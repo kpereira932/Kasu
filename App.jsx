@@ -446,11 +446,20 @@ function OutletApp({user,onLogout,showToast,onBMO}){
 
 // ─── Entry Screen ─────────────────────────────────────────────────────────────
 function EntryScreen({user,dayDone,onSaved,showToast,txns}){
-  const [orderNo,setOrderNo]=useState("");const [pays,setPays]=useState([{mode:"Cash",amount:""}]);
-  const [boxOpen,setBoxOpen]=useState(false);const [box,setBox]=useState({mode:"Cash",amount:""});
-  const [savedBox,setSavedBox]=useState(null);const [busy,setBusy]=useState(false);
-  const [errors,setErrors]=useState({});const [dupWarn,setDupWarn]=useState(false);const [dupConfirm,setDupConfirm]=useState(false);
+  const [orderNo,setOrderNo]=useState("");
+  const [pays,setPays]=useState([{mode:"Cash",amount:""}]);
+  const [boxMode,setBoxMode]=useState("Cash");
+  const [boxAmt,setBoxAmt]=useState("");
+  const [boxEnabled,setBoxEnabled]=useState(false);
+  const [busy,setBusy]=useState(false);
+  const [errors,setErrors]=useState({});
+  const [dupWarn,setDupWarn]=useState(false);
+  const [dupConfirm,setDupConfirm]=useState(false);
   const orderRef=useRef(null);
+  const amt0Ref=useRef(null);
+  const amt1Ref=useRef(null);
+  const boxAmtRef=useRef(null);
+  const saveRef=useRef(null);
 
   const checkDup=useCallback((val)=>{if(!val.trim()){setDupWarn(false);return;}setDupWarn(txns.some(t=>t.orderNo===val.trim()));},[txns]);
 
@@ -458,6 +467,7 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
     const e={};
     if(!orderNo.trim())e.orderNo="Order number is required.";
     pays.forEach((p,i)=>{if(!p.amount||isNaN(p.amount)||Number(p.amount)<=0)e[`amt${i}`]="Enter a valid amount (>0).";else if(Number(p.amount)>999999)e[`amt${i}`]="Amount seems too large.";});
+    if(boxEnabled&&(!boxAmt||isNaN(boxAmt)||Number(boxAmt)<=0))e.boxAmt="Enter a valid box amount.";
     return e;
   };
 
@@ -466,58 +476,136 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
   const doSave=async()=>{
     setDupConfirm(false);setBusy(true);
     const all=await sget("transactions")||[];
-    all.push({id:`t${Date.now()}`,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)})),boxAmount:savedBox?Number(savedBox.amount):0,boxMode:savedBox?savedBox.mode:"Cash",outletId:user.outlets[0],outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
+    all.push({id:`t${Date.now()}`,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)})),boxAmount:boxEnabled?Number(boxAmt):0,boxMode:boxEnabled?boxMode:"Cash",outletId:user.outlets[0],outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
     await sset("transactions",all);await addLog("ADD_TXN",user.id,"Order "+orderNo.trim());
-    setOrderNo("");setPays([{mode:"Cash",amount:""}]);setSavedBox(null);setErrors({});setDupWarn(false);
+    setOrderNo("");setPays([{mode:"Cash",amount:""}]);setBoxAmt("");setBoxEnabled(false);setBoxMode("Cash");setErrors({});setDupWarn(false);
     setBusy(false);showToast("Order #"+orderNo.trim()+" saved!","success");onSaved();
     setTimeout(()=>orderRef.current&&orderRef.current.focus(),100);
   };
+
+  // Keyboard: Enter on order number → jump to amount
+  const onOrderKeyDown=e=>{
+    if(e.key==="Enter"){e.preventDefault();amt0Ref.current&&amt0Ref.current.focus();}
+  };
+  // Keyboard: Enter on amount → jump to box amt if enabled, else save
+  const onAmt0KeyDown=e=>{
+    if(e.key==="Enter"){e.preventDefault();if(boxEnabled&&boxAmtRef.current)boxAmtRef.current.focus();else trySave();}
+  };
+  const onAmt1KeyDown=e=>{
+    if(e.key==="Enter"){e.preventDefault();if(boxEnabled&&boxAmtRef.current)boxAmtRef.current.focus();else trySave();}
+  };
+  const onBoxAmtKeyDown=e=>{
+    if(e.key==="Enter"){e.preventDefault();trySave();}
+  };
+
+  const selStyle=(active,color)=>({
+    padding:"9px 14px",borderRadius:9,border:`1.5px solid ${active?color:C.border}`,
+    background:active?color:"#fff",color:active?"#fff":C.sub,
+    fontWeight:600,fontSize:13,cursor:"pointer",whiteSpace:"nowrap",transition:"all .12s"
+  });
 
   if(dayDone)return <div style={{padding:20}}><div style={{...Cd,textAlign:"center",padding:32}}><div style={{fontSize:36,marginBottom:12}}>🌙</div><div style={{fontWeight:700,fontSize:16,color:C.text,marginBottom:6}}>Day is Closed</div><div style={{color:C.sub,fontSize:13}}>No new entries after day end.</div></div></div>;
 
   return(
     <div style={{padding:16}}>
       <div style={Cd}>
-        <div style={{fontWeight:700,fontSize:16,color:C.text,marginBottom:18}}>New Payment Entry</div>
+
+        {/* ── Order Number ── */}
         <Field label="Order Number" error={errors.orderNo}>
           <input ref={orderRef} type="text" value={orderNo}
             onChange={e=>{setOrderNo(e.target.value);checkDup(e.target.value);setErrors(ev=>({...ev,orderNo:""}));}}
+            onKeyDown={onOrderKeyDown}
             placeholder="e.g. 1042"
-            style={{...IS,fontSize:22,fontWeight:700,padding:"12px 16px",letterSpacing:1,borderColor:errors.orderNo?C.danger:dupWarn?C.warn:C.border}}/>
+            style={{...IS,fontSize:24,fontWeight:800,padding:"13px 16px",letterSpacing:1,borderColor:errors.orderNo?C.danger:dupWarn?C.warn:C.border}}/>
         </Field>
-        {dupWarn&&<Msg type="warn">⚠ Order #{orderNo} already exists today. Will ask confirmation.</Msg>}
+        {dupWarn&&<Msg type="warn">⚠ Order #{orderNo} already exists today.</Msg>}
+
+        {/* ── Payment ── */}
+        <div style={{height:1,background:C.border,margin:"14px 0"}}/>
         {pays.map((p,i)=>(
           <div key={i} style={{marginBottom:14}}>
-            <div style={{fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,marginBottom:8}}>{i===0?"Payment Mode":"Split Payment"}</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>{PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={p.mode===m} onClick={()=>setPays(pays.map((x,j)=>j===i?{...x,mode:m}:x))}/>)}</div>
-            <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-              <div style={{flex:1}}>
-                <input type="number" value={p.amount} onChange={e=>{setPays(pays.map((x,j)=>j===i?{...x,amount:e.target.value}:x));setErrors(ev=>({...ev,[`amt${i}`]:""}));}}
-                  placeholder="0" style={{...IS,fontSize:22,fontWeight:700,padding:"12px 16px",borderColor:errors[`amt${i}`]?C.danger:C.border}}/>
-                {errors[`amt${i}`]&&<div style={{color:C.danger,fontSize:11,marginTop:4,fontWeight:500}}>⚠ {errors[`amt${i}`]}</div>}
+            <label style={{display:"block",fontSize:11,color:C.sub,marginBottom:8,fontWeight:700,textTransform:"uppercase",letterSpacing:.4}}>
+              {i===0?"Payment":"Split Payment"}
+              {i>0&&<button onClick={()=>setPays(pays.filter((_,j)=>j!==i))} style={{marginLeft:10,background:"none",border:"none",color:C.danger,cursor:"pointer",fontSize:12,fontWeight:700}}>✕ Remove</button>}
+            </label>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {/* Dropdown */}
+              <div>
+                <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Mode</label>
+                <select value={p.mode}
+                  onChange={e=>setPays(pays.map((x,j)=>j===i?{...x,mode:e.target.value}:x))}
+                  style={{...IS,fontSize:14,fontWeight:600,color:MODE_COLORS[p.mode],background:MODE_BG[p.mode],border:`1.5px solid ${MODE_COLORS[p.mode]}55`,padding:"10px 12px"}}>
+                  {PAYMENT_MODES.map(m=><option key={m} value={m}>{m}</option>)}
+                </select>
               </div>
-              {i>0&&<button onClick={()=>setPays(pays.filter((_,j)=>j!==i))} style={{background:C.dangerLight,color:C.danger,border:`1px solid ${C.dangerBorder}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",fontWeight:700,fontSize:14,flexShrink:0}}>✕</button>}
+              {/* Amount */}
+              <div>
+                <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Amount (₹)</label>
+                <input ref={i===0?amt0Ref:amt1Ref} type="number" value={p.amount}
+                  onChange={e=>{setPays(pays.map((x,j)=>j===i?{...x,amount:e.target.value}:x));setErrors(ev=>({...ev,[`amt${i}`]:""}));}}
+                  onKeyDown={i===0?onAmt0KeyDown:onAmt1KeyDown}
+                  placeholder="0"
+                  style={{...IS,fontSize:22,fontWeight:800,padding:"10px 14px",borderColor:errors[`amt${i}`]?C.danger:C.border}}/>
+                {errors[`amt${i}`]&&<div style={{color:C.danger,fontSize:11,marginTop:3}}>⚠ {errors[`amt${i}`]}</div>}
+              </div>
             </div>
           </div>
         ))}
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-          {pays.length<2&&<button onClick={()=>setPays([...pays,{mode:"Cash",amount:""}])} style={{background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:8,padding:"6px 12px",fontSize:12,cursor:"pointer",fontWeight:600}}>+ Split</button>}
-          {!savedBox?<button onClick={()=>setBoxOpen(true)} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 12px",color:C.sub,fontSize:12,cursor:"pointer",fontWeight:600}}>📦 Box Charges</button>
-          :<div style={{display:"flex",alignItems:"center",gap:6,background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"5px 10px"}}>
-            <span style={{fontSize:12,color:C.sub}}>📦 {savedBox.mode}: <strong style={{color:C.text}}>{inr(savedBox.amount)}</strong></span>
-            <button onClick={()=>setSavedBox(null)} style={{background:"none",border:"none",color:C.danger,fontSize:14,cursor:"pointer",padding:0}}>✕</button>
-          </div>}
+
+        {pays.length<2&&(
+          <button onClick={()=>setPays([...pays,{mode:"Cash",amount:""}])}
+            style={{background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:600,marginBottom:14}}>
+            + Split Payment
+          </button>
+        )}
+
+        {/* ── Box Charges ── */}
+        <div style={{height:1,background:C.border,margin:"14px 0"}}/>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:boxEnabled?12:0}}>
+          <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",userSelect:"none"}}>
+            <div onClick={()=>setBoxEnabled(b=>!b)}
+              style={{width:38,height:22,borderRadius:11,background:boxEnabled?C.accent:C.border,position:"relative",transition:"background .2s",flexShrink:0,cursor:"pointer"}}>
+              <div style={{position:"absolute",top:3,left:boxEnabled?18:3,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.2)"}}/>
+            </div>
+            <span style={{fontWeight:700,fontSize:13,color:C.text}}>📦 Box Charges</span>
+          </label>
+          {boxEnabled&&<span style={{fontSize:12,color:C.sub}}>tab to amount → Enter to save</span>}
         </div>
-        <button onClick={trySave} disabled={busy} style={{...BPr,padding:"14px",fontSize:16,fontWeight:700,opacity:busy?.7:1}}>{busy?"Saving…":"Save Order"}</button>
+
+        {boxEnabled&&(
+          <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,padding:14,marginBottom:4}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div>
+                <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Mode</label>
+                <select value={boxMode} onChange={e=>setBoxMode(e.target.value)}
+                  style={{...IS,fontSize:14,fontWeight:600,color:MODE_COLORS[boxMode],background:MODE_BG[boxMode],border:`1.5px solid ${MODE_COLORS[boxMode]}55`,padding:"10px 12px"}}>
+                  {BMO_PAYMENT_MODES.map(m=><option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Amount (₹)</label>
+                <input ref={boxAmtRef} type="number" value={boxAmt}
+                  onChange={e=>{setBoxAmt(e.target.value);setErrors(ev=>({...ev,boxAmt:""}));}}
+                  onKeyDown={onBoxAmtKeyDown}
+                  placeholder="0"
+                  style={{...IS,fontSize:22,fontWeight:800,padding:"10px 14px",borderColor:errors.boxAmt?C.danger:C.border}}/>
+                {errors.boxAmt&&<div style={{color:C.danger,fontSize:11,marginTop:3}}>⚠ {errors.boxAmt}</div>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Save ── */}
+        <div style={{height:1,background:C.border,margin:"16px 0"}}/>
+        <button ref={saveRef} onClick={trySave} disabled={busy}
+          style={{...BPr,padding:"15px",fontSize:17,fontWeight:800,opacity:busy?.7:1,letterSpacing:.3}}>
+          {busy?"Saving…":"Save Order  ↵"}
+        </button>
+        <div style={{textAlign:"center",fontSize:11,color:C.muted,marginTop:8}}>
+          Tab between fields · Enter to save
+        </div>
       </div>
-      <Modal open={boxOpen} onClose={()=>setBoxOpen(false)} title="📦 Box Charges" width={360}>
-        <Field label="Payment Mode"><div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:4}}>{BMO_PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={box.mode===m} onClick={()=>setBox({...box,mode:m})}/>)}</div></Field>
-        <Field label="Amount (₹)"><Inp type="number" value={box.amount} onChange={v=>setBox({...box,amount:v})} placeholder="e.g. 20" large/></Field>
-        <div style={{display:"flex",gap:8,marginTop:4}}>
-          <button onClick={()=>{if(!box.amount||Number(box.amount)<=0)return;setSavedBox({...box});setBoxOpen(false);setBox({mode:"Cash",amount:""});}} style={{...BPr,flex:1}}>Confirm</button>
-          <button onClick={()=>setBoxOpen(false)} style={{...BSc,flex:1}}>Cancel</button>
-        </div>
-      </Modal>
+
       <ConfirmDialog open={dupConfirm} onClose={()=>setDupConfirm(false)} onConfirm={doSave} title="Duplicate Order Number" warn
         message={`Order #${orderNo} already exists today. Save another entry anyway?`} confirmLabel="Yes, Save Anyway"/>
     </div>
