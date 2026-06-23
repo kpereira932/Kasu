@@ -529,15 +529,6 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
               {i>0&&<button onClick={()=>setPays(pays.filter((_,j)=>j!==i))} style={{marginLeft:10,background:"none",border:"none",color:C.danger,cursor:"pointer",fontSize:12,fontWeight:700}}>✕ Remove</button>}
             </label>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              {/* Dropdown */}
-              <div>
-                <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Mode</label>
-                <select value={p.mode}
-                  onChange={e=>setPays(pays.map((x,j)=>j===i?{...x,mode:e.target.value}:x))}
-                  style={{...IS,fontSize:14,fontWeight:600,color:MODE_COLORS[p.mode],background:MODE_BG[p.mode],border:`1.5px solid ${MODE_COLORS[p.mode]}55`,padding:"10px 12px"}}>
-                  {PAYMENT_MODES.map(m=><option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
               {/* Amount */}
               <div>
                 <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Amount (₹)</label>
@@ -547,6 +538,15 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
                   placeholder="0"
                   style={{...IS,fontSize:22,fontWeight:800,padding:"10px 14px",borderColor:errors[`amt${i}`]?C.danger:C.border}}/>
                 {errors[`amt${i}`]&&<div style={{color:C.danger,fontSize:11,marginTop:3}}>⚠ {errors[`amt${i}`]}</div>}
+              </div>
+              {/* Dropdown */}
+              <div>
+                <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Mode</label>
+                <select value={p.mode}
+                  onChange={e=>setPays(pays.map((x,j)=>j===i?{...x,mode:e.target.value}:x))}
+                  style={{...IS,fontSize:14,fontWeight:600,color:MODE_COLORS[p.mode],background:MODE_BG[p.mode],border:`1.5px solid ${MODE_COLORS[p.mode]}55`,padding:"10px 12px"}}>
+                  {PAYMENT_MODES.map(m=><option key={m} value={m}>{m}</option>)}
+                </select>
               </div>
             </div>
           </div>
@@ -576,13 +576,6 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
           <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,padding:14,marginBottom:4}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <div>
-                <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Mode</label>
-                <select value={boxMode} onChange={e=>setBoxMode(e.target.value)}
-                  style={{...IS,fontSize:14,fontWeight:600,color:MODE_COLORS[boxMode],background:MODE_BG[boxMode],border:`1.5px solid ${MODE_COLORS[boxMode]}55`,padding:"10px 12px"}}>
-                  {BMO_PAYMENT_MODES.map(m=><option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
-              <div>
                 <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Amount (₹)</label>
                 <input ref={boxAmtRef} type="number" value={boxAmt}
                   onChange={e=>{setBoxAmt(e.target.value);setErrors(ev=>({...ev,boxAmt:""}));}}
@@ -590,6 +583,13 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
                   placeholder="0"
                   style={{...IS,fontSize:22,fontWeight:800,padding:"10px 14px",borderColor:errors.boxAmt?C.danger:C.border}}/>
                 {errors.boxAmt&&<div style={{color:C.danger,fontSize:11,marginTop:3}}>⚠ {errors.boxAmt}</div>}
+              </div>
+              <div>
+                <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Mode</label>
+                <select value={boxMode} onChange={e=>setBoxMode(e.target.value)}
+                  style={{...IS,fontSize:14,fontWeight:600,color:MODE_COLORS[boxMode],background:MODE_BG[boxMode],border:`1.5px solid ${MODE_COLORS[boxMode]}55`,padding:"10px 12px"}}>
+                  {BMO_PAYMENT_MODES.map(m=><option key={m} value={m}>{m}</option>)}
+                </select>
               </div>
             </div>
           </div>
