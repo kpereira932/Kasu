@@ -8,11 +8,11 @@ const BMO_PAYMENT_MODES = ["Cash","Stag QR","Pine Card Fail"];
 const MODE_COLORS = {"Cash":"#16a34a","PhonePe QR Fail":"#ea580c","Pine QR Fail":"#dc2626","Pine Card Fail":"#b91c1c","Stag QR":"#7c3aed","Comp":"#64748b"};
 const MODE_BG    = {"Cash":"#f0fdf4","PhonePe QR Fail":"#fff7ed","Pine QR Fail":"#fef2f2","Pine Card Fail":"#fef2f2","Stag QR":"#f5f3ff","Comp":"#f8fafc"};
 const C = {
-  bg:"#F8FAFC",surface:"#FFFFFF",border:"#E2E8F0",
-  text:"#0F172A",sub:"#64748B",muted:"#94A3B8",
-  accent:"#7C3AED",accentLight:"#F5F3FF",accentBorder:"#DDD6FE",
+  bg:"#FBF8F2",surface:"#FFFFFF",border:"#E8DFCB",
+  text:"#2B2113",sub:"#7A6A4F",muted:"#A99B7E",
+  accent:"#C9802C",accentLight:"#FBF1E1",accentBorder:"#EBCB99",
   success:"#16A34A",successLight:"#F0FDF4",successBorder:"#BBF7D0",
-  warn:"#D97706",warnLight:"#FFFBEB",warnBorder:"#FDE68A",
+  warn:"#B7791F",warnLight:"#FFFBEB",warnBorder:"#FDE68A",
   danger:"#DC2626",dangerLight:"#FEF2F2",dangerBorder:"#FECACA",
   bmo:"#0F766E",bmoLight:"#F0FDFA",bmoBorder:"#99F6E4",
 };
@@ -636,9 +636,6 @@ function BoxChargeModal({open,onClose,user,showToast,onSaved}){
 
   return(
     <Modal open={open} onClose={()=>{reset();onClose();}} title="📦 Box / Cup Charges" width={400}>
-      <div style={{fontSize:12,color:C.sub,marginBottom:14,lineHeight:1.5}}>
-        A separate charge not linked to any specific order — for packaging used across the day.
-      </div>
       {BOX_ITEMS.map(bi=>(
         <div key={bi.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,gap:10}}>
           <div style={{flex:1}}>
