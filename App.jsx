@@ -368,14 +368,15 @@ function Login({onLogin,showToast}){
 // ─── Outlet App ───────────────────────────────────────────────────────────────
 function OutletApp({user,onLogout,showToast,onBMO}){
   const [screen,setScreen]=useState("entry");
-  const [txns,setTxns]=useState([]);const [refs,setRefs]=useState([]);
+  const [txns,setTxns]=useState([]);const [refs,setRefs]=useState([]);const [boxCharges,setBoxCharges]=useState([]);
   const [dayDone,setDayDone]=useState(false);const [dayModal,setDayModal]=useState(false);
   const outletId=user.outlets[0];
 
   const load=useCallback(async()=>{
-    const [all,allR,ds]=await Promise.all([sget("transactions"),sget("refunds"),sget("dayStatus")]);
+    const [all,allR,allB,ds]=await Promise.all([sget("transactions"),sget("refunds"),sget("boxCharges"),sget("dayStatus")]);
     setTxns((all||[]).filter(t=>t.outletId===outletId&&t.day===TODAY));
     setRefs((allR||[]).filter(r=>r.outletId===outletId&&r.day===TODAY));
+    setBoxCharges((allB||[]).filter(b=>b.outletId===outletId&&b.day===TODAY));
     if((ds||{})[outletId]===TODAY)setDayDone(true);
   },[outletId]);
 
@@ -384,6 +385,7 @@ function OutletApp({user,onLogout,showToast,onBMO}){
 
   const totals={};PAYMENT_MODES.forEach(m=>{totals[m]=0;});
   txns.forEach(t=>{t.payments.forEach(p=>{totals[p.mode]=(totals[p.mode]||0)+Number(p.amount);});if(t.boxAmount)totals[t.boxMode||"Cash"]=(totals[t.boxMode||"Cash"]||0)+Number(t.boxAmount);});
+  boxCharges.forEach(b=>{totals[b.mode]=(totals[b.mode]||0)+Number(b.amount);});
   const totalRef=refs.reduce((s,r)=>s+Number(r.amount),0);
   const grand=Object.values(totals).reduce((a,b)=>a+b,0);
   const cashInHand=(totals["Cash"]||0)-totalRef;
@@ -393,6 +395,15 @@ function OutletApp({user,onLogout,showToast,onBMO}){
     await sset("dayStatus",ds);setDayDone(true);setDayModal(false);
     await addLog("DAY_END",user.id,"Day end — "+outletId);
     showToast("Day closed successfully!","success");
+  };
+
+  const canEdit=t=>t.day===TODAY;
+  const doEdit=async(updated,reason,oldVals)=>{
+    const all=await sget("transactions")||[];
+    const u=all.map(t=>t.id===updated.id?updated:t);
+    await sset("transactions",u);
+    await addLog("EDIT_TXN",user.id,"Edited order "+updated.orderNo,reason,{oldPayments:oldVals.payments,newPayments:updated.payments});
+    showToast("Order updated","success");load();
   };
 
   const navItems=[{id:"entry",icon:"⊕",label:"New Entry"},{id:"orders",icon:"📋",label:"Orders"},{id:"refunds",icon:"↩",label:"Refunds"}];
@@ -436,7 +447,7 @@ function OutletApp({user,onLogout,showToast,onBMO}){
 
       <div style={{flex:1,overflowY:"auto",paddingBottom:72}}>
         {screen==="entry"&&<EntryScreen user={user} dayDone={dayDone} onSaved={load} showToast={showToast} txns={txns}/>}
-        {screen==="orders"&&<OrdersScreen txns={txns}/>}
+        {screen==="orders"&&<OrdersScreen txns={txns} editable canEdit={canEdit} onEdit={doEdit}/>}
         {screen==="refunds"&&<RefundsScreen user={user} dayDone={dayDone} onSaved={load} refs={refs} showToast={showToast}/>}
       </div>
 
@@ -465,20 +476,16 @@ const BOX_ITEMS = [
 function EntryScreen({user,dayDone,onSaved,showToast,txns}){
   const [orderNo,setOrderNo]=useState("");
   const [pays,setPays]=useState([{mode:"Cash",amount:""}]);
-  const [boxMode,setBoxMode]=useState("Cash");
-  const [boxQty,setBoxQty]=useState({food:0,cup:0});
-  const [boxEnabled,setBoxEnabled]=useState(false);
   const [busy,setBusy]=useState(false);
   const [errors,setErrors]=useState({});
   const [dupWarn,setDupWarn]=useState(false);
   const [dupConfirm,setDupConfirm]=useState(false);
   const [showGuide,setShowGuide]=useState(false);
+  const [boxModalOpen,setBoxModalOpen]=useState(false);
   const orderRef=useRef(null);
   const amt0Ref=useRef(null);
   const amt1Ref=useRef(null);
   const saveRef=useRef(null);
-
-  const boxTotal = boxQty.food*BOX_ITEMS[0].rate + boxQty.cup*BOX_ITEMS[1].rate;
 
   const checkDup=useCallback((val)=>{if(!val.trim()){setDupWarn(false);return;}setDupWarn(txns.some(t=>t.orderNo===val.trim()));},[txns]);
 
@@ -486,7 +493,6 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
     const e={};
     if(!orderNo.trim())e.orderNo="Order number is required.";
     pays.forEach((p,i)=>{if(!p.amount||isNaN(p.amount)||Number(p.amount)<=0)e[`amt${i}`]="Enter a valid amount (>0).";else if(Number(p.amount)>999999)e[`amt${i}`]="Amount seems too large.";});
-    if(boxEnabled&&boxTotal<=0)e.boxAmt="Add at least 1 box or cup.";
     return e;
   };
 
@@ -496,11 +502,10 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
     setDupConfirm(false);setBusy(true);
     const all=await sget("transactions")||[];
     all.push({id:`t${Date.now()}`,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)})),
-      boxAmount:boxEnabled?boxTotal:0,boxMode:boxEnabled?boxMode:"Cash",
-      boxItems:boxEnabled?{food:boxQty.food,cup:boxQty.cup}:null,
+      boxAmount:0,boxMode:"Cash",boxItems:null,
       outletId:user.outlets[0],outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
     await sset("transactions",all);await addLog("ADD_TXN",user.id,"Order "+orderNo.trim());
-    setOrderNo("");setPays([{mode:"Cash",amount:""}]);setBoxQty({food:0,cup:0});setBoxEnabled(false);setBoxMode("Cash");setErrors({});setDupWarn(false);
+    setOrderNo("");setPays([{mode:"Cash",amount:""}]);setErrors({});setDupWarn(false);
     setBusy(false);showToast("Order #"+orderNo.trim()+" saved!","success");onSaved();
     setTimeout(()=>orderRef.current&&orderRef.current.focus(),100);
   };
@@ -509,7 +514,6 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
   const onOrderKeyDown=e=>{
     if(e.key==="Enter"){e.preventDefault();amt0Ref.current&&amt0Ref.current.focus();}
   };
-  // Keyboard: Enter on amount → save (box qty uses +/- buttons, not tab flow)
   const onAmt0KeyDown=e=>{
     if(e.key==="Enter"){e.preventDefault();trySave();}
   };
@@ -535,7 +539,7 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
             1. Type the order number, press <strong>Enter</strong> → jumps to Amount.<br/>
             2. Enter amount, pick payment mode, press <strong>Enter</strong> → saves order.<br/>
             3. Need a split payment? Tap <strong>+ Split Payment</strong>.<br/>
-            4. Selling takeaway? Turn on <strong>Box / Cup Charges</strong> and tap +/− to count items — total is calculated for you.
+            4. Selling a takeaway box or cup? Use the <strong>📦 Box / Cup Charges</strong> button below — it's separate from order entry.
           </div>
         )}
         <Field error={errors.orderNo}>
@@ -586,54 +590,6 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
           </button>
         )}
 
-        {/* ── Box / Cup Charges ── */}
-        <div style={{height:1,background:C.border,margin:"14px 0"}}/>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:boxEnabled?12:0}}>
-          <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",userSelect:"none"}}>
-            <div onClick={()=>setBoxEnabled(b=>!b)}
-              style={{width:38,height:22,borderRadius:11,background:boxEnabled?C.accent:C.border,position:"relative",transition:"background .2s",flexShrink:0,cursor:"pointer"}}>
-              <div style={{position:"absolute",top:3,left:boxEnabled?18:3,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.2)"}}/>
-            </div>
-            <span style={{fontWeight:700,fontSize:13,color:C.text}}>📦 Box / Cup Charges</span>
-          </label>
-          {boxEnabled&&boxTotal>0&&<span style={{fontSize:13,fontWeight:800,color:C.accent}}>{inr(boxTotal)}</span>}
-        </div>
-
-        {boxEnabled&&(
-          <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,padding:14,marginBottom:4}}>
-            {BOX_ITEMS.map(bi=>(
-              <div key={bi.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,gap:10}}>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:13,color:C.text}}>{bi.icon} {bi.label}</div>
-                  <div style={{fontSize:11,color:C.muted}}>₹{bi.rate} each</div>
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <button onClick={()=>setBoxQty(q=>({...q,[bi.key]:Math.max(0,q[bi.key]-1)}))}
-                    style={{width:32,height:32,borderRadius:8,border:`1.5px solid ${C.border}`,background:"#fff",fontSize:16,fontWeight:700,cursor:"pointer",color:C.sub}}>−</button>
-                  <span style={{minWidth:22,textAlign:"center",fontWeight:800,fontSize:15,color:C.text}}>{boxQty[bi.key]}</span>
-                  <button onClick={()=>setBoxQty(q=>({...q,[bi.key]:q[bi.key]+1}))}
-                    style={{width:32,height:32,borderRadius:8,border:`1.5px solid ${C.accent}`,background:C.accentLight,fontSize:16,fontWeight:700,cursor:"pointer",color:C.accent}}>+</button>
-                </div>
-              </div>
-            ))}
-            <div style={{height:1,background:C.border,margin:"4px 0 10px"}}/>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
-              <div style={{flex:1}}>
-                <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Payment Mode</label>
-                <select value={boxMode} onChange={e=>setBoxMode(e.target.value)}
-                  style={{...IS,fontSize:14,fontWeight:600,color:MODE_COLORS[boxMode],background:MODE_BG[boxMode],border:`1.5px solid ${MODE_COLORS[boxMode]}55`,padding:"10px 12px"}}>
-                  {BMO_PAYMENT_MODES.map(m=><option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
-              <div style={{textAlign:"right"}}>
-                <div style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3}}>Total</div>
-                <div style={{fontSize:20,fontWeight:800,color:C.text}}>{inr(boxTotal)}</div>
-              </div>
-            </div>
-            {errors.boxAmt&&<div style={{color:C.danger,fontSize:11,marginTop:8}}>⚠ {errors.boxAmt}</div>}
-          </div>
-        )}
-
         {/* ── Save ── */}
         <div style={{height:1,background:C.border,margin:"16px 0"}}/>
         <button ref={saveRef} onClick={trySave} disabled={busy}
@@ -645,16 +601,84 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
         </div>
       </div>
 
+      {/* ── Standalone Box Charges (not tied to an order) ── */}
+      <button onClick={()=>setBoxModalOpen(true)}
+        style={{width:"100%",marginTop:14,background:"#fff",border:`1.5px dashed ${C.border}`,borderRadius:14,padding:"14px",display:"flex",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",color:C.text,fontWeight:700,fontSize:14}}>
+        📦 Add Box / Cup Charges
+      </button>
+
+      <BoxChargeModal open={boxModalOpen} onClose={()=>setBoxModalOpen(false)} user={user} showToast={showToast} onSaved={onSaved}/>
+
       <ConfirmDialog open={dupConfirm} onClose={()=>setDupConfirm(false)} onConfirm={doSave} title="Duplicate Order Number" warn
         message={`Order #${orderNo} already exists today. Save another entry anyway?`} confirmLabel="Yes, Save Anyway"/>
     </div>
   );
 }
 
-function OrdersScreen({txns}){
+// ─── Standalone Box Charge Modal ──────────────────────────────────────────────
+function BoxChargeModal({open,onClose,user,showToast,onSaved}){
+  const [qty,setQty]=useState({food:0,cup:0});
+  const [mode,setMode]=useState("Cash");
+  const [busy,setBusy]=useState(false);
+  const total = qty.food*BOX_ITEMS[0].rate + qty.cup*BOX_ITEMS[1].rate;
+
+  const reset=()=>{setQty({food:0,cup:0});setMode("Cash");};
+
+  const save=async()=>{
+    if(total<=0)return;
+    setBusy(true);
+    const all=await sget("boxCharges")||[];
+    all.push({id:`b${Date.now()}`,amount:total,mode,items:{food:qty.food,cup:qty.cup},
+      outletId:user.outlets[0],outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
+    await sset("boxCharges",all);await addLog("ADD_BOX",user.id,"Box/Cup charge "+inr(total));
+    setBusy(false);reset();onClose();showToast("Box charge of "+inr(total)+" recorded","success");onSaved&&onSaved();
+  };
+
+  return(
+    <Modal open={open} onClose={()=>{reset();onClose();}} title="📦 Box / Cup Charges" width={400}>
+      <div style={{fontSize:12,color:C.sub,marginBottom:14,lineHeight:1.5}}>
+        A separate charge not linked to any specific order — for packaging used across the day.
+      </div>
+      {BOX_ITEMS.map(bi=>(
+        <div key={bi.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,gap:10}}>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:700,fontSize:14,color:C.text}}>{bi.icon} {bi.label}</div>
+            <div style={{fontSize:11,color:C.muted}}>₹{bi.rate} each</div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <button onClick={()=>setQty(q=>({...q,[bi.key]:Math.max(0,q[bi.key]-1)}))}
+              style={{width:34,height:34,borderRadius:9,border:`1.5px solid ${C.border}`,background:"#fff",fontSize:18,fontWeight:700,cursor:"pointer",color:C.sub}}>−</button>
+            <span style={{minWidth:24,textAlign:"center",fontWeight:800,fontSize:16,color:C.text}}>{qty[bi.key]}</span>
+            <button onClick={()=>setQty(q=>({...q,[bi.key]:q[bi.key]+1}))}
+              style={{width:34,height:34,borderRadius:9,border:`1.5px solid ${C.accent}`,background:C.accentLight,fontSize:18,fontWeight:700,cursor:"pointer",color:C.accent}}>+</button>
+          </div>
+        </div>
+      ))}
+      <Divider/>
+      <Field label="Payment Mode">
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{BMO_PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={mode===m} onClick={()=>setMode(m)}/>)}</div>
+      </Field>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",marginBottom:16}}>
+        <span style={{fontSize:12,color:C.sub,fontWeight:600,textTransform:"uppercase"}}>Total</span>
+        <span style={{fontSize:22,fontWeight:800,color:C.text}}>{inr(total)}</span>
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={save} disabled={busy||total<=0} style={{...BPr,flex:1,opacity:(busy||total<=0)?.6:1}}>{busy?"Saving…":"Save Charge"}</button>
+        <button onClick={()=>{reset();onClose();}} style={{...BSc,flex:1}}>Cancel</button>
+      </div>
+    </Modal>
+  );
+}
+
+function OrdersScreen({txns,editable,canEdit,onEdit}){
+  const [editTxn,setEditTxn]=useState(null);
   return <div style={{padding:16}}>
     <SectionHeader title={`Today's Orders (${txns.length})`}/>
-    {txns.length===0?<EmptyState icon="📋" title="No orders yet" desc="Saved orders appear here"/>:txns.slice().reverse().map(t=><TxnCard key={t.id} txn={t}/>)}
+    {txns.length===0?<EmptyState icon="📋" title="No orders yet" desc="Saved orders appear here"/>
+      :txns.slice().reverse().map(t=>(
+        <TxnCard key={t.id} txn={t} editable={editable&&canEdit&&canEdit(t)} onEdit={()=>setEditTxn(t)}/>
+      ))}
+    {editTxn&&<EditTxnModal txn={editTxn} onSave={(updated,reason,orig)=>{onEdit(updated,reason,orig);setEditTxn(null);}} onClose={()=>setEditTxn(null)}/>}
   </div>;
 }
 
@@ -885,15 +909,18 @@ function AdminApp({user,onLogout,showToast,onBMO}){
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 function Dashboard({user}){
-  const [txns,setTxns]=useState([]);const [refs,setRefs]=useState([]);const [outlets,setOutlets]=useState([]);const [dayStatus,setDayStatus]=useState({});const [loading,setLoading]=useState(true);
-  useEffect(()=>{Promise.all([sget("transactions"),sget("refunds"),sget("outlets"),sget("dayStatus")]).then(([a,b,o,ds])=>{setTxns((a||[]).filter(t=>t.day===TODAY));setRefs((b||[]).filter(r=>r.day===TODAY));setOutlets(o||[]);setDayStatus(ds||{});setLoading(false);});},[]);
+  const [txns,setTxns]=useState([]);const [refs,setRefs]=useState([]);const [boxCharges,setBoxCharges]=useState([]);const [outlets,setOutlets]=useState([]);const [dayStatus,setDayStatus]=useState({});const [loading,setLoading]=useState(true);
+  useEffect(()=>{Promise.all([sget("transactions"),sget("refunds"),sget("boxCharges"),sget("outlets"),sget("dayStatus")]).then(([a,b,bx,o,ds])=>{setTxns((a||[]).filter(t=>t.day===TODAY));setRefs((b||[]).filter(r=>r.day===TODAY));setBoxCharges((bx||[]).filter(x=>x.day===TODAY));setOutlets(o||[]);setDayStatus(ds||{});setLoading(false);});},[]);
   const totals={};PAYMENT_MODES.forEach(m=>{totals[m]=0;});
   txns.forEach(t=>{t.payments.forEach(p=>{totals[p.mode]=(totals[p.mode]||0)+Number(p.amount);});if(t.boxAmount)totals[t.boxMode||"Cash"]=(totals[t.boxMode||"Cash"]||0)+Number(t.boxAmount);});
+  boxCharges.forEach(b=>{totals[b.mode]=(totals[b.mode]||0)+Number(b.amount);});
   const totalRef=refs.reduce((s,r)=>s+Number(r.amount),0);
   const grand=Object.values(totals).reduce((a,b)=>a+b,0);
   const net=grand-totalRef,cashInHand=(totals["Cash"]||0)-totalRef,avgOrder=txns.length?Math.round(grand/txns.length):0;
-  const cashFails=["PhonePe QR Fail","Pine Labs QR Fail","Pine Labs Card Fail"].reduce((s,m)=>s+(totals[m]||0),0);
-  const outletMap={};txns.forEach(t=>{if(!outletMap[t.outletId])outletMap[t.outletId]={name:t.outletName,total:0,orders:0};t.payments.forEach(p=>{outletMap[t.outletId].total+=Number(p.amount);});if(t.boxAmount)outletMap[t.outletId].total+=Number(t.boxAmount);outletMap[t.outletId].orders+=1;});
+  const cashFails=["PhonePe QR Fail","Pine QR Fail","Pine Card Fail"].reduce((s,m)=>s+(totals[m]||0),0);
+  const outletMap={};
+  txns.forEach(t=>{if(!outletMap[t.outletId])outletMap[t.outletId]={name:t.outletName,total:0,orders:0};t.payments.forEach(p=>{outletMap[t.outletId].total+=Number(p.amount);});if(t.boxAmount)outletMap[t.outletId].total+=Number(t.boxAmount);outletMap[t.outletId].orders+=1;});
+  boxCharges.forEach(b=>{if(!outletMap[b.outletId])outletMap[b.outletId]={name:b.outletName,total:0,orders:0};outletMap[b.outletId].total+=Number(b.amount);});
   const userMap={};txns.forEach(t=>{const k=t.createdBy||"?";if(!userMap[k])userMap[k]={name:t.createdByName||k,orders:0,total:0};t.payments.forEach(p=>{userMap[k].total+=Number(p.amount);});userMap[k].orders+=1;});
   if(loading)return <div style={{display:"flex",justifyContent:"center",padding:48}}><Spinner/></div>;
   return(
@@ -1017,31 +1044,43 @@ function Transactions({user,showToast}){
 }
 
 function EditTxnModal({txn,onSave,onClose}){
-  const [pays,setPays]=useState(txn.payments.map(p=>({...p})));
-  const [boxAmt,setBoxAmt]=useState(txn.boxAmount||"");const [boxMode,setBoxMode]=useState(txn.boxMode||"Cash");const [reason,setReason]=useState("");
-  const orig={payments:txn.payments.map(p=>({...p})),boxAmount:txn.boxAmount,boxMode:txn.boxMode};
+  const [orderNo,setOrderNo]=useState(txn.orderNo);
+  const [pays,setPays]=useState(txn.payments.map(p=>({...p,amount:String(p.amount)})));
+  const [reason,setReason]=useState("");
+  const orig={payments:txn.payments.map(p=>({...p}))};
+  const canSave = orderNo.trim() && pays.every(p=>p.amount&&!isNaN(p.amount)&&Number(p.amount)>0) && reason.trim();
   return(
     <Modal open title={`Edit Order #${txn.orderNo}`} onClose={onClose} width={460}>
       <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",marginBottom:14}}>
         <div style={{fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Current Values</div>
+        <div style={{fontSize:13,color:C.sub}}>Order #{txn.orderNo}</div>
         {txn.payments.map((p,i)=><div key={i} style={{fontSize:13,color:C.sub}}>{p.mode}: {inr(p.amount)}</div>)}
-        {txn.boxAmount>0&&<div style={{fontSize:13,color:C.sub}}>Box ({txn.boxMode}): {inr(txn.boxAmount)}</div>}
       </div>
+      <Field label="Order Number"><Inp value={orderNo} onChange={setOrderNo} placeholder="Order number"/></Field>
       {pays.map((p,i)=>(
         <div key={i} style={{marginBottom:14}}>
-          <Field label={i===0?"New Mode":"Split"}>
-            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>{PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={p.mode===m} onClick={()=>setPays(pays.map((x,j)=>j===i?{...x,mode:m}:x))}/>)}</div>
-            <Inp type="number" value={p.amount} onChange={v=>setPays(pays.map((x,j)=>j===i?{...x,amount:v}:x))} placeholder="Amount" large/>
+          <Field label={i===0?"Payment Mode":"Split Payment"}>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+              {PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={p.mode===m} onClick={()=>setPays(pays.map((x,j)=>j===i?{...x,mode:m}:x))}/>)}
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <Inp type="number" value={p.amount} onChange={v=>setPays(pays.map((x,j)=>j===i?{...x,amount:v}:x))} placeholder="Amount" large/>
+              {pays.length>1&&<button onClick={()=>setPays(pays.filter((_,j)=>j!==i))} style={{...BDn,flexShrink:0}}>✕</button>}
+            </div>
           </Field>
         </div>
       ))}
-      <Divider/>
-      <Field label="Box Mode"><Sel value={boxMode} onChange={setBoxMode} options={PAYMENT_MODES}/></Field>
-      <Field label="Box Amount"><Inp type="number" value={boxAmt} onChange={setBoxAmt} placeholder="0"/></Field>
+      {pays.length<2&&(
+        <button onClick={()=>setPays([...pays,{mode:"Cash",amount:""}])}
+          style={{background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:600,marginBottom:14}}>
+          + Split Payment
+        </button>
+      )}
       <Divider/>
       <Field label="Reason (required)"><textarea value={reason} onChange={e=>setReason(e.target.value)} rows={2} style={{...IS,resize:"vertical"}} placeholder="Why are you editing this?"/></Field>
       <div style={{display:"flex",gap:8}}>
-        <button onClick={()=>{if(!reason.trim())return;onSave({...txn,payments:pays.map(p=>({...p,amount:Number(p.amount)})),boxAmount:Number(boxAmt)||0,boxMode},reason,orig);}} style={{...BPr,flex:1}}>Save</button>
+        <button onClick={()=>{if(!canSave)return;onSave({...txn,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)}))},reason,orig);}}
+          disabled={!canSave} style={{...BPr,flex:1,opacity:canSave?1:.5}}>Save</button>
         <button onClick={onClose} style={{...BSc,flex:1}}>Cancel</button>
       </div>
     </Modal>
@@ -1058,18 +1097,23 @@ function Reports(){
     setDateErr("");if(from>to){setDateErr("'From' date cannot be after 'To' date.");return;}setLoading(true);
     let txns=(await sget("transactions")||[]).filter(t=>t.day>=from&&t.day<=to);
     let rfs=(await sget("refunds")||[]).filter(r=>r.day>=from&&r.day<=to);
-    if(sel!=="all"){txns=txns.filter(t=>t.outletId===sel);rfs=rfs.filter(r=>r.outletId===sel);}
+    let boxes=(await sget("boxCharges")||[]).filter(b=>b.day>=from&&b.day<=to);
+    if(sel!=="all"){txns=txns.filter(t=>t.outletId===sel);rfs=rfs.filter(r=>r.outletId===sel);boxes=boxes.filter(b=>b.outletId===sel);}
     if(selMode!=="all")txns=txns.filter(t=>t.payments.some(p=>p.mode===selMode));
     const mt={};PAYMENT_MODES.forEach(m=>{mt[m]={amount:0,count:0};});
     txns.forEach(t=>{t.payments.forEach(p=>{mt[p.mode].amount+=Number(p.amount);mt[p.mode].count+=1;});if(t.boxAmount)mt[t.boxMode||"Cash"].amount+=Number(t.boxAmount);});
+    boxes.forEach(b=>{mt[b.mode].amount+=Number(b.amount);});
     const byDay={};
     txns.forEach(t=>{if(!byDay[t.day])byDay[t.day]={total:0,orders:0,refunds:0};t.payments.forEach(p=>{byDay[t.day].total+=Number(p.amount);});if(t.boxAmount)byDay[t.day].total+=Number(t.boxAmount);byDay[t.day].orders+=1;});
+    boxes.forEach(b=>{if(!byDay[b.day])byDay[b.day]={total:0,orders:0,refunds:0};byDay[b.day].total+=Number(b.amount);});
     rfs.forEach(r=>{if(!byDay[r.day])byDay[r.day]={total:0,orders:0,refunds:0};byDay[r.day].refunds+=Number(r.amount);});
     const byOutlet={};txns.forEach(t=>{if(!byOutlet[t.outletId])byOutlet[t.outletId]={name:t.outletName,total:0,orders:0};t.payments.forEach(p=>{byOutlet[t.outletId].total+=Number(p.amount);});byOutlet[t.outletId].orders+=1;});
+    boxes.forEach(b=>{if(!byOutlet[b.outletId])byOutlet[b.outletId]={name:b.outletName,total:0,orders:0};byOutlet[b.outletId].total+=Number(b.amount);});
     const byUser={};txns.forEach(t=>{const k=t.createdBy||"?";if(!byUser[k])byUser[k]={name:t.createdByName||k,orders:0,total:0};t.payments.forEach(p=>{byUser[k].total+=Number(p.amount);});byUser[k].orders+=1;});
     const totalSales=Object.values(mt).reduce((s,v)=>s+v.amount,0);
     const totalRef=rfs.reduce((s,r)=>s+Number(r.amount),0);
-    setRep({mt,byDay,byOutlet,byUser,totalSales,totalRef,cashInHand:(mt["Cash"]?.amount||0)-totalRef,count:txns.length});setLoading(false);
+    const totalBox=boxes.reduce((s,b)=>s+Number(b.amount),0);
+    setRep({mt,byDay,byOutlet,byUser,totalSales,totalRef,totalBox,cashInHand:(mt["Cash"]?.amount||0)-totalRef,count:txns.length});setLoading(false);
   };
   const csv=()=>{
     if(!rep)return;
