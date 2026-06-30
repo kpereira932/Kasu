@@ -3,10 +3,10 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const PAYMENT_MODES = ["Cash","PhonePe QR Fail","Pine Labs QR Fail","Pine Labs Card Fail","Stag QR","Comp"];
-const BMO_PAYMENT_MODES = ["Cash","Stag QR","Pine Labs Card Fail"];
-const MODE_COLORS = {"Cash":"#16a34a","PhonePe QR Fail":"#ea580c","Pine Labs QR Fail":"#dc2626","Pine Labs Card Fail":"#b91c1c","Stag QR":"#7c3aed","Comp":"#64748b"};
-const MODE_BG    = {"Cash":"#f0fdf4","PhonePe QR Fail":"#fff7ed","Pine Labs QR Fail":"#fef2f2","Pine Labs Card Fail":"#fef2f2","Stag QR":"#f5f3ff","Comp":"#f8fafc"};
+const PAYMENT_MODES = ["Cash","PhonePe QR Fail","Pine QR Fail","Pine Card Fail","Stag QR","Comp"];
+const BMO_PAYMENT_MODES = ["Cash","Stag QR","Pine Card Fail"];
+const MODE_COLORS = {"Cash":"#16a34a","PhonePe QR Fail":"#ea580c","Pine QR Fail":"#dc2626","Pine Card Fail":"#b91c1c","Stag QR":"#7c3aed","Comp":"#64748b"};
+const MODE_BG    = {"Cash":"#f0fdf4","PhonePe QR Fail":"#fff7ed","Pine QR Fail":"#fef2f2","Pine Card Fail":"#fef2f2","Stag QR":"#f5f3ff","Comp":"#f8fafc"};
 const C = {
   bg:"#F8FAFC",surface:"#FFFFFF",border:"#E2E8F0",
   text:"#0F172A",sub:"#64748B",muted:"#94A3B8",
@@ -59,12 +59,24 @@ const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
+const LEGACY_MODE_MAP = {"Pine Labs QR Fail":"Pine QR Fail","Pine Labs Card Fail":"Pine Card Fail"};
+function fixMode(m){return LEGACY_MODE_MAP[m]||m;}
+function migrateTxns(arr){
+  if(!Array.isArray(arr))return arr;
+  return arr.map(t=>({
+    ...t,
+    payments:Array.isArray(t.payments)?t.payments.map(p=>({...p,mode:fixMode(p.mode)})):t.payments,
+    boxMode:t.boxMode?fixMode(t.boxMode):t.boxMode
+  }));
+}
 const cache = {};
 async function sget(key) {
   if (cache[key]!==undefined) return cache[key];
   try {
     const snap = await getDoc(doc(db,"kasu",key));
-    cache[key] = snap.exists() ? snap.data().value : null;
+    let val = snap.exists() ? snap.data().value : null;
+    if (key==="transactions" && val) val = migrateTxns(val);
+    cache[key] = val;
     return cache[key];
   } catch(e) { console.error("sget",key,e); return null; }
 }
@@ -393,7 +405,7 @@ function OutletApp({user,onLogout,showToast,onBMO}){
           <div><div style={{fontWeight:800,fontSize:15,color:C.text,letterSpacing:"-0.3px"}}>ಕಾಸು</div><div style={{color:C.sub,fontSize:11}}>{user.name}</div></div>
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-          <button onClick={onBMO} style={{background:C.bmoLight,color:C.bmo,border:`1px solid ${C.bmoBorder}`,borderRadius:10,padding:"7px 12px",fontWeight:800,fontSize:12,cursor:"pointer",letterSpacing:".5px"}}>BMO</button>
+          <button onClick={onBMO} title="Emergency manual ordering — use only if POS is down" style={{background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:10,padding:"7px 12px",fontWeight:800,fontSize:12,cursor:"pointer",letterSpacing:".5px",display:"flex",alignItems:"center",gap:5,boxShadow:`0 0 0 3px ${C.dangerLight}`}}>⚠ BMO</button>
           {!dayDone?<button onClick={()=>setDayModal(true)} style={{background:C.warnLight,color:C.warn,border:`1px solid ${C.warnBorder}`,borderRadius:10,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>Day End</button>
           :<Badge label="Day Closed" color={C.success} bg={C.successLight} border={C.successBorder}/>}
           <button onClick={onLogout} style={{...BSc,padding:"7px 10px",fontSize:12}}>Logout</button>
@@ -445,21 +457,28 @@ function OutletApp({user,onLogout,showToast,onBMO}){
 }
 
 // ─── Entry Screen ─────────────────────────────────────────────────────────────
+const BOX_ITEMS = [
+  {key:"food",label:"Food Box",icon:"📦",rate:20},
+  {key:"cup",label:"Takeaway Cup",icon:"🥤",rate:10},
+];
+
 function EntryScreen({user,dayDone,onSaved,showToast,txns}){
   const [orderNo,setOrderNo]=useState("");
   const [pays,setPays]=useState([{mode:"Cash",amount:""}]);
   const [boxMode,setBoxMode]=useState("Cash");
-  const [boxAmt,setBoxAmt]=useState("");
+  const [boxQty,setBoxQty]=useState({food:0,cup:0});
   const [boxEnabled,setBoxEnabled]=useState(false);
   const [busy,setBusy]=useState(false);
   const [errors,setErrors]=useState({});
   const [dupWarn,setDupWarn]=useState(false);
   const [dupConfirm,setDupConfirm]=useState(false);
+  const [showGuide,setShowGuide]=useState(false);
   const orderRef=useRef(null);
   const amt0Ref=useRef(null);
   const amt1Ref=useRef(null);
-  const boxAmtRef=useRef(null);
   const saveRef=useRef(null);
+
+  const boxTotal = boxQty.food*BOX_ITEMS[0].rate + boxQty.cup*BOX_ITEMS[1].rate;
 
   const checkDup=useCallback((val)=>{if(!val.trim()){setDupWarn(false);return;}setDupWarn(txns.some(t=>t.orderNo===val.trim()));},[txns]);
 
@@ -467,7 +486,7 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
     const e={};
     if(!orderNo.trim())e.orderNo="Order number is required.";
     pays.forEach((p,i)=>{if(!p.amount||isNaN(p.amount)||Number(p.amount)<=0)e[`amt${i}`]="Enter a valid amount (>0).";else if(Number(p.amount)>999999)e[`amt${i}`]="Amount seems too large.";});
-    if(boxEnabled&&(!boxAmt||isNaN(boxAmt)||Number(boxAmt)<=0))e.boxAmt="Enter a valid box amount.";
+    if(boxEnabled&&boxTotal<=0)e.boxAmt="Add at least 1 box or cup.";
     return e;
   };
 
@@ -476,9 +495,12 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
   const doSave=async()=>{
     setDupConfirm(false);setBusy(true);
     const all=await sget("transactions")||[];
-    all.push({id:`t${Date.now()}`,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)})),boxAmount:boxEnabled?Number(boxAmt):0,boxMode:boxEnabled?boxMode:"Cash",outletId:user.outlets[0],outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
+    all.push({id:`t${Date.now()}`,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)})),
+      boxAmount:boxEnabled?boxTotal:0,boxMode:boxEnabled?boxMode:"Cash",
+      boxItems:boxEnabled?{food:boxQty.food,cup:boxQty.cup}:null,
+      outletId:user.outlets[0],outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
     await sset("transactions",all);await addLog("ADD_TXN",user.id,"Order "+orderNo.trim());
-    setOrderNo("");setPays([{mode:"Cash",amount:""}]);setBoxAmt("");setBoxEnabled(false);setBoxMode("Cash");setErrors({});setDupWarn(false);
+    setOrderNo("");setPays([{mode:"Cash",amount:""}]);setBoxQty({food:0,cup:0});setBoxEnabled(false);setBoxMode("Cash");setErrors({});setDupWarn(false);
     setBusy(false);showToast("Order #"+orderNo.trim()+" saved!","success");onSaved();
     setTimeout(()=>orderRef.current&&orderRef.current.focus(),100);
   };
@@ -487,22 +509,13 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
   const onOrderKeyDown=e=>{
     if(e.key==="Enter"){e.preventDefault();amt0Ref.current&&amt0Ref.current.focus();}
   };
-  // Keyboard: Enter on amount → jump to box amt if enabled, else save
+  // Keyboard: Enter on amount → save (box qty uses +/- buttons, not tab flow)
   const onAmt0KeyDown=e=>{
-    if(e.key==="Enter"){e.preventDefault();if(boxEnabled&&boxAmtRef.current)boxAmtRef.current.focus();else trySave();}
-  };
-  const onAmt1KeyDown=e=>{
-    if(e.key==="Enter"){e.preventDefault();if(boxEnabled&&boxAmtRef.current)boxAmtRef.current.focus();else trySave();}
-  };
-  const onBoxAmtKeyDown=e=>{
     if(e.key==="Enter"){e.preventDefault();trySave();}
   };
-
-  const selStyle=(active,color)=>({
-    padding:"9px 14px",borderRadius:9,border:`1.5px solid ${active?color:C.border}`,
-    background:active?color:"#fff",color:active?"#fff":C.sub,
-    fontWeight:600,fontSize:13,cursor:"pointer",whiteSpace:"nowrap",transition:"all .12s"
-  });
+  const onAmt1KeyDown=e=>{
+    if(e.key==="Enter"){e.preventDefault();trySave();}
+  };
 
   if(dayDone)return <div style={{padding:20}}><div style={{...Cd,textAlign:"center",padding:32}}><div style={{fontSize:36,marginBottom:12}}>🌙</div><div style={{fontWeight:700,fontSize:16,color:C.text,marginBottom:6}}>Day is Closed</div><div style={{color:C.sub,fontSize:13}}>No new entries after day end.</div></div></div>;
 
@@ -511,7 +524,21 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
       <div style={Cd}>
 
         {/* ── Order Number ── */}
-        <Field label="Order Number" error={errors.orderNo}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+          <label style={{fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:.4}}>Order Number</label>
+          <button onClick={()=>setShowGuide(g=>!g)} style={{background:"none",border:"none",color:C.accent,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:3}}>
+            {showGuide?"Hide guide":"? How this works"}
+          </button>
+        </div>
+        {showGuide&&(
+          <div style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:10,padding:"10px 12px",fontSize:12,color:C.text,marginBottom:10,lineHeight:1.6}}>
+            1. Type the order number, press <strong>Enter</strong> → jumps to Amount.<br/>
+            2. Enter amount, pick payment mode, press <strong>Enter</strong> → saves order.<br/>
+            3. Need a split payment? Tap <strong>+ Split Payment</strong>.<br/>
+            4. Selling takeaway? Turn on <strong>Box / Cup Charges</strong> and tap +/− to count items — total is calculated for you.
+          </div>
+        )}
+        <Field error={errors.orderNo}>
           <input ref={orderRef} type="text" value={orderNo}
             onChange={e=>{setOrderNo(e.target.value);checkDup(e.target.value);setErrors(ev=>({...ev,orderNo:""}));}}
             onKeyDown={onOrderKeyDown}
@@ -559,7 +586,7 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
           </button>
         )}
 
-        {/* ── Box Charges ── */}
+        {/* ── Box / Cup Charges ── */}
         <div style={{height:1,background:C.border,margin:"14px 0"}}/>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:boxEnabled?12:0}}>
           <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",userSelect:"none"}}>
@@ -567,31 +594,43 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
               style={{width:38,height:22,borderRadius:11,background:boxEnabled?C.accent:C.border,position:"relative",transition:"background .2s",flexShrink:0,cursor:"pointer"}}>
               <div style={{position:"absolute",top:3,left:boxEnabled?18:3,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.2)"}}/>
             </div>
-            <span style={{fontWeight:700,fontSize:13,color:C.text}}>📦 Box Charges</span>
+            <span style={{fontWeight:700,fontSize:13,color:C.text}}>📦 Box / Cup Charges</span>
           </label>
-          {boxEnabled&&<span style={{fontSize:12,color:C.sub}}>tab to amount → Enter to save</span>}
+          {boxEnabled&&boxTotal>0&&<span style={{fontSize:13,fontWeight:800,color:C.accent}}>{inr(boxTotal)}</span>}
         </div>
 
         {boxEnabled&&(
           <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,padding:14,marginBottom:4}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <div>
-                <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Amount (₹)</label>
-                <input ref={boxAmtRef} type="number" value={boxAmt}
-                  onChange={e=>{setBoxAmt(e.target.value);setErrors(ev=>({...ev,boxAmt:""}));}}
-                  onKeyDown={onBoxAmtKeyDown}
-                  placeholder="0"
-                  style={{...IS,fontSize:22,fontWeight:800,padding:"10px 14px",borderColor:errors.boxAmt?C.danger:C.border}}/>
-                {errors.boxAmt&&<div style={{color:C.danger,fontSize:11,marginTop:3}}>⚠ {errors.boxAmt}</div>}
+            {BOX_ITEMS.map(bi=>(
+              <div key={bi.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,gap:10}}>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:13,color:C.text}}>{bi.icon} {bi.label}</div>
+                  <div style={{fontSize:11,color:C.muted}}>₹{bi.rate} each</div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <button onClick={()=>setBoxQty(q=>({...q,[bi.key]:Math.max(0,q[bi.key]-1)}))}
+                    style={{width:32,height:32,borderRadius:8,border:`1.5px solid ${C.border}`,background:"#fff",fontSize:16,fontWeight:700,cursor:"pointer",color:C.sub}}>−</button>
+                  <span style={{minWidth:22,textAlign:"center",fontWeight:800,fontSize:15,color:C.text}}>{boxQty[bi.key]}</span>
+                  <button onClick={()=>setBoxQty(q=>({...q,[bi.key]:q[bi.key]+1}))}
+                    style={{width:32,height:32,borderRadius:8,border:`1.5px solid ${C.accent}`,background:C.accentLight,fontSize:16,fontWeight:700,cursor:"pointer",color:C.accent}}>+</button>
+                </div>
               </div>
-              <div>
-                <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Mode</label>
+            ))}
+            <div style={{height:1,background:C.border,margin:"4px 0 10px"}}/>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+              <div style={{flex:1}}>
+                <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Payment Mode</label>
                 <select value={boxMode} onChange={e=>setBoxMode(e.target.value)}
                   style={{...IS,fontSize:14,fontWeight:600,color:MODE_COLORS[boxMode],background:MODE_BG[boxMode],border:`1.5px solid ${MODE_COLORS[boxMode]}55`,padding:"10px 12px"}}>
                   {BMO_PAYMENT_MODES.map(m=><option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3}}>Total</div>
+                <div style={{fontSize:20,fontWeight:800,color:C.text}}>{inr(boxTotal)}</div>
+              </div>
             </div>
+            {errors.boxAmt&&<div style={{color:C.danger,fontSize:11,marginTop:8}}>⚠ {errors.boxAmt}</div>}
           </div>
         )}
 
@@ -790,7 +829,7 @@ function AdminApp({user,onLogout,showToast,onBMO}){
         <Badge label={user.role.toUpperCase()} color={C.accent} bg={C.accentLight} border={C.accentBorder}/>
       </div>
       <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}`}}>
-        <button onClick={()=>{setMenuOpen(false);onBMO();}} style={{width:"100%",background:C.bmoLight,color:C.bmo,border:`1px solid ${C.bmoBorder}`,borderRadius:10,padding:"10px",fontWeight:800,fontSize:14,cursor:"pointer",letterSpacing:".5px"}}>🍽 BMO</button>
+        <button onClick={()=>{setMenuOpen(false);onBMO();}} title="Emergency manual ordering — use only if POS is down" style={{width:"100%",background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:10,padding:"10px",fontWeight:800,fontSize:14,cursor:"pointer",letterSpacing:".5px",boxShadow:`0 0 0 3px ${C.dangerLight}`}}>⚠ BMO — Emergency Orders</button>
       </div>
       <nav style={{flex:1,padding:"6px 0",overflowY:"auto"}}>
         {navItems.map(n=>(
@@ -817,7 +856,7 @@ function AdminApp({user,onLogout,showToast,onBMO}){
               <div style={{fontWeight:700,fontSize:15,color:C.text}}>{navItems.find(n=>n.id===screen)?.label||"Kāsu"}</div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <button onClick={onBMO} style={{background:C.bmoLight,color:C.bmo,border:`1px solid ${C.bmoBorder}`,borderRadius:8,padding:"6px 10px",fontWeight:800,fontSize:12,cursor:"pointer"}}>BMO</button>
+              <button onClick={onBMO} title="Emergency manual ordering" style={{background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:8,padding:"6px 10px",fontWeight:800,fontSize:12,cursor:"pointer",boxShadow:`0 0 0 2px ${C.dangerLight}`}}>⚠ BMO</button>
               <button onClick={onLogout} style={{...BSc,padding:"6px 10px",fontSize:11}}>Logout</button>
             </div>
           </div>
