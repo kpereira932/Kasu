@@ -71,19 +71,29 @@ function migrateTxns(arr){
 }
 const cache = {};
 async function sget(key) {
+  // Never cache transactions - always read fresh
+  if(key==="transactions"){
+    try {
+      const snap = await getDoc(doc(db,"kasu",key));
+      if(!snap.exists()) return null;
+      const data = snap.data();
+      let val = "value" in data ? data.value : null;
+      if(Array.isArray(val)) val=migrateTxns(val);
+      return val;
+    } catch(e){console.error("sget",key,e);return null;}
+  }
   if (cache[key]!==undefined) return cache[key];
   try {
     const snap = await getDoc(doc(db,"kasu",key));
     if(!snap.exists()){cache[key]=null;return null;}
     const data = snap.data();
-    let val = "value" in data ? data.value : null;
-    if(key==="transactions"&&Array.isArray(val)) val=migrateTxns(val);
+    const val = "value" in data ? data.value : null;
     cache[key]=val;
     return val;
   } catch(e){console.error("sget",key,e);return null;}
 }
 async function sset(key,val){
-  cache[key]=val;
+  if(key!=="transactions") cache[key]=val;
   try { await setDoc(doc(db,"kasu",key),{value:val}); }
   catch(e){console.error("sset",key,e);}
 }
@@ -91,7 +101,6 @@ function clearCache(k){delete cache[k];}
 
 // Atomically append a transaction - prevents race conditions between outlets
 async function appendTxn(txn){
-  clearCache("transactions");
   try {
     const ref=doc(db,"kasu","transactions");
     await runTransaction(db,async t=>{
@@ -99,12 +108,8 @@ async function appendTxn(txn){
       const arr=snap.exists()&&snap.data().value?migrateTxns(snap.data().value):[];
       t.set(ref,{value:[...arr,txn]});
     });
-    clearCache("transactions");
   } catch(e){
-    console.error("appendTxn failed, falling back",e);
-    const all=await sget("transactions")||[];
-    all.push(txn);
-    await sset("transactions",all);
+    console.error("appendTxn error",e);
   }
 }
 
@@ -420,7 +425,6 @@ function OutletApp({user,onLogout,showToast,onBMO}){
   const outletId=user.outlets[0];
 
   const load=useCallback(async()=>{
-    clearCache("transactions");clearCache("refunds");clearCache("boxCharges");clearCache("dayStatus");
     const [all,allR,allB,ds]=await Promise.all([getAllTxns(),sget("refunds"),sget("boxCharges"),sget("dayStatus")]);
     setTxns((all||[]).filter(t=>t&&t.outletId===outletId&&t.day===TODAY));
     setRefs((allR||[]).filter(r=>r&&r.outletId===outletId&&r.day===TODAY));
