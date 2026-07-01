@@ -71,23 +71,17 @@ function migrateTxns(arr){
 }
 const cache = {};
 async function sget(key) {
-  if (cache[key]!==undefined) return cache[key];
+  delete cache[key]; // Always fetch fresh from Firestore
   try {
     const snap = await getDoc(doc(db,"kasu",key));
     if(!snap.exists()){cache[key]=null;return null;}
     const data = snap.data();
     let val;
     if("value" in data){
-      // Correct format: {value: [...]}
       val = data.value;
-    } else if(Array.isArray(data)){
-      // Direct array (shouldn't happen in Firestore but just in case)
-      val = data;
     } else if("id" in data && "day" in data){
-      // Single object stored directly — wrap in array
       val = [data];
     } else {
-      // Unknown format — return null
       val = null;
     }
     if (key==="transactions" && val) val = migrateTxns(val);
@@ -1109,7 +1103,9 @@ function AdminApp({user,onLogout,showToast,onBMO}){
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 function Dashboard({user}){
   const [txns,setTxns]=useState([]);const [refs,setRefs]=useState([]);const [boxCharges,setBoxCharges]=useState([]);const [outlets,setOutlets]=useState([]);const [dayStatus,setDayStatus]=useState({});const [loading,setLoading]=useState(true);
-  useEffect(()=>{Promise.all([sget("transactions"),sget("refunds"),sget("boxCharges"),sget("outlets"),sget("dayStatus")]).then(([a,b,bx,o,ds])=>{setTxns((a||[]).filter(t=>t.day===TODAY));setRefs((b||[]).filter(r=>r.day===TODAY));setBoxCharges((bx||[]).filter(x=>x.day===TODAY));setOutlets(o||[]);setDayStatus(ds||{});setLoading(false);});},[]);
+  useEffect(()=>{
+    Promise.all([sget("transactions"),sget("refunds"),sget("boxCharges"),sget("outlets"),sget("dayStatus")]).then(([a,b,bx,o,ds])=>{setTxns((a||[]).filter(t=>t.day===TODAY));setRefs((b||[]).filter(r=>r.day===TODAY));setBoxCharges((bx||[]).filter(x=>x.day===TODAY));setOutlets(o||[]);setDayStatus(ds||{});setLoading(false);});
+  },[]);
   const totals={};PAYMENT_MODES.forEach(m=>{totals[m]=0;});
   txns.forEach(t=>{t.payments.forEach(p=>{totals[p.mode]=(totals[p.mode]||0)+Number(p.amount);});if(t.boxAmount)totals[t.boxMode||"Cash"]=(totals[t.boxMode||"Cash"]||0)+Number(t.boxAmount);});
   boxCharges.forEach(b=>{totals[b.mode]=(totals[b.mode]||0)+Number(b.amount);});
@@ -1191,7 +1187,11 @@ function Transactions({user,showToast}){
   const [all,setAll]=useState([]);const [refs,setRefs]=useState([]);const [outlets,setOutlets]=useState([]);
   const [fO,setFO]=useState("all");const [fD,setFD]=useState(TODAY);const [fM,setFM]=useState("all");const [search,setSearch]=useState("");
   const [editTxn,setEditTxn]=useState(null);const [delTxn,setDelTxn]=useState(null);const [loading,setLoading]=useState(true);
-  const load=useCallback(async()=>{const [t,r,o]=await Promise.all([sget("transactions"),sget("refunds"),sget("outlets")]);setAll(t||[]);setRefs(r||[]);setOutlets(o||[]);setLoading(false);},[]);
+  const load=useCallback(async()=>{
+    // Always bypass cache for admin to get fresh data from Firestore
+    const [t,r,o]=await Promise.all([sget("transactions"),sget("refunds"),sget("outlets")]);
+    setAll(t||[]);setRefs(r||[]);setOutlets(o||[]);setLoading(false);
+  },[]);
   useEffect(()=>{load();},[load]);
   const doDelete=async(reason)=>{if(!delTxn)return;const u=all.filter(t=>t.id!==delTxn.id);await sset("transactions",u);await addLog("DEL_TXN",user.id,"Deleted order "+delTxn.orderNo,reason);setAll(u);setDelTxn(null);showToast("Deleted","success");};
   const doEdit=async(updated,reason,oldVals)=>{const u=all.map(t=>t.id===updated.id?updated:t);await sset("transactions",u);await addLog("EDIT_TXN",user.id,"Edited order "+updated.orderNo,reason,{oldPayments:oldVals.payments,newPayments:updated.payments});setAll(u);setEditTxn(null);showToast("Updated","success");};
