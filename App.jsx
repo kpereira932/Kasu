@@ -429,10 +429,7 @@ function OutletApp({user,onLogout,showToast,onBMO}){
 
   const load=useCallback(async()=>{
     const [all,allR,allB,ds]=await Promise.all([getAllTxns(),sget("refunds"),sget("boxCharges"),sget("dayStatus")]);
-    console.log("DEBUG load - outletId:",outletId,"TODAY:",TODAY,"all txns count:",all?.length,"sample:",all?.[0]);
-    const filtered=(all||[]).filter(t=>t&&t.outletId===outletId&&t.day===TODAY);
-    console.log("DEBUG filtered txns:",filtered.length, filtered.map(t=>({id:t.id,day:t.day,outlet:t.outletId})));
-    setTxns(filtered);
+    setTxns((all||[]).filter(t=>t&&t.outletId===outletId&&t.day===TODAY));
     setRefs((allR||[]).filter(r=>r&&r.outletId===outletId&&r.day===TODAY));
     setBoxCharges((allB||[]).filter(b=>b&&b.outletId===outletId&&b.day===TODAY));
     if((ds||{})[outletId]===TODAY)setDayDone(true);
