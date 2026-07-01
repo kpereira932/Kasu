@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion } from "firebase/firestore";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PAYMENT_MODES = ["Cash","PhonePe QR Fail","Pine QR Fail","Pine Card Fail","Stag QR","Comp"];
@@ -71,21 +71,13 @@ function migrateTxns(arr){
 }
 const cache = {};
 async function sget(key) {
-  delete cache[key]; // Always fetch fresh from Firestore
+  if (cache[key]!==undefined) return cache[key];
   try {
     const snap = await getDoc(doc(db,"kasu",key));
     if(!snap.exists()){cache[key]=null;return null;}
     const data = snap.data();
-    let val;
-    if("value" in data){
-      val = data.value;
-    } else if("id" in data && "day" in data){
-      val = [data];
-    } else {
-      val = null;
-    }
-    // Migrate legacy mode names for any transaction array
-    if(Array.isArray(val) && (key==="transactions" || key.startsWith("transactions_"))) val = migrateTxns(val);
+    let val = "value" in data ? data.value : ("id" in data && "day" in data ? [data] : null);
+    if(Array.isArray(val)&&(key==="transactions"||key.startsWith("transactions_"))) val=migrateTxns(val);
     cache[key] = val;
     return cache[key];
   } catch(e) { console.error("sget",key,e); return null; }
@@ -97,35 +89,50 @@ async function sset(key,val){
 }
 function clearCache(k){delete cache[k];}
 
-// ─── Per-outlet transaction storage (fixes race condition) ────────────────────
-// Outlets write to their own key; admin merges all
+// ─── Per-outlet transaction storage ──────────────────────────────────────────
 const OUTLET_IDS = ["o1","o2","o3","o4"];
 function txnKey(outletId){return `transactions_${outletId}`;}
 
-async function getTxnsForOutlet(outletId){
-  return await sget(txnKey(outletId))||[];
+// Atomically append a single transaction to an outlet's document
+async function appendTxn(outletId, txn){
+  clearCache(txnKey(outletId));
+  const key=txnKey(outletId);
+  const existing=await sget(key)||[];
+  existing.push(txn);
+  await sset(key,existing);
 }
+
+// Read all transactions across all outlets + legacy doc, deduplicated
 async function getAllTxns(){
-  const results=await Promise.all(OUTLET_IDS.map(id=>sget(txnKey(id))));
-  const legacy=await sget("transactions")||[];
-  const all=[...legacy,...results.flat()].filter(Boolean);
+  const keys=["transactions",...OUTLET_IDS.map(id=>txnKey(id))];
+  const results=await Promise.all(keys.map(k=>sget(k)));
+  const all=results.flat().filter(t=>t&&t.id);
   const seen=new Set();
-  return all.filter(t=>{
-    if(!t||!t.id)return false;
-    if(seen.has(t.id))return false;
-    seen.add(t.id);return true;
-  });
+  return all.filter(t=>{if(seen.has(t.id))return false;seen.add(t.id);return true;});
 }
-async function saveTxnsForOutlet(outletId,txns){
-  await sset(txnKey(outletId),txns);
-}
-async function updateTxnAcrossOutlets(updater){
-  for(const id of OUTLET_IDS){
-    const txns=await sget(txnKey(id))||[];
-    await sset(txnKey(id),updater(txns));
+
+// Update a single transaction across all stores that contain it
+async function updateOneTxn(updatedTxn){
+  const keys=["transactions",...OUTLET_IDS.map(id=>txnKey(id))];
+  for(const key of keys){
+    const arr=cache[key];
+    if(Array.isArray(arr)&&arr.some(t=>t.id===updatedTxn.id)){
+      const next=arr.map(t=>t.id===updatedTxn.id?updatedTxn:t);
+      await sset(key,next);
+    }
   }
-  const legacy=await sget("transactions")||[];
-  if(legacy.length>0) await sset("transactions",updater(legacy));
+}
+
+// Delete a single transaction across all stores that contain it
+async function deleteOneTxn(id){
+  const keys=["transactions",...OUTLET_IDS.map(id=>txnKey(id))];
+  for(const key of keys){
+    const arr=cache[key];
+    if(Array.isArray(arr)&&arr.some(t=>t.id===id)){
+      const next=arr.filter(t=>t.id!==id);
+      await sset(key,next);
+    }
+  }
 }
 
 // ─── Benne Logo ───────────────────────────────────────────────────────────────
@@ -454,9 +461,7 @@ function OutletApp({user,onLogout,showToast,onBMO}){
 
   const canEdit=t=>t.day===TODAY;
   const doEdit=async(updated,reason,oldVals)=>{
-    const all=await getTxnsForOutlet(outletId);
-    const u=all.map(t=>t.id===updated.id?updated:t);
-    await saveTxnsForOutlet(outletId,u);
+    await updateOneTxn(updated);
     await addLog("EDIT_TXN",user.id,"Edited order "+updated.orderNo,reason,{oldPayments:oldVals.payments,newPayments:updated.payments});
     showToast("Order updated","success");load();
   };
@@ -577,11 +582,11 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
   const doSave=async()=>{
     setDupConfirm(false);setBusy(true);
     const outletId=user.outlets[0];
-    const all=await getTxnsForOutlet(outletId);
-    all.push({id:`t${Date.now()}`,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)})),
+    const txn={id:`t${Date.now()}`,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)})),
       boxAmount:0,boxMode:"Cash",boxItems:null,compReason:hasComp?compReason.trim():"",
-      outletId,outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
-    await saveTxnsForOutlet(outletId,all);await addLog("ADD_TXN",user.id,"Order "+orderNo.trim()+(hasComp?` [Comp: ${compReason.trim()}]`:""));
+      outletId,outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name};
+    await appendTxn(outletId,txn);
+    await addLog("ADD_TXN",user.id,"Order "+orderNo.trim()+(hasComp?` [Comp: ${compReason.trim()}]`:""));
     setOrderNo("");setPays([{mode:"Cash",amount:""}]);setCompReason("");setErrors({});setDupWarn(false);
     setBusy(false);showToast("Order #"+orderNo.trim()+" saved!","success");onSaved();
     setTimeout(()=>orderRef.current&&orderRef.current.focus(),100);
@@ -1228,12 +1233,12 @@ function Transactions({user,showToast}){
   useEffect(()=>{load();},[load]);
   const doDelete=async(reason)=>{
     if(!delTxn)return;
-    await updateTxnAcrossOutlets(txns=>txns.filter(t=>t.id!==delTxn.id));
+    await deleteOneTxn(delTxn.id);
     await addLog("DEL_TXN",user.id,"Deleted order "+delTxn.orderNo,reason);
     setAll(all.filter(t=>t.id!==delTxn.id));setDelTxn(null);showToast("Deleted","success");
   };
   const doEdit=async(updated,reason,oldVals)=>{
-    await updateTxnAcrossOutlets(txns=>txns.map(t=>t.id===updated.id?updated:t));
+    await updateOneTxn(updated);
     await addLog("EDIT_TXN",user.id,"Edited order "+updated.orderNo,reason,{oldPayments:oldVals.payments,newPayments:updated.payments});
     setAll(all.map(t=>t.id===updated.id?updated:t));setEditTxn(null);showToast("Updated","success");
   };
