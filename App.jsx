@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, runTransaction } from "firebase/firestore";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PAYMENT_MODES = ["Cash","PhonePe QR Fail","Pine QR Fail","Pine Card Fail","Stag QR","Comp"];
@@ -76,63 +76,51 @@ async function sget(key) {
     const snap = await getDoc(doc(db,"kasu",key));
     if(!snap.exists()){cache[key]=null;return null;}
     const data = snap.data();
-    let val = "value" in data ? data.value : ("id" in data && "day" in data ? [data] : null);
-    if(Array.isArray(val)&&(key==="transactions"||key.startsWith("transactions_"))) val=migrateTxns(val);
-    cache[key] = val;
-    return cache[key];
-  } catch(e) { console.error("sget",key,e); return null; }
+    let val = "value" in data ? data.value : null;
+    if(key==="transactions"&&Array.isArray(val)) val=migrateTxns(val);
+    cache[key]=val;
+    return val;
+  } catch(e){console.error("sget",key,e);return null;}
 }
 async function sset(key,val){
   cache[key]=val;
   try { await setDoc(doc(db,"kasu",key),{value:val}); }
-  catch(e){ console.error("sset",key,e); }
+  catch(e){console.error("sset",key,e);}
 }
 function clearCache(k){delete cache[k];}
 
-// ─── Per-outlet transaction storage ──────────────────────────────────────────
-const OUTLET_IDS = ["o1","o2","o3","o4"];
-function txnKey(outletId){return `transactions_${outletId}`;}
-
-// Atomically append a single transaction to an outlet's document
-async function appendTxn(outletId, txn){
-  clearCache(txnKey(outletId));
-  const key=txnKey(outletId);
-  const existing=await sget(key)||[];
-  existing.push(txn);
-  await sset(key,existing);
-}
-
-// Read all transactions across all outlets + legacy doc, deduplicated
-async function getAllTxns(){
-  const keys=["transactions",...OUTLET_IDS.map(id=>txnKey(id))];
-  const results=await Promise.all(keys.map(k=>sget(k)));
-  const all=results.flat().filter(t=>t&&t.id);
-  const seen=new Set();
-  return all.filter(t=>{if(seen.has(t.id))return false;seen.add(t.id);return true;});
-}
-
-// Update a single transaction across all stores that contain it
-async function updateOneTxn(updatedTxn){
-  const keys=["transactions",...OUTLET_IDS.map(id=>txnKey(id))];
-  for(const key of keys){
-    const arr=cache[key];
-    if(Array.isArray(arr)&&arr.some(t=>t.id===updatedTxn.id)){
-      const next=arr.map(t=>t.id===updatedTxn.id?updatedTxn:t);
-      await sset(key,next);
-    }
+// Atomically append a transaction - prevents race conditions between outlets
+async function appendTxn(txn){
+  clearCache("transactions");
+  try {
+    const ref=doc(db,"kasu","transactions");
+    await runTransaction(db,async t=>{
+      const snap=await t.get(ref);
+      const arr=snap.exists()&&snap.data().value?migrateTxns(snap.data().value):[];
+      t.set(ref,{value:[...arr,txn]});
+    });
+    // Refresh cache after transaction
+    clearCache("transactions");
+    await sget("transactions");
+  } catch(e){
+    console.error("appendTxn failed, falling back",e);
+    // Fallback: read-modify-write
+    const all=await sget("transactions")||[];
+    all.push(txn);
+    await sset("transactions",all);
   }
 }
 
-// Delete a single transaction across all stores that contain it
+async function getAllTxns(){return await sget("transactions")||[];}
+
+async function updateOneTxn(updated){
+  const all=await getAllTxns();
+  const next=all.map(t=>t.id===updated.id?updated:t);
+  await sset("transactions",next);
+}
 async function deleteOneTxn(id){
-  const keys=["transactions",...OUTLET_IDS.map(id=>txnKey(id))];
-  for(const key of keys){
-    const arr=cache[key];
-    if(Array.isArray(arr)&&arr.some(t=>t.id===id)){
-      const next=arr.filter(t=>t.id!==id);
-      await sset(key,next);
-    }
-  }
+  const all=await getAllTxns();
+  await sset("transactions",all.filter(t=>t.id!==id));
 }
 
 // ─── Benne Logo ───────────────────────────────────────────────────────────────
@@ -585,7 +573,7 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
     const txn={id:`t${Date.now()}`,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)})),
       boxAmount:0,boxMode:"Cash",boxItems:null,compReason:hasComp?compReason.trim():"",
       outletId,outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name};
-    await appendTxn(outletId,txn);
+    await appendTxn(txn);
     await addLog("ADD_TXN",user.id,"Order "+orderNo.trim()+(hasComp?` [Comp: ${compReason.trim()}]`:""));
     setOrderNo("");setPays([{mode:"Cash",amount:""}]);setCompReason("");setErrors({});setDupWarn(false);
     setBusy(false);showToast("Order #"+orderNo.trim()+" saved!","success");onSaved();
