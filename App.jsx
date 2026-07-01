@@ -107,12 +107,14 @@ async function getTxnsForOutlet(outletId){
 }
 async function getAllTxns(){
   const results=await Promise.all(OUTLET_IDS.map(id=>sget(txnKey(id))));
-  // Also read legacy shared key in case old data exists there
   const legacy=await sget("transactions")||[];
-  const all=[...legacy,...results.flat()];
-  // Deduplicate by id
+  const all=[...legacy,...results.flat()].filter(Boolean);
   const seen=new Set();
-  return all.filter(t=>{if(seen.has(t.id))return false;seen.add(t.id);return true;});
+  return all.filter(t=>{
+    if(!t||!t.id)return false;
+    if(seen.has(t.id))return false;
+    seen.add(t.id);return true;
+  });
 }
 async function saveTxnsForOutlet(outletId,txns){
   await sset(txnKey(outletId),txns);
@@ -428,11 +430,11 @@ function OutletApp({user,onLogout,showToast,onBMO}){
   const load=useCallback(async()=>{
     const [all,allR,allB,ds]=await Promise.all([getAllTxns(),sget("refunds"),sget("boxCharges"),sget("dayStatus")]);
     console.log("DEBUG load - outletId:",outletId,"TODAY:",TODAY,"all txns count:",all?.length,"sample:",all?.[0]);
-    const filtered=(all||[]).filter(t=>t.outletId===outletId&&t.day===TODAY);
+    const filtered=(all||[]).filter(t=>t&&t.outletId===outletId&&t.day===TODAY);
     console.log("DEBUG filtered txns:",filtered.length, filtered.map(t=>({id:t.id,day:t.day,outlet:t.outletId})));
     setTxns(filtered);
-    setRefs((allR||[]).filter(r=>r.outletId===outletId&&r.day===TODAY));
-    setBoxCharges((allB||[]).filter(b=>b.outletId===outletId&&b.day===TODAY));
+    setRefs((allR||[]).filter(r=>r&&r.outletId===outletId&&r.day===TODAY));
+    setBoxCharges((allB||[]).filter(b=>b&&b.outletId===outletId&&b.day===TODAY));
     if((ds||{})[outletId]===TODAY)setDayDone(true);
   },[outletId]);
 
