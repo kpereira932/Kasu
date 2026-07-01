@@ -8,12 +8,12 @@ const BMO_PAYMENT_MODES = ["Cash","Stag QR","Pine Card Fail"];
 const MODE_COLORS = {"Cash":"#16a34a","PhonePe QR Fail":"#ea580c","Pine QR Fail":"#dc2626","Pine Card Fail":"#b91c1c","Stag QR":"#7c3aed","Comp":"#64748b"};
 const MODE_BG    = {"Cash":"#f0fdf4","PhonePe QR Fail":"#fff7ed","Pine QR Fail":"#fef2f2","Pine Card Fail":"#fef2f2","Stag QR":"#f5f3ff","Comp":"#f8fafc"};
 const C = {
-  bg:"#FBF8F2",surface:"#FFFFFF",border:"#E8DFCB",
-  text:"#2B2113",sub:"#7A6A4F",muted:"#A99B7E",
-  accent:"#C9802C",accentLight:"#FBF1E1",accentBorder:"#EBCB99",
-  success:"#16A34A",successLight:"#F0FDF4",successBorder:"#BBF7D0",
-  warn:"#B7791F",warnLight:"#FFFBEB",warnBorder:"#FDE68A",
-  danger:"#DC2626",dangerLight:"#FEF2F2",dangerBorder:"#FECACA",
+  bg:"#f8f6f3",surface:"#FFFFFF",surface2:"#f0ede8",border:"#ddd8d0",borderStrong:"#c8c2b8",
+  text:"#1a1a1a",sub:"#888888",muted:"#999999",
+  accent:"#C8873A",accentDark:"#A06828",accentLight:"rgba(200,135,58,0.10)",accentBorder:"rgba(200,135,58,0.30)",
+  success:"#166534",successLight:"#dcfce7",successBorder:"#16a34a",
+  warn:"#A06828",warnLight:"rgba(200,135,58,0.10)",warnBorder:"rgba(200,135,58,0.30)",
+  danger:"#C0392B",dangerLight:"#FDECEA",dangerBorder:"#dc2626",
   bmo:"#0F766E",bmoLight:"#F0FDFA",bmoBorder:"#99F6E4",
 };
 
@@ -188,13 +188,13 @@ function copyText(t){
 }
 
 // ─── Shared Styles ────────────────────────────────────────────────────────────
-const LS ={display:"block",fontSize:11,color:C.sub,marginBottom:5,fontWeight:600,textTransform:"uppercase",letterSpacing:.4};
-const IS ={width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:14,outline:"none",boxSizing:"border-box"};
-const BPr={background:C.accent,color:"#fff",border:"none",borderRadius:10,padding:"11px 18px",fontWeight:600,fontSize:14,cursor:"pointer",width:"100%"};
-const BSc={background:C.surface,color:C.sub,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 16px",fontWeight:600,fontSize:13,cursor:"pointer"};
-const BDn={background:C.dangerLight,color:C.danger,border:`1px solid ${C.dangerBorder}`,borderRadius:8,padding:"4px 10px",fontWeight:600,fontSize:12,cursor:"pointer"};
-const BEd={background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:8,padding:"4px 10px",fontWeight:600,fontSize:12,cursor:"pointer"};
-const Cd ={background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:16};
+const LS ={display:"block",fontSize:11,color:C.sub,marginBottom:5,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em"};
+const IS ={width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:"10px 12px",color:C.text,fontSize:14,outline:"none",boxSizing:"border-box"};
+const BPr={background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"11px 18px",fontWeight:600,fontSize:14,cursor:"pointer",width:"100%"};
+const BSc={background:C.surface,color:C.text,border:`1px solid ${C.borderStrong}`,borderRadius:4,padding:"10px 16px",fontWeight:600,fontSize:13,cursor:"pointer"};
+const BDn={background:C.dangerLight,color:C.danger,border:`1px solid ${C.dangerBorder}`,borderRadius:4,padding:"4px 10px",fontWeight:600,fontSize:12,cursor:"pointer"};
+const BEd={background:C.accentLight,color:C.accentDark,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"4px 10px",fontWeight:600,fontSize:12,cursor:"pointer"};
+const Cd ={background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,padding:16};
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 function Inp({value,onChange,placeholder,type="text",onEnter,large,style:sx={},readOnly}){
@@ -216,7 +216,7 @@ function Field({label,children,hint,error}){
 }
 function Msg({type,children}){
   const ok=type==="ok",wn=type==="warn";
-  return <div style={{background:ok?C.successLight:wn?C.warnLight:C.dangerLight,border:`1px solid ${ok?C.successBorder:wn?C.warnBorder:C.dangerBorder}`,borderRadius:10,padding:"9px 12px",fontSize:13,color:ok?C.success:wn?C.warn:C.danger,margin:"10px 0"}}>{children}</div>;
+  return <div style={{background:ok?C.successLight:wn?C.warnLight:C.dangerLight,border:`1px solid ${ok?C.successBorder:wn?C.warnBorder:C.dangerBorder}`,borderRadius:4,padding:"9px 12px",fontSize:13,color:ok?C.success:wn?C.warn:C.danger,margin:"10px 0"}}>{children}</div>;
 }
 function EmptyState({icon,title,desc}){
   return <div style={{textAlign:"center",padding:"36px 20px"}}>
@@ -226,7 +226,7 @@ function EmptyState({icon,title,desc}){
   </div>;
 }
 function Badge({label,color,bg,border:bd}){
-  return <span style={{display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:700,letterSpacing:.4,textTransform:"uppercase",background:bg||C.accentLight,color:color||C.accent,border:`1px solid ${bd||C.accentBorder}`,borderRadius:6,padding:"2px 7px",whiteSpace:"nowrap"}}>{label}</span>;
+  return <span style={{display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:700,letterSpacing:.4,textTransform:"uppercase",background:bg||C.accentLight,color:color||C.accent,border:`1px solid ${bd||C.accentBorder}`,borderRadius:4,padding:"2px 7px",whiteSpace:"nowrap"}}>{label}</span>;
 }
 function StatCard({label,value,color,icon,sub}){
   return <div style={{...Cd,padding:"14px 16px"}}>
@@ -247,14 +247,14 @@ function SectionHeader({title,action}){
 function Divider(){return <div style={{height:1,background:C.border,margin:"14px 0"}}/>;}
 function Spinner(){return <div style={{width:20,height:20,border:`2px solid ${C.border}`,borderTopColor:C.accent,borderRadius:"50%",animation:"spin .7s linear infinite",display:"inline-block"}}/>;}
 function ModeChip({mode,selected,onClick}){
-  return <button onClick={onClick} style={{background:selected?MODE_COLORS[mode]:C.surface,color:selected?"#fff":C.sub,border:`1.5px solid ${selected?MODE_COLORS[mode]:C.border}`,borderRadius:9,padding:"7px 11px",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>
+  return <button onClick={onClick} style={{background:selected?MODE_COLORS[mode]:C.surface,color:selected?"#fff":C.sub,border:`1.5px solid ${selected?MODE_COLORS[mode]:C.border}`,borderRadius:4,padding:"7px 11px",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>
     {mode}
   </button>;
 }
 function CopyWABtn({getText,label="📲 Copy Summary"}){
   const [done,setDone]=useState(false);
   const go=()=>{copyText(getText());setDone(true);setTimeout(()=>setDone(false),2200);};
-  return <button onClick={go} style={{background:done?C.successLight:C.surface,color:done?C.success:C.sub,border:`1px solid ${done?C.successBorder:C.border}`,borderRadius:10,padding:"9px 14px",fontWeight:600,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+  return <button onClick={go} style={{background:done?C.successLight:C.surface,color:done?C.success:C.sub,border:`1px solid ${done?C.successBorder:C.border}`,borderRadius:4,padding:"9px 14px",fontWeight:600,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
     {done?"✓ Copied!":label}
   </button>;
 }
@@ -264,10 +264,10 @@ function Modal({open,onClose,title,children,width=440}){
   if(!open)return null;
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:C.surface,borderRadius:20,width:"100%",maxWidth:width,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 64px rgba(0,0,0,.22)",animation:"slideUp .2s ease"}}>
+      <div style={{background:C.surface,borderRadius:4,width:"100%",maxWidth:width,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 64px rgba(0,0,0,.22)",animation:"slideUp .2s ease"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"18px 20px",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,background:C.surface,zIndex:1}}>
           <div style={{fontWeight:700,fontSize:16,color:C.text}}>{title}</div>
-          <button onClick={onClose} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,width:30,height:30,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.sub,fontSize:16,flexShrink:0}}>✕</button>
+          <button onClick={onClose} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,width:30,height:30,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.sub,fontSize:16,flexShrink:0}}>✕</button>
         </div>
         <div style={{padding:20}}>{children}</div>
       </div>
@@ -281,7 +281,7 @@ function ConfirmDialog({open,onClose,onConfirm,title,message,confirmLabel="Confi
       <p style={{color:C.sub,fontSize:14,lineHeight:1.6,marginBottom:20}}>{message}</p>
       <div style={{display:"flex",gap:8}}>
         <button onClick={onClose} style={{...BSc,flex:1}}>Cancel</button>
-        <button onClick={onConfirm} style={{flex:1,background:danger?C.danger:warn?C.warn:C.accent,color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontWeight:600,fontSize:13,cursor:"pointer"}}>{confirmLabel}</button>
+        <button onClick={onConfirm} style={{flex:1,background:danger?C.danger:warn?C.warn:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"10px 16px",fontWeight:600,fontSize:13,cursor:"pointer"}}>{confirmLabel}</button>
       </div>
     </Modal>
   );
@@ -291,7 +291,7 @@ function ConfirmDialog({open,onClose,onConfirm,title,message,confirmLabel="Confi
 function Toast({toast}){
   const st={success:{bg:C.successLight,bd:C.successBorder,cl:C.success,ic:"✓"},error:{bg:C.dangerLight,bd:C.dangerBorder,cl:C.danger,ic:"✕"},warn:{bg:C.warnLight,bd:C.warnBorder,cl:C.warn,ic:"⚠"}};
   const s=st[toast.type]||st.success;
-  return <div style={{position:"fixed",top:16,right:16,zIndex:9999,animation:"toastIn .25s ease",display:"flex",alignItems:"center",gap:10,background:s.bg,border:`1px solid ${s.bd}`,borderRadius:12,padding:"11px 16px",boxShadow:"0 4px 20px rgba(0,0,0,.12)",maxWidth:320,minWidth:220}}>
+  return <div style={{position:"fixed",top:16,right:16,zIndex:9999,animation:"toastIn .25s ease",display:"flex",alignItems:"center",gap:10,background:s.bg,border:`1px solid ${s.bd}`,borderRadius:4,padding:"11px 16px",boxShadow:"0 4px 20px rgba(0,0,0,.12)",maxWidth:320,minWidth:220}}>
     <span style={{width:22,height:22,borderRadius:"50%",background:s.cl,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>{s.ic}</span>
     <span style={{fontSize:13,fontWeight:500,color:C.text,flex:1}}>{toast.msg}</span>
   </div>;
@@ -308,12 +308,13 @@ export default function App(){
   useEffect(()=>{
     seed().finally(()=>setReady(true));
     const s=document.createElement("style");
-    s.textContent=`*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;background:${C.bg};color:${C.text};}
+    s.textContent=`*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Lato',-apple-system,BlinkMacSystemFont,sans-serif;background:${C.bg};color:${C.text};}
+    .font-serif{font-family:'Lora',serif;}
     @keyframes spin{to{transform:rotate(360deg)}}@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
     @keyframes toastIn{from{opacity:0;transform:translateX(110%)}to{opacity:1;transform:translateX(0)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-    input:focus,select:focus,textarea:focus{outline:2px solid ${C.accent};outline-offset:-1px;border-color:${C.accent}!important;}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:${C.accent}!important;box-shadow:0 0 0 2px ${C.accentLight};}
     button{font-family:inherit;}input,select,textarea{font-family:inherit;}
-    ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:2px}
+    ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${C.borderStrong};border-radius:2px}
     @media print{.no-print{display:none!important}}`;
     document.head.appendChild(s);
   },[]);
@@ -350,10 +351,10 @@ function Login({onLogin,showToast}){
   };
   return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,padding:20}}>
-      <div style={{...Cd,width:"100%",maxWidth:380,padding:32,boxShadow:"0 4px 24px rgba(0,0,0,.06)"}}>
+      <div style={{...Cd,width:"100%",maxWidth:380,padding:32}}>
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{display:"flex",justifyContent:"center",marginBottom:10}}><BenneLogo size={110}/></div>
-          <div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Kāsu</div>
+          <div className="font-serif" style={{fontSize:26,fontWeight:400,color:C.text}}>ಕಾಸು</div>
           <div style={{color:C.sub,fontSize:13,marginTop:3}}>Benne Operations Platform</div>
         </div>
         <Field label="Username"><Inp value={un} onChange={setUn} placeholder="Enter username" onEnter={go}/></Field>
@@ -410,36 +411,36 @@ function OutletApp({user,onLogout,showToast,onBMO}){
 
   return(
     <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",maxWidth:540,margin:"0 auto"}}>
-      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:10}}>
+      <div style={{background:C.accent,borderBottom:`1px solid ${C.accentDark}`,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:10}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <BenneLogo size={36}/>
-          <div><div style={{fontWeight:800,fontSize:15,color:C.text,letterSpacing:"-0.3px"}}>ಕಾಸು</div><div style={{color:C.sub,fontSize:11}}>{user.name}</div></div>
+          <div><div className="font-serif" style={{fontWeight:400,fontSize:17,color:"#fff"}}>ಕಾಸು</div><div style={{color:"rgba(255,255,255,0.85)",fontSize:11}}>{user.name}</div></div>
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-          <button onClick={onBMO} title="Emergency manual ordering — use only if POS is down" style={{background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:10,padding:"7px 12px",fontWeight:800,fontSize:12,cursor:"pointer",letterSpacing:".5px",display:"flex",alignItems:"center",gap:5,boxShadow:`0 0 0 3px ${C.dangerLight}`}}>⚠ BMO</button>
-          {!dayDone?<button onClick={()=>setDayModal(true)} style={{background:C.warnLight,color:C.warn,border:`1px solid ${C.warnBorder}`,borderRadius:10,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>Day End</button>
-          :<Badge label="Day Closed" color={C.success} bg={C.successLight} border={C.successBorder}/>}
-          <button onClick={onLogout} style={{...BSc,padding:"7px 10px",fontSize:12}}>Logout</button>
+          <button onClick={onBMO} title="Emergency manual ordering — use only if POS is down" style={{background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:4,padding:"7px 12px",fontWeight:800,fontSize:12,cursor:"pointer",letterSpacing:".5px",display:"flex",alignItems:"center",gap:5}}>⚠ BMO</button>
+          {!dayDone?<button onClick={()=>setDayModal(true)} style={{background:"#fff",color:C.accentDark,border:"none",borderRadius:4,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>Day End</button>
+          :<span style={{display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",background:"rgba(255,255,255,0.2)",color:"#fff",border:"1px solid rgba(255,255,255,0.4)",borderRadius:4,padding:"4px 8px",whiteSpace:"nowrap"}}>Day Closed</span>}
+          <button onClick={onLogout} style={{background:"transparent",color:"#fff",border:"1px solid rgba(255,255,255,0.5)",borderRadius:4,padding:"7px 10px",fontWeight:600,fontSize:12,cursor:"pointer"}}>Logout</button>
         </div>
       </div>
 
       {/* Summary strip */}
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"8px 10px",display:"flex",gap:5,overflowX:"auto",flexShrink:0}}>
         {PAYMENT_MODES.map(m=>(
-          <div key={m} style={{flexShrink:0,background:MODE_BG[m],border:`1px solid ${C.border}`,borderRadius:9,padding:"5px 9px",minWidth:68,textAlign:"center"}}>
+          <div key={m} style={{flexShrink:0,background:MODE_BG[m],border:`1px solid ${C.border}`,borderRadius:4,padding:"5px 9px",minWidth:68,textAlign:"center"}}>
             <div style={{fontSize:8,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:1}}>{m.split(" ")[0]}</div>
             <div style={{fontSize:12,fontWeight:700,color:MODE_COLORS[m]}}>{inr(totals[m]||0)}</div>
           </div>
         ))}
-        <div style={{flexShrink:0,background:C.dangerLight,border:`1px solid ${C.dangerBorder}`,borderRadius:9,padding:"5px 9px",minWidth:62,textAlign:"center"}}>
+        <div style={{flexShrink:0,background:C.dangerLight,border:`1px solid ${C.dangerBorder}`,borderRadius:4,padding:"5px 9px",minWidth:62,textAlign:"center"}}>
           <div style={{fontSize:8,color:C.danger,fontWeight:700,textTransform:"uppercase",marginBottom:1}}>Refunds</div>
           <div style={{fontSize:12,fontWeight:700,color:C.danger}}>−{inr(totalRef)}</div>
         </div>
-        <div style={{flexShrink:0,background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:9,padding:"5px 9px",minWidth:62,textAlign:"center"}}>
+        <div style={{flexShrink:0,background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:"5px 9px",minWidth:62,textAlign:"center"}}>
           <div style={{fontSize:8,color:C.success,fontWeight:700,textTransform:"uppercase",marginBottom:1}}>Cash IH</div>
           <div style={{fontSize:12,fontWeight:700,color:C.success}}>{inr(cashInHand)}</div>
         </div>
-        <div style={{flexShrink:0,background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:9,padding:"5px 9px",minWidth:62,textAlign:"center"}}>
+        <div style={{flexShrink:0,background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"5px 9px",minWidth:62,textAlign:"center"}}>
           <div style={{fontSize:8,color:C.accent,fontWeight:700,textTransform:"uppercase",marginBottom:1}}>Net</div>
           <div style={{fontSize:12,fontWeight:700,color:C.accent}}>{inr(grand-totalRef)}</div>
         </div>
@@ -456,7 +457,7 @@ function OutletApp({user,onLogout,showToast,onBMO}){
           <button key={n.id} onClick={()=>setScreen(n.id)} style={{flex:1,background:"transparent",border:"none",borderTop:screen===n.id?`2px solid ${C.accent}`:"2px solid transparent",color:screen===n.id?C.accent:C.sub,padding:"10px 4px 8px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,position:"relative"}}>
             <span style={{fontSize:18,lineHeight:1}}>{n.icon}</span>
             <span style={{fontSize:10,fontWeight:screen===n.id?700:500}}>{n.label}</span>
-            {n.id==="orders"&&txns.length>0&&<span style={{position:"absolute",top:4,right:"calc(50% - 18px)",background:C.accent,color:"#fff",borderRadius:8,fontSize:9,padding:"1px 5px",fontWeight:700}}>{txns.length}</span>}
+            {n.id==="orders"&&txns.length>0&&<span style={{position:"absolute",top:4,right:"calc(50% - 18px)",background:C.accent,color:"#fff",borderRadius:4,fontSize:9,padding:"1px 5px",fontWeight:700}}>{txns.length}</span>}
           </button>
         ))}
       </div>
@@ -535,7 +536,7 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
           </button>
         </div>
         {showGuide&&(
-          <div style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:10,padding:"10px 12px",fontSize:12,color:C.text,marginBottom:10,lineHeight:1.6}}>
+          <div style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"10px 12px",fontSize:12,color:C.text,marginBottom:10,lineHeight:1.6}}>
             1. Type the order number, press <strong>Enter</strong> → jumps to Amount.<br/>
             2. Enter amount, pick payment mode, press <strong>Enter</strong> → saves order.<br/>
             3. Need a split payment? Tap <strong>+ Split Payment</strong>.<br/>
@@ -585,7 +586,7 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
 
         {pays.length<2&&(
           <button onClick={()=>setPays([...pays,{mode:"Cash",amount:""}])}
-            style={{background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:600,marginBottom:14}}>
+            style={{background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:600,marginBottom:14}}>
             + Split Payment
           </button>
         )}
@@ -603,7 +604,7 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
 
       {/* ── Standalone Box Charges (not tied to an order) ── */}
       <button onClick={()=>setBoxModalOpen(true)}
-        style={{width:"100%",marginTop:14,background:"#fff",border:`1.5px dashed ${C.border}`,borderRadius:14,padding:"14px",display:"flex",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",color:C.text,fontWeight:700,fontSize:14}}>
+        style={{width:"100%",marginTop:14,background:"#fff",border:`1.5px dashed ${C.border}`,borderRadius:4,padding:"14px",display:"flex",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",color:C.text,fontWeight:700,fontSize:14}}>
         📦 Add Box / Cup Charges
       </button>
 
@@ -644,10 +645,10 @@ function BoxChargeModal({open,onClose,user,showToast,onSaved}){
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button onClick={()=>setQty(q=>({...q,[bi.key]:Math.max(0,q[bi.key]-1)}))}
-              style={{width:34,height:34,borderRadius:9,border:`1.5px solid ${C.border}`,background:"#fff",fontSize:18,fontWeight:700,cursor:"pointer",color:C.sub}}>−</button>
+              style={{width:34,height:34,borderRadius:4,border:`1.5px solid ${C.border}`,background:"#fff",fontSize:18,fontWeight:700,cursor:"pointer",color:C.sub}}>−</button>
             <span style={{minWidth:24,textAlign:"center",fontWeight:800,fontSize:16,color:C.text}}>{qty[bi.key]}</span>
             <button onClick={()=>setQty(q=>({...q,[bi.key]:q[bi.key]+1}))}
-              style={{width:34,height:34,borderRadius:9,border:`1.5px solid ${C.accent}`,background:C.accentLight,fontSize:18,fontWeight:700,cursor:"pointer",color:C.accent}}>+</button>
+              style={{width:34,height:34,borderRadius:4,border:`1.5px solid ${C.accent}`,background:C.accentLight,fontSize:18,fontWeight:700,cursor:"pointer",color:C.accent}}>+</button>
           </div>
         </div>
       ))}
@@ -655,7 +656,7 @@ function BoxChargeModal({open,onClose,user,showToast,onSaved}){
       <Field label="Payment Mode">
         <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{BMO_PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={mode===m} onClick={()=>setMode(m)}/>)}</div>
       </Field>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",marginBottom:16}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:"10px 14px",marginBottom:16}}>
         <span style={{fontSize:12,color:C.sub,fontWeight:600,textTransform:"uppercase"}}>Total</span>
         <span style={{fontSize:22,fontWeight:800,color:C.text}}>{inr(total)}</span>
       </div>
@@ -696,7 +697,7 @@ function RefundsScreen({user,dayDone,onSaved,refs,showToast}){
     <div style={{padding:16}}>
       {!dayDone&&<button onClick={()=>setOpen(true)} style={{...BPr,background:C.danger,marginBottom:16,padding:14,fontSize:15,fontWeight:700}}>+ Add Refund</button>}
       <Modal open={open} onClose={()=>{setOpen(false);setErrors({});}} title="Add Refund" width={380}>
-        <div style={{background:C.dangerLight,border:`1px solid ${C.dangerBorder}`,borderRadius:10,padding:"9px 12px",fontSize:13,color:C.danger,marginBottom:16,display:"flex",gap:8,alignItems:"center"}}><span>💸</span><span>Refunds are always paid out in <strong>Cash</strong></span></div>
+        <div style={{background:C.dangerLight,border:`1px solid ${C.dangerBorder}`,borderRadius:4,padding:"9px 12px",fontSize:13,color:C.danger,marginBottom:16,display:"flex",gap:8,alignItems:"center"}}><span>💸</span><span>Refunds are always paid out in <strong>Cash</strong></span></div>
         <Field label="Order Number" error={errors.orderNo}><Inp value={orderNo} onChange={v=>{setOrderNo(v);setErrors(e=>({...e,orderNo:""}));}} placeholder="e.g. 1042" large/></Field>
         <Field label="Refund Amount (₹)" error={errors.amt}><Inp type="number" value={amt} onChange={v=>{setAmt(v);setErrors(e=>({...e,amt:""}));}} placeholder="0" large/></Field>
         <Field label="Note" hint="(optional)"><Inp value={note} onChange={setNote} placeholder="Reason for refund"/></Field>
@@ -737,9 +738,9 @@ function TxnCard({txn,onEdit,onDelete,editable}){
       </div>
       <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>
         {txn.payments.map((p,i)=>(
-          <span key={i} style={{fontSize:11,borderRadius:7,padding:"3px 9px",fontWeight:600,background:MODE_BG[p.mode],color:MODE_COLORS[p.mode],border:`1px solid ${MODE_COLORS[p.mode]}33`}}>{p.mode}: {inr(p.amount)}</span>
+          <span key={i} style={{fontSize:11,borderRadius:4,padding:"3px 9px",fontWeight:600,background:MODE_BG[p.mode],color:MODE_COLORS[p.mode],border:`1px solid ${MODE_COLORS[p.mode]}33`}}>{p.mode}: {inr(p.amount)}</span>
         ))}
-        {txn.boxAmount>0&&<span style={{fontSize:11,borderRadius:7,padding:"3px 9px",fontWeight:600,background:C.bg,color:C.sub,border:`1px solid ${C.border}`}}>📦 Box ({txn.boxMode}): {inr(txn.boxAmount)}</span>}
+        {txn.boxAmount>0&&<span style={{fontSize:11,borderRadius:4,padding:"3px 9px",fontWeight:600,background:C.bg,color:C.sub,border:`1px solid ${C.border}`}}>📦 Box ({txn.boxMode}): {inr(txn.boxAmount)}</span>}
       </div>
       <div style={{color:C.muted,fontSize:11}}>{fmt(txn.ts)}{txn.createdByName?` · ${txn.createdByName}`:""} · {txn.outletName}</div>
     </div>
@@ -782,7 +783,7 @@ function DayEndModal({open,onClose,onConfirm,totals,totalRef,grand,txnCount,outl
           </div>
         ):(
           <>
-            <div style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:10,padding:12,textAlign:"center",marginBottom:16}}>
+            <div style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:12,textAlign:"center",marginBottom:16}}>
               <div style={{fontSize:11,color:C.accent,fontWeight:700,marginBottom:2}}>BUSINESS DAY</div>
               <div style={{fontSize:18,fontWeight:800,color:C.text}}>{fmtD(TODAY)}</div>
               <div style={{fontSize:12,color:C.sub,marginTop:2}}>{outletName}</div>
@@ -808,7 +809,7 @@ function DayEndModal({open,onClose,onConfirm,totals,totalRef,grand,txnCount,outl
                 ))
               }
             </div>
-            <div style={{background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:10,padding:12,textAlign:"center",marginBottom:14}}>
+            <div style={{background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:12,textAlign:"center",marginBottom:14}}>
               <div style={{fontSize:11,color:C.success,fontWeight:700,marginBottom:2}}>CASH IN HAND</div>
               <div style={{fontSize:26,fontWeight:800,color:C.success}}>{inr(cashInHand)}</div>
             </div>
@@ -842,15 +843,15 @@ function AdminApp({user,onLogout,showToast,onBMO}){
   const SidebarContent=()=>(
     <>
       <div style={{padding:"18px 16px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:10}}>
-        <div style={{width:36,height:36,background:C.accentLight,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",}}><BenneLogo size={38}/></div>
-        <div><div style={{fontWeight:800,fontSize:15,color:C.text}}>Kāsu</div><div style={{fontSize:10,color:C.sub}}>ಕಾಸು · Benne</div></div>
+        <div style={{width:36,height:36,background:C.accentLight,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",}}><BenneLogo size={38}/></div>
+        <div><div className="font-serif" style={{fontWeight:400,fontSize:16,color:C.text}}>ಕಾಸು</div><div style={{fontSize:10,color:C.sub}}>Benne</div></div>
       </div>
       <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}`}}>
         <div style={{fontWeight:600,color:C.text,fontSize:13,marginBottom:4}}>{user.name}</div>
         <Badge label={user.role.toUpperCase()} color={C.accent} bg={C.accentLight} border={C.accentBorder}/>
       </div>
       <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}`}}>
-        <button onClick={()=>{setMenuOpen(false);onBMO();}} title="Emergency manual ordering — use only if POS is down" style={{width:"100%",background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:10,padding:"10px",fontWeight:800,fontSize:14,cursor:"pointer",letterSpacing:".5px",boxShadow:`0 0 0 3px ${C.dangerLight}`}}>⚠ BMO — Emergency Orders</button>
+        <button onClick={()=>{setMenuOpen(false);onBMO();}} title="Emergency manual ordering — use only if POS is down" style={{width:"100%",background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:4,padding:"10px",fontWeight:800,fontSize:14,cursor:"pointer",letterSpacing:".5px",boxShadow:`0 0 0 3px ${C.dangerLight}`}}>⚠ BMO — Emergency Orders</button>
       </div>
       <nav style={{flex:1,padding:"6px 0",overflowY:"auto"}}>
         {navItems.map(n=>(
@@ -871,14 +872,14 @@ function AdminApp({user,onLogout,showToast,onBMO}){
       )}
       <div style={{flex:1,overflowY:"auto",background:C.bg,minWidth:0,display:"flex",flexDirection:"column"}}>
         {isMobile&&(
-          <div className="no-print" style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"11px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:20}}>
+          <div className="no-print" style={{background:C.accent,borderBottom:`1px solid ${C.accentDark}`,padding:"11px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:20}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:C.text,padding:"2px",lineHeight:1}}>☰</button>
-              <div style={{fontWeight:700,fontSize:15,color:C.text}}>{navItems.find(n=>n.id===screen)?.label||"Kāsu"}</div>
+              <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#fff",padding:"2px",lineHeight:1}}>☰</button>
+              <div style={{fontWeight:700,fontSize:15,color:"#fff"}}>{navItems.find(n=>n.id===screen)?.label||"ಕಾಸು"}</div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <button onClick={onBMO} title="Emergency manual ordering" style={{background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:8,padding:"6px 10px",fontWeight:800,fontSize:12,cursor:"pointer",boxShadow:`0 0 0 2px ${C.dangerLight}`}}>⚠ BMO</button>
-              <button onClick={onLogout} style={{...BSc,padding:"6px 10px",fontSize:11}}>Logout</button>
+              <button onClick={onBMO} title="Emergency manual ordering" style={{background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:4,padding:"6px 10px",fontWeight:800,fontSize:12,cursor:"pointer"}}>⚠ BMO</button>
+              <button onClick={onLogout} style={{background:"transparent",color:"#fff",border:"1px solid rgba(255,255,255,0.5)",borderRadius:4,padding:"6px 10px",fontWeight:600,fontSize:11,cursor:"pointer"}}>Logout</button>
             </div>
           </div>
         )}
@@ -941,7 +942,7 @@ function Dashboard({user}){
                 <span style={{fontSize:12,color:C.text,display:"flex",alignItems:"center",gap:6}}><span style={{width:8,height:8,borderRadius:"50%",background:MODE_COLORS[m],display:"inline-block"}}/>{m}</span>
                 <span style={{fontSize:12,fontWeight:700,color:MODE_COLORS[m]}}>{inr(totals[m]||0)}</span>
               </div>
-              <div style={{height:5,background:C.bg,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",background:MODE_COLORS[m],width:pct+"%",borderRadius:3}}/></div>
+              <div style={{height:5,background:C.bg,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",background:MODE_COLORS[m],width:pct+"%",borderRadius:4}}/></div>
             </div>
           );})}
         </div>
@@ -1048,7 +1049,7 @@ function EditTxnModal({txn,onSave,onClose}){
   const canSave = orderNo.trim() && pays.every(p=>p.amount&&!isNaN(p.amount)&&Number(p.amount)>0) && reason.trim();
   return(
     <Modal open title={`Edit Order #${txn.orderNo}`} onClose={onClose} width={460}>
-      <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",marginBottom:14}}>
+      <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:"10px 14px",marginBottom:14}}>
         <div style={{fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Current Values</div>
         <div style={{fontSize:13,color:C.sub}}>Order #{txn.orderNo}</div>
         {txn.payments.map((p,i)=><div key={i} style={{fontSize:13,color:C.sub}}>{p.mode}: {inr(p.amount)}</div>)}
@@ -1069,7 +1070,7 @@ function EditTxnModal({txn,onSave,onClose}){
       ))}
       {pays.length<2&&(
         <button onClick={()=>setPays([...pays,{mode:"Cash",amount:""}])}
-          style={{background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:600,marginBottom:14}}>
+          style={{background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:600,marginBottom:14}}>
           + Split Payment
         </button>
       )}
@@ -1442,7 +1443,7 @@ function Logs(){
         :logs.map(l=>(
           <div key={l.id} style={{...Cd,marginBottom:8,padding:"10px 14px"}}>
             <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-              <span style={{background:AC[l.action]||C.sub,color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700,flexShrink:0,marginTop:1}}>{l.action}</span>
+              <span style={{background:AC[l.action]||C.sub,color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:10,fontWeight:700,flexShrink:0,marginTop:1}}>{l.action}</span>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:13,color:C.text}}>{l.detail}</div>
                 {l.reason&&<div style={{fontSize:11,color:C.sub,marginTop:2}}>Reason: {l.reason}</div>}
@@ -1505,7 +1506,7 @@ function BackupRestore({showToast}){
       {info&&<div style={{...Cd,background:C.successLight,border:`1px solid ${C.successBorder}`}}>
         <div style={{fontWeight:700,color:C.success,marginBottom:10}}>✓ Last Backup</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(90px,1fr))",gap:8}}>
-          {Object.entries(info).map(([k,v])=><div key={k} style={{background:C.surface,borderRadius:8,padding:"8px 12px"}}><div style={{fontSize:10,color:C.sub,textTransform:"uppercase",fontWeight:600,marginBottom:2}}>{k}</div><div style={{fontSize:18,fontWeight:800,color:C.text}}>{v}</div></div>)}
+          {Object.entries(info).map(([k,v])=><div key={k} style={{background:C.surface,borderRadius:4,padding:"8px 12px"}}><div style={{fontSize:10,color:C.sub,textTransform:"uppercase",fontWeight:600,marginBottom:2}}>{k}</div><div style={{fontSize:18,fontWeight:800,color:C.text}}>{v}</div></div>)}
         </div>
       </div>}
       <ConfirmDialog open={confirm==="full"} onClose={()=>setConfirm(null)} onConfirm={()=>doBackup(true)} title="Download Full Backup?" warn message="This file will contain passwords. Store securely." confirmLabel="Yes, Download"/>
@@ -1535,8 +1536,8 @@ function BMOApp({user,onClose,showToast}){
           </div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          {screen!=="home"&&<button onClick={()=>setScreen("home")} style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"1px solid rgba(255,255,255,.25)",borderRadius:8,padding:"6px 12px",fontSize:12,cursor:"pointer",fontWeight:600}}>← Home</button>}
-          <button onClick={onClose} style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"1px solid rgba(255,255,255,.25)",borderRadius:8,padding:"6px 12px",fontSize:12,cursor:"pointer",fontWeight:600}}>✕ Close</button>
+          {screen!=="home"&&<button onClick={()=>setScreen("home")} style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"1px solid rgba(255,255,255,.25)",borderRadius:4,padding:"6px 12px",fontSize:12,cursor:"pointer",fontWeight:600}}>← Home</button>}
+          <button onClick={onClose} style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"1px solid rgba(255,255,255,.25)",borderRadius:4,padding:"6px 12px",fontSize:12,cursor:"pointer",fontWeight:600}}>✕ Close</button>
         </div>
       </div>
       <div style={{flex:1,overflowY:"auto"}}>
@@ -1548,20 +1549,20 @@ function BMOApp({user,onClose,showToast}){
               <div style={{color:C.sub,fontSize:14,marginTop:6}}>Emergency ordering system · {fmtD(TODAY)}</div>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              <button onClick={()=>setScreen("order")} style={{background:C.bmo,color:"#fff",border:"none",borderRadius:16,padding:"20px 20px",fontWeight:700,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left"}}>
+              <button onClick={()=>setScreen("order")} style={{background:C.bmo,color:"#fff",border:"none",borderRadius:4,padding:"20px 20px",fontWeight:700,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left"}}>
                 <span style={{fontSize:32}}>⊕</span>
                 <div><div>Order Taker</div><div style={{fontSize:13,fontWeight:400,opacity:.8,marginTop:2}}>Take new manual orders</div></div>
               </button>
-              <button onClick={()=>setScreen("view")} style={{background:C.surface,color:C.text,border:`2px solid ${C.border}`,borderRadius:16,padding:"20px 20px",fontWeight:700,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left"}}>
+              <button onClick={()=>setScreen("view")} style={{background:C.surface,color:C.text,border:`2px solid ${C.border}`,borderRadius:4,padding:"20px 20px",fontWeight:700,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left"}}>
                 <span style={{fontSize:32}}>📺</span>
                 <div><div>View Orders</div><div style={{fontSize:13,fontWeight:400,color:C.sub,marginTop:2}}>Kitchen display & counter view</div></div>
               </button>
-              <button onClick={()=>setScreen("reports")} style={{background:C.surface,color:C.text,border:`2px solid ${C.border}`,borderRadius:16,padding:"20px 20px",fontWeight:700,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left"}}>
+              <button onClick={()=>setScreen("reports")} style={{background:C.surface,color:C.text,border:`2px solid ${C.border}`,borderRadius:4,padding:"20px 20px",fontWeight:700,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left"}}>
                 <span style={{fontSize:32}}>📊</span>
                 <div><div>BMO Reports</div><div style={{fontSize:13,fontWeight:400,color:C.sub,marginTop:2}}>Sales, items, payment summary</div></div>
               </button>
               {canManageMenu&&(
-                <button onClick={()=>setScreen("menu")} style={{background:C.surface,color:C.text,border:`2px solid ${C.border}`,borderRadius:16,padding:"20px 20px",fontWeight:700,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left"}}>
+                <button onClick={()=>setScreen("menu")} style={{background:C.surface,color:C.text,border:`2px solid ${C.border}`,borderRadius:4,padding:"20px 20px",fontWeight:700,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left"}}>
                   <span style={{fontSize:32}}>📝</span>
                   <div><div>Manage Menu</div><div style={{fontSize:13,fontWeight:400,color:C.sub,marginTop:2}}>Items, prices, categories</div></div>
                 </button>
@@ -1611,13 +1612,13 @@ function useBMOOutlet(user){
     <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"8px 14px",position:"relative"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <span style={{fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,whiteSpace:"nowrap"}}>Outlet</span>
-        <button onClick={()=>setPickerOpen(p=>!p)} style={{flex:1,background:C.bg,border:`1px solid ${C.border}`,borderRadius:9,padding:"8px 12px",fontSize:13,color:C.text,cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center",fontWeight:600}}>
+        <button onClick={()=>setPickerOpen(p=>!p)} style={{flex:1,background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 12px",fontSize:13,color:C.text,cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center",fontWeight:600}}>
           <span>{outletName}</span>
           <span style={{color:C.muted,fontSize:12}}>{pickerOpen?"▲":"▼"}</span>
         </button>
       </div>
       {pickerOpen&&(
-        <div style={{position:"absolute",left:14,right:14,top:"100%",background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,boxShadow:"0 8px 24px rgba(0,0,0,.12)",zIndex:50,overflow:"hidden",marginTop:4}}>
+        <div style={{position:"absolute",left:14,right:14,top:"100%",background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,boxShadow:"0 8px 24px rgba(0,0,0,.12)",zIndex:50,overflow:"hidden",marginTop:4}}>
           {isAdminLevel&&(
             <button onClick={()=>{setSelOutlet("all");setPickerOpen(false);}} style={{width:"100%",padding:"12px 16px",background:selOutlet==="all"?C.accentLight:C.surface,color:selOutlet==="all"?C.accent:C.text,border:"none",borderBottom:`1px solid ${C.border}`,fontSize:14,cursor:"pointer",textAlign:"left",fontWeight:selOutlet==="all"?700:500}}>
               All Outlets
@@ -1642,6 +1643,7 @@ function BMOOrderTaker({user,showToast}){
   const [selCat,setSelCat]=useState(BMO_CATEGORIES[0]);
   const [cart,setCart]=useState([]);
   const [payMode,setPayMode]=useState("Cash");
+  const [dineType,setDineType]=useState("dinein"); // "dinein" | "takeaway"
   const [stage,setStage]=useState("menu");
   const [customModal,setCustomModal]=useState(null);
   const [busy,setBusy]=useState(false);
@@ -1674,6 +1676,10 @@ function BMOOrderTaker({user,showToast}){
   const catItems=menu.filter(m=>m.category===selCat&&m.active);
   const cartTotal=cart.reduce((s,l)=>s+l.lineTotal,0);
   const cartTotalQty=cart.reduce((s,l)=>s+l.quantity,0);
+  const TAKEAWAY_RATE_FOOD=20,TAKEAWAY_RATE_BEV=10;
+  const takeawayChargeForLine=(l)=>(l.category==="Beverages"?TAKEAWAY_RATE_BEV:TAKEAWAY_RATE_FOOD)*l.quantity;
+  const takeawayTotal = dineType==="takeaway" ? cart.reduce((s,l)=>s+takeawayChargeForLine(l),0) : 0;
+  const grandTotal = cartTotal + takeawayTotal;
 
   const lineKey=(itemId,customs)=>`${itemId}||${customs}`;
   const getItemTotalQty=(itemId)=>cart.filter(l=>l.itemId===itemId).reduce((s,l)=>s+l.quantity,0);
@@ -1741,7 +1747,10 @@ function BMOOrderTaker({user,showToast}){
       createdBy:user.id,createdByName:user.name,
       createdAt:new Date().toISOString(),
       paymentMode:payMode,
-      totalAmount:cartTotal,
+      dineType,
+      takeawayCharge:takeawayTotal,
+      itemsAmount:cartTotal,
+      totalAmount:grandTotal,
       status:"open",
       cancelled:false,
       items:cart.map(l=>({...l}))
@@ -1749,8 +1758,8 @@ function BMOOrderTaker({user,showToast}){
     const orders=await sget("bmoOrders")||[];
     orders.push(order);
     await sset("bmoOrders",orders);
-    await addLog("BMO_ORDER",user.id,`BMO #${dayCount} — ${outletName} — ${inr(cartTotal)} — ${payMode}`);
-    setLastOrder(order);setCart([]);setPayMode("Cash");setStage("done");setBusy(false);
+    await addLog("BMO_ORDER",user.id,`BMO #${dayCount} — ${outletName} — ${inr(grandTotal)} — ${payMode}${dineType==="takeaway"?" — Takeaway":""}`);
+    setLastOrder(order);setCart([]);setPayMode("Cash");setDineType("dinein");setStage("done");setBusy(false);
     showToast(`BMO Order #${dayCount} saved!`,"success");
   };
 
@@ -1780,7 +1789,8 @@ function BMOOrderTaker({user,showToast}){
         <div style={{fontWeight:800,fontSize:20,color:C.success,marginBottom:4}}>Order Placed!</div>
         <div style={{fontSize:36,fontWeight:900,color:C.bmo,marginBottom:4}}>BMO #{lastOrder.bmoOrderNo}</div>
         <div style={{color:C.sub,fontSize:13,marginBottom:4}}>{lastOrder.outletName}</div>
-        <div style={{color:C.sub,fontSize:14,marginBottom:4}}>{lastOrder.paymentMode}</div>
+        <div style={{color:C.sub,fontSize:14,marginBottom:4}}>{lastOrder.paymentMode}{lastOrder.dineType==="takeaway"?" · Takeaway":" · Dine-in"}</div>
+        {lastOrder.takeawayCharge>0&&<div style={{color:C.sub,fontSize:12,marginBottom:4}}>Includes {inr(lastOrder.takeawayCharge)} takeaway charge</div>}
         <div style={{fontSize:22,fontWeight:800,color:C.text,marginBottom:20}}>{inr(lastOrder.totalAmount)}</div>
         <button onClick={()=>{setStage("menu");setLastOrder(null);}} style={{...BPr,background:C.bmo}}>New Order</button>
       </div>
@@ -1807,24 +1817,50 @@ function BMOOrderTaker({user,showToast}){
               </div>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <button onClick={()=>updateQty(l.lineId,-1)} style={{width:36,height:36,borderRadius:9,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:20,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger}}>−</button>
+                  <button onClick={()=>updateQty(l.lineId,-1)} style={{width:36,height:36,borderRadius:4,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:20,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger}}>−</button>
                   <span style={{fontWeight:800,fontSize:18,minWidth:28,textAlign:"center",color:C.text}}>{l.quantity}</span>
-                  <button onClick={()=>updateQty(l.lineId,1)} style={{width:36,height:36,borderRadius:9,border:`1.5px solid ${C.bmo}`,background:C.bmoLight,cursor:"pointer",fontSize:20,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.bmo}}>+</button>
+                  <button onClick={()=>updateQty(l.lineId,1)} style={{width:36,height:36,borderRadius:4,border:`1.5px solid ${C.bmo}`,background:C.bmoLight,cursor:"pointer",fontSize:20,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.bmo}}>+</button>
                 </div>
                 <div style={{fontWeight:800,color:C.success,fontSize:16}}>{inr(l.lineTotal)}</div>
               </div>
             </div>
           ))}
+          <div style={{...Cd,marginBottom:16}}>
+            <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:10}}>Order Type</div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setDineType("dinein")}
+                style={{flex:1,padding:"12px",borderRadius:4,border:`1.5px solid ${dineType==="dinein"?C.accent:C.border}`,background:dineType==="dinein"?C.accentLight:"#fff",color:dineType==="dinein"?C.accentDark:C.sub,fontWeight:700,fontSize:14,cursor:"pointer"}}>
+                🍽 Dine-in
+              </button>
+              <button onClick={()=>setDineType("takeaway")}
+                style={{flex:1,padding:"12px",borderRadius:4,border:`1.5px solid ${dineType==="takeaway"?C.accent:C.border}`,background:dineType==="takeaway"?C.accentLight:"#fff",color:dineType==="takeaway"?C.accentDark:C.sub,fontWeight:700,fontSize:14,cursor:"pointer"}}>
+                🥡 Takeaway
+              </button>
+            </div>
+            {dineType==="takeaway"&&(
+              <div style={{marginTop:10,fontSize:12,color:C.sub,lineHeight:1.5}}>
+                Takeaway charge applied automatically — ₹20 per food item, ₹10 per beverage.
+              </div>
+            )}
+          </div>
           <div style={{...Cd,background:C.bmoLight,border:`1px solid ${C.bmoBorder}`,marginBottom:16}}>
             <div style={{fontWeight:700,fontSize:14,color:C.bmo,marginBottom:10}}>Payment Mode</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{BMO_PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={payMode===m} onClick={()=>setPayMode(m)}/>)}</div>
           </div>
-          <div style={{...Cd,background:C.successLight,border:`1px solid ${C.successBorder}`,marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div>
-              <div style={{fontWeight:700,color:C.text,fontSize:15}}>Total</div>
-              <div style={{color:C.sub,fontSize:12}}>{cartTotalQty} items · {cart.length} lines</div>
+          <div style={{...Cd,background:C.successLight,border:`1px solid ${C.successBorder}`,marginBottom:16}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.sub,marginBottom:takeawayTotal>0?4:0}}>
+              <span>Items ({cartTotalQty})</span><span>{inr(cartTotal)}</span>
             </div>
-            <span style={{fontWeight:900,color:C.success,fontSize:24}}>{inr(cartTotal)}</span>
+            {takeawayTotal>0&&(
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.sub,marginBottom:8}}>
+                <span>Takeaway charge</span><span>{inr(takeawayTotal)}</span>
+              </div>
+            )}
+            <div style={{height:1,background:C.successBorder,margin:"8px 0"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{fontWeight:700,color:C.text,fontSize:15}}>Total</div>
+              <span style={{fontWeight:900,color:C.success,fontSize:24}}>{inr(grandTotal)}</span>
+            </div>
           </div>
           <div style={{display:"flex",gap:10}}>
             <button onClick={()=>setStage("menu")} style={{...BSc,flex:1}}>← Add More</button>
@@ -1853,7 +1889,7 @@ function BMOOrderTaker({user,showToast}){
           return(
             <button key={cat} onClick={()=>setSelCat(cat)} style={{flexShrink:0,background:"transparent",border:"none",borderBottom:selCat===cat?`2px solid ${C.bmo}`:"2px solid transparent",color:selCat===cat?C.bmo:C.sub,padding:"11px 14px",fontSize:13,cursor:"pointer",fontWeight:selCat===cat?700:500,whiteSpace:"nowrap",position:"relative"}}>
               {cat}
-              {catQty>0&&<span style={{marginLeft:5,background:C.bmo,color:"#fff",borderRadius:8,fontSize:9,padding:"1px 5px",fontWeight:800,verticalAlign:"middle"}}>{catQty}</span>}
+              {catQty>0&&<span style={{marginLeft:5,background:C.bmo,color:"#fff",borderRadius:4,fontSize:9,padding:"1px 5px",fontWeight:800,verticalAlign:"middle"}}>{catQty}</span>}
             </button>
           );
         })}
@@ -1868,7 +1904,7 @@ function BMOOrderTaker({user,showToast}){
             const itemQty=getItemTotalQty(item.id);
             const inCart=itemQty>0;
             return(
-              <div key={item.id} style={{background:C.surface,border:`1.5px solid ${inCart?C.bmo:C.border}`,borderRadius:14,padding:"12px 12px 10px",display:"flex",flexDirection:"column",gap:6,position:"relative",boxShadow:inCart?`0 0 0 2px ${C.bmo}22`:"none"}}>
+              <div key={item.id} style={{background:C.surface,border:`1.5px solid ${inCart?C.bmo:C.border}`,borderRadius:4,padding:"12px 12px 10px",display:"flex",flexDirection:"column",gap:6,position:"relative",boxShadow:inCart?`0 0 0 2px ${C.bmo}22`:"none"}}>
                 {inCart&&<div style={{position:"absolute",top:-8,right:-8,background:C.bmo,color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,boxShadow:"0 2px 6px rgba(0,0,0,.2)"}}>{itemQty}</div>}
                 <div onClick={hasCustom?()=>openCustomModal(item):undefined} style={{cursor:hasCustom?"pointer":"default",flex:1}}>
                   <div style={{fontWeight:700,color:C.text,fontSize:13,lineHeight:1.35,marginBottom:4}}>{item.name}</div>
@@ -1878,7 +1914,7 @@ function BMOOrderTaker({user,showToast}){
                 </div>
                 {hasCustom?(
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:4}}>
-                    <button onClick={()=>openCustomModal(item)} style={{flex:1,background:inCart?C.bmo:C.bg,color:inCart?"#fff":C.bmo,border:`1.5px solid ${C.bmo}`,borderRadius:8,padding:"7px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                    <button onClick={()=>openCustomModal(item)} style={{flex:1,background:inCart?C.bmo:C.bg,color:inCart?"#fff":C.bmo,border:`1.5px solid ${C.bmo}`,borderRadius:4,padding:"7px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>
                       {inCart?`+Add (${itemQty})`:"+ Add"}
                     </button>
                   </div>
@@ -1886,12 +1922,12 @@ function BMOOrderTaker({user,showToast}){
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:4,gap:4}}>
                     {inCart?(
                       <>
-                        <button onClick={(e)=>handleDirectMinus(item,e)} style={{width:34,height:34,borderRadius:8,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:18,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger,flexShrink:0}}>−</button>
+                        <button onClick={(e)=>handleDirectMinus(item,e)} style={{width:34,height:34,borderRadius:4,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:18,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger,flexShrink:0}}>−</button>
                         <span style={{fontWeight:800,fontSize:16,color:C.bmo,minWidth:20,textAlign:"center"}}>{itemQty}</span>
-                        <button onClick={(e)=>handleDirectPlus(item,e)} style={{width:34,height:34,borderRadius:8,border:`1.5px solid ${C.bmo}`,background:C.bmoLight,cursor:"pointer",fontSize:18,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.bmo,flexShrink:0}}>+</button>
+                        <button onClick={(e)=>handleDirectPlus(item,e)} style={{width:34,height:34,borderRadius:4,border:`1.5px solid ${C.bmo}`,background:C.bmoLight,cursor:"pointer",fontSize:18,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.bmo,flexShrink:0}}>+</button>
                       </>
                     ):(
-                      <button onClick={(e)=>handleDirectPlus(item,e)} style={{flex:1,background:C.bg,color:C.bmo,border:`1.5px solid ${C.bmo}`,borderRadius:8,padding:"7px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Add</button>
+                      <button onClick={(e)=>handleDirectPlus(item,e)} style={{flex:1,background:C.bg,color:C.bmo,border:`1.5px solid ${C.bmo}`,borderRadius:4,padding:"7px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Add</button>
                     )}
                   </div>
                 )}
@@ -1904,9 +1940,9 @@ function BMOOrderTaker({user,showToast}){
       {/* Floating cart bar */}
       {cart.length>0&&(
         <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"10px 12px",background:C.surface,borderTop:`1px solid ${C.border}`,zIndex:10}}>
-          <button onClick={()=>setStage("cart")} style={{...BPr,background:C.bmo,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 20px",borderRadius:12}}>
+          <button onClick={()=>setStage("cart")} style={{...BPr,background:C.bmo,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 20px",borderRadius:4}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{background:"rgba(255,255,255,.2)",borderRadius:8,padding:"2px 10px",fontWeight:800,fontSize:13}}>{cartTotalQty}</span>
+              <span style={{background:"rgba(255,255,255,.2)",borderRadius:4,padding:"2px 10px",fontWeight:800,fontSize:13}}>{cartTotalQty}</span>
               <span style={{fontWeight:600,fontSize:13,opacity:.9}}>{cart.length} line{cart.length!==1?"s":""}</span>
             </div>
             <span style={{fontWeight:700,fontSize:15}}>View Cart →</span>
@@ -1925,7 +1961,7 @@ function BMOOrderTaker({user,showToast}){
                 <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                   {g.options.map(opt=>(
                     <button key={opt} onClick={()=>setCustomModal(cm=>({...cm,selections:{...cm.selections,[g.name]:opt}}))}
-                      style={{background:customModal.selections[g.name]===opt?C.bmo:C.surface,color:customModal.selections[g.name]===opt?"#fff":C.sub,border:`1.5px solid ${customModal.selections[g.name]===opt?C.bmo:C.border}`,borderRadius:9,padding:"8px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>
+                      style={{background:customModal.selections[g.name]===opt?C.bmo:C.surface,color:customModal.selections[g.name]===opt?"#fff":C.sub,border:`1.5px solid ${customModal.selections[g.name]===opt?C.bmo:C.border}`,borderRadius:4,padding:"8px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>
                       {opt}
                     </button>
                   ))}
@@ -1936,12 +1972,12 @@ function BMOOrderTaker({user,showToast}){
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
               <div style={{fontSize:13,fontWeight:600,color:C.text}}>Quantity</div>
               <div style={{display:"flex",alignItems:"center",gap:14}}>
-                <button onClick={()=>setCustomModal(cm=>({...cm,qty:Math.max(1,(cm.qty||1)-1)}))} style={{width:40,height:40,borderRadius:10,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger}}>−</button>
+                <button onClick={()=>setCustomModal(cm=>({...cm,qty:Math.max(1,(cm.qty||1)-1)}))} style={{width:40,height:40,borderRadius:4,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger}}>−</button>
                 <span style={{fontWeight:800,fontSize:22,minWidth:32,textAlign:"center"}}>{customModal.qty||1}</span>
-                <button onClick={()=>setCustomModal(cm=>({...cm,qty:(cm.qty||1)+1}))} style={{width:40,height:40,borderRadius:10,border:`1.5px solid ${C.bmo}`,background:C.bmoLight,cursor:"pointer",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.bmo}}>+</button>
+                <button onClick={()=>setCustomModal(cm=>({...cm,qty:(cm.qty||1)+1}))} style={{width:40,height:40,borderRadius:4,border:`1.5px solid ${C.bmo}`,background:C.bmoLight,cursor:"pointer",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.bmo}}>+</button>
               </div>
             </div>
-            <div style={{background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div style={{background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
               <span style={{color:C.sub,fontSize:14}}>Subtotal</span>
               <span style={{fontWeight:800,color:C.success,fontSize:20}}>{inr(customModal.item.price*(customModal.qty||1))}</span>
             </div>
@@ -2042,7 +2078,7 @@ function BMOViewOrders({user}){
           return(
             <button key={ct} onClick={()=>setCounter(ct)} style={{flexShrink:0,background:"transparent",border:"none",borderBottom:counter===ct?`2px solid ${C.bmo}`:"2px solid transparent",color:counter===ct?C.bmo:C.sub,padding:"11px 16px",fontSize:13,cursor:"pointer",fontWeight:counter===ct?700:500,whiteSpace:"nowrap",position:"relative"}}>
               {ct}
-              {pending>0&&<span style={{marginLeft:5,background:C.warn,color:"#fff",borderRadius:8,fontSize:9,padding:"1px 5px",fontWeight:800,verticalAlign:"middle"}}>{pending}</span>}
+              {pending>0&&<span style={{marginLeft:5,background:C.warn,color:"#fff",borderRadius:4,fontSize:9,padding:"1px 5px",fontWeight:800,verticalAlign:"middle"}}>{pending}</span>}
             </button>
           );
         })}
@@ -2053,7 +2089,7 @@ function BMOViewOrders({user}){
         {/* Stats */}
         <div style={{display:"flex",gap:8,marginBottom:14,overflowX:"auto"}}>
           {[["Pending Lines",pendingLineCount,C.warn],["Done Orders",completedOrders.length,C.success],["Total Today",orders.length,C.bmo]].map(([l,v,cl])=>(
-            <div key={l} style={{flexShrink:0,background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 14px",textAlign:"center",minWidth:90}}>
+            <div key={l} style={{flexShrink:0,background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 14px",textAlign:"center",minWidth:90}}>
               <div style={{fontSize:9,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:2}}>{l}</div>
               <div style={{fontSize:20,fontWeight:800,color:cl}}>{v}</div>
             </div>
@@ -2081,7 +2117,7 @@ function BMOViewOrders({user}){
                 </div>
               </div>
               {pendingLines.map(line=>(
-                <div key={line.lineId} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",marginBottom:8}}>
+                <div key={line.lineId} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:"10px 12px",marginBottom:8}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                     <div style={{flex:1}}>
                       <div style={{fontWeight:700,color:C.text,fontSize:14}}>{line.itemName}</div>
@@ -2096,9 +2132,9 @@ function BMOViewOrders({user}){
                   </div>
                   <div style={{display:"flex",gap:8}}>
                     {line.quantity>1&&(
-                      <button onClick={()=>markPlusOne(order.id,line.lineId)} style={{flex:1,background:C.bmoLight,color:C.bmo,border:`1px solid ${C.bmoBorder}`,borderRadius:8,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer"}}>+1 Done</button>
+                      <button onClick={()=>markPlusOne(order.id,line.lineId)} style={{flex:1,background:C.bmoLight,color:C.bmo,border:`1px solid ${C.bmoBorder}`,borderRadius:4,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer"}}>+1 Done</button>
                     )}
-                    <button onClick={()=>markLineDone(order.id,line.lineId)} style={{flex:2,background:C.bmo,color:"#fff",border:"none",borderRadius:8,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ All Done</button>
+                    <button onClick={()=>markLineDone(order.id,line.lineId)} style={{flex:2,background:C.bmo,color:"#fff",border:"none",borderRadius:4,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ All Done</button>
                   </div>
                 </div>
               ))}
@@ -2303,7 +2339,7 @@ function BMOMenuManager({showToast}){
       </div>
       <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:16}}>
         {cats.map(c=>(
-          <button key={c} onClick={()=>setFilterCat(c)} style={{flexShrink:0,background:filterCat===c?C.bmo:C.surface,color:filterCat===c?"#fff":C.sub,border:`1px solid ${filterCat===c?C.bmo:C.border}`,borderRadius:8,padding:"6px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>{c}</button>
+          <button key={c} onClick={()=>setFilterCat(c)} style={{flexShrink:0,background:filterCat===c?C.bmo:C.surface,color:filterCat===c?"#fff":C.sub,border:`1px solid ${filterCat===c?C.bmo:C.border}`,borderRadius:4,padding:"6px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>{c}</button>
         ))}
       </div>
       {filtered.map(item=>(
@@ -2355,7 +2391,7 @@ function MenuItemForm({item,onSave,onClose,isNew}){
         <button onClick={addGroup} style={{...BSc,padding:"5px 12px",fontSize:12}}>+ Add Group</button>
       </div>
       {f.customGroups.map((g,gi)=>(
-        <div key={gi} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:12,marginBottom:10}}>
+        <div key={gi} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:12,marginBottom:10}}>
           <div style={{display:"flex",gap:8,marginBottom:8}}>
             <input value={g.name} onChange={e=>updateGroup(gi,"name",e.target.value)} placeholder="Group name (e.g. Style)" style={{...IS,flex:1,fontSize:13}}/>
             <label style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:C.sub,whiteSpace:"nowrap"}}>
