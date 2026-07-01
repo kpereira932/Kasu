@@ -74,7 +74,22 @@ async function sget(key) {
   if (cache[key]!==undefined) return cache[key];
   try {
     const snap = await getDoc(doc(db,"kasu",key));
-    let val = snap.exists() ? snap.data().value : null;
+    if(!snap.exists()){cache[key]=null;return null;}
+    const data = snap.data();
+    let val;
+    if("value" in data){
+      // Correct format: {value: [...]}
+      val = data.value;
+    } else if(Array.isArray(data)){
+      // Direct array (shouldn't happen in Firestore but just in case)
+      val = data;
+    } else if("id" in data && "day" in data){
+      // Single object stored directly — wrap in array
+      val = [data];
+    } else {
+      // Unknown format — return null
+      val = null;
+    }
     if (key==="transactions" && val) val = migrateTxns(val);
     cache[key] = val;
     return cache[key];
@@ -154,9 +169,10 @@ async function addLog(action,userId,detail,reason="",extra={}){
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function bizDay(d=new Date()){
-  const x=new Date(d);
-  if(x.getHours()<3||(x.getHours()===2&&x.getMinutes()<30))x.setDate(x.getDate()-1);
-  return x.toISOString().split("T")[0];
+  // Use IST (UTC+5:30) for date calculation
+  const ist=new Date(d.getTime()+5.5*60*60*1000);
+  if(ist.getUTCHours()<3||(ist.getUTCHours()===2&&ist.getUTCMinutes()<30))ist.setUTCDate(ist.getUTCDate()-1);
+  return ist.toISOString().split("T")[0];
 }
 const TODAY=bizDay();
 const fmt  =ts=>new Date(ts).toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
