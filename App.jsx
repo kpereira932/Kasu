@@ -407,7 +407,7 @@ function OutletApp({user,onLogout,showToast,onBMO}){
     showToast("Order updated","success");load();
   };
 
-  const navItems=[{id:"entry",icon:"⊕",label:"New Entry"},{id:"orders",icon:"📋",label:"Orders"},{id:"refunds",icon:"↩",label:"Refunds"}];
+  const navItems=[{id:"entry",icon:"⊕",label:"New Entry"},{id:"orders",icon:"📋",label:"Orders"}];
 
   return(
     <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",maxWidth:540,margin:"0 auto"}}>
@@ -439,7 +439,6 @@ function OutletApp({user,onLogout,showToast,onBMO}){
       <div style={{flex:1,overflowY:"auto",paddingBottom:72}}>
         {screen==="entry"&&<EntryScreen user={user} dayDone={dayDone} onSaved={load} showToast={showToast} txns={txns}/>}
         {screen==="orders"&&<OrdersScreen txns={txns} editable canEdit={canEdit} onEdit={doEdit}/>}
-        {screen==="refunds"&&<RefundsScreen user={user} dayDone={dayDone} onSaved={load} refs={refs} showToast={showToast}/>}
       </div>
 
       <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:540,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",zIndex:10}}>
@@ -789,17 +788,22 @@ function TxnCard({txn,onEdit,onDelete,editable}){
 
 // ─── Day End Modal ────────────────────────────────────────────────────────────
 function DayEndModal({open,onClose,onConfirm,totals,totalRef,grand,txnCount,outletName,alreadyClosed}){
+  const [endType,setEndType]=useState(null); // null = picking, "shift" | "day"
   const [zeroConfirm,setZeroConfirm]=useState(false);
   const net=grand-totalRef,cashIn=totals["Cash"]||0,cashInHand=cashIn-totalRef;
-  const cashFails=["PhonePe QR Fail","Pine Labs QR Fail","Pine Labs Card Fail"].reduce((s,m)=>s+(totals[m]||0),0);
   const rows=PAYMENT_MODES.filter(m=>totals[m]>0);
+
+  // Reset type choice when modal closes
+  const handleClose=()=>{setEndType(null);setZeroConfirm(false);onClose();};
+
   const buildWA=()=>{
-    const lines=[`ಕಾಸು *Kāsu Day End*`,`📍 ${outletName}`,`📅 ${fmtD(TODAY)}`,``,`💰 Gross: ${inr(grand)}`,`↩ Refunds: −${inr(totalRef)}`,`✅ Net: *${inr(net)}*`,`📋 Orders: ${txnCount}`,`💵 Cash in Hand: *${inr(cashInHand)}*`,``,`*Breakdown:*`];
+    const label=endType==="shift"?"Shift End":"Day End";
+    const lines=[`ಕಾಸು *Kāsu ${label}*`,`📍 ${outletName}`,`📅 ${fmtD(TODAY)}`,``,`💰 Gross: ${inr(grand)}`,`↩ Refunds: −${inr(totalRef)}`,`✅ Net: *${inr(net)}*`,`📋 Orders: ${txnCount}`,`💵 Cash in Hand: *${inr(cashInHand)}*`,``,`*Breakdown:*`];
     PAYMENT_MODES.filter(m=>totals[m]>0).forEach(m=>lines.push(`• ${m}: ${inr(totals[m])}`));
     return lines.join("\n");
   };
   const buildPrintHTML=()=>`
-    <h1>Day End Summary</h1><div class="sub">${outletName} · ${fmtD(TODAY)}</div>
+    <h1>${endType==="shift"?"Shift End":"Day End"} Summary</h1><div class="sub">${outletName} · ${fmtD(TODAY)}</div>
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-label">Gross Sales</div><div class="kpi-val green">${inr(grand)}</div></div>
       <div class="kpi"><div class="kpi-label">Net Sales</div><div class="kpi-val">${inr(net)}</div></div>
@@ -810,21 +814,43 @@ function DayEndModal({open,onClose,onConfirm,totals,totalRef,grand,txnCount,outl
     </div>
     <div class="section">Payment Mode Breakdown</div>
     <table><thead><tr><th>Mode</th><th class="right">Amount</th></tr></thead><tbody>${rows.map(m=>`<tr><td>${m}</td><td class="right bold">${inr(totals[m])}</td></tr>`).join("")}</tbody></table>`;
+
   if(!open)return null;
+
+  // ── Step 1: pick shift or day end ──
+  if(!endType&&!alreadyClosed)return(
+    <Modal open onClose={handleClose} title="End of Shift / Day" width={400}>
+      <div style={{color:C.sub,fontSize:13,marginBottom:20}}>What would you like to close?</div>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <button onClick={()=>setEndType("shift")}
+          style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,padding:"16px 20px",cursor:"pointer",textAlign:"left",fontWeight:600,fontSize:15,color:C.text}}>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>Shift End</div>
+          <div style={{fontSize:12,color:C.sub,fontWeight:400}}>View your shift summary. Orders stay open for the next shift.</div>
+        </button>
+        <button onClick={()=>setEndType("day")}
+          style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"16px 20px",cursor:"pointer",textAlign:"left",color:C.text}}>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:3,color:C.accentDark}}>Day End</div>
+          <div style={{fontSize:12,color:C.sub,fontWeight:400}}>Close the business day for this outlet. No new entries after this.</div>
+        </button>
+      </div>
+    </Modal>
+  );
+
+  // ── Step 2: summary ──
   return(
     <>
-      <Modal open={open&&!zeroConfirm} onClose={onClose} title="Day End Summary" width={460}>
+      <Modal open={open&&!zeroConfirm} onClose={handleClose} title={endType==="shift"?"Shift End Summary":"Day End Summary"} width={460}>
         {alreadyClosed?(
           <div style={{textAlign:"center",padding:"20px 0"}}>
             <div style={{fontSize:36,marginBottom:12}}>✅</div>
             <div style={{fontWeight:700,fontSize:16,color:C.success,marginBottom:8}}>Day Already Closed</div>
             <div style={{color:C.sub,fontSize:13,marginBottom:20}}>This outlet closed for {fmtD(TODAY)}.</div>
-            <button onClick={onClose} style={{...BSc,width:"100%"}}>Close</button>
+            <button onClick={handleClose} style={{...BSc,width:"100%"}}>Close</button>
           </div>
         ):(
           <>
             <div style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:12,textAlign:"center",marginBottom:16}}>
-              <div style={{fontSize:11,color:C.accent,fontWeight:700,marginBottom:2}}>BUSINESS DAY</div>
+              <div style={{fontSize:11,color:C.accent,fontWeight:700,marginBottom:2}}>{endType==="shift"?"SHIFT END":"BUSINESS DAY"}</div>
               <div style={{fontSize:18,fontWeight:800,color:C.text}}>{fmtD(TODAY)}</div>
               <div style={{fontSize:12,color:C.sub,marginTop:2}}>{outletName}</div>
             </div>
@@ -855,9 +881,12 @@ function DayEndModal({open,onClose,onConfirm,totals,totalRef,grand,txnCount,outl
             </div>
             <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
               <CopyWABtn getText={buildWA}/>
-              <button onClick={()=>printHTML(buildPrintHTML(),"Day End — "+outletName)} style={{...BSc,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>🖨 Print</button>
+              <button onClick={()=>printHTML(buildPrintHTML(),`${endType==="shift"?"Shift":"Day"} End — `+outletName)} style={{...BSc,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>🖨 Print</button>
             </div>
-            <button onClick={()=>txnCount===0?setZeroConfirm(true):onConfirm()} style={{...BPr,background:C.success,padding:14,fontSize:15}}>✓ Confirm Day End</button>
+            {endType==="shift"
+              ?<button onClick={handleClose} style={{...BPr,background:C.success,padding:14,fontSize:15}}>Done</button>
+              :<button onClick={()=>txnCount===0?setZeroConfirm(true):onConfirm()} style={{...BPr,background:C.success,padding:14,fontSize:15}}>✓ Confirm Day End</button>
+            }
           </>
         )}
       </Modal>
