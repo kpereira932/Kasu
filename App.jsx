@@ -1433,7 +1433,7 @@ function UserForm({initial,outlets,onSave,onCancel,isNew}){
 function Logs(){
   const [logs,setLogs]=useState([]);const [loading,setLoading]=useState(true);
   useEffect(()=>{sget("logs").then(l=>{setLogs(l||[]);setLoading(false);});},[]);
-  const AC={"LOGIN":C.success,"LOGOUT":C.sub,"ADD_TXN":C.accent,"EDIT_TXN":C.warn,"DEL_TXN":C.danger,"ADD_REFUND":C.danger,"DAY_END":C.success,"BMO_ORDER":C.bmo};
+  const AC={"LOGIN":C.success,"LOGOUT":C.sub,"ADD_TXN":C.accent,"EDIT_TXN":C.warn,"DEL_TXN":C.danger,"ADD_REFUND":C.danger,"DAY_END":C.success,"BMO_ORDER":C.accent};
   return(
     <div style={{padding:20,maxWidth:800,margin:"0 auto"}}>
       <div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px",marginBottom:4}}>Audit Logs</div>
@@ -1527,7 +1527,7 @@ function BMOApp({user,onClose,showToast}){
 
   return(
     <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column"}}>
-      <div style={{background:C.bmo,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:10}}>
+      <div style={{background:C.accent,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:10}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <BenneLogo size={36} style={{filter:"brightness(0) invert(1)",opacity:.9}}/>
           <div>
@@ -1549,7 +1549,7 @@ function BMOApp({user,onClose,showToast}){
               <div style={{color:C.sub,fontSize:14,marginTop:6}}>Emergency ordering system · {fmtD(TODAY)}</div>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              <button onClick={()=>setScreen("order")} style={{background:C.bmo,color:"#fff",border:"none",borderRadius:4,padding:"20px 20px",fontWeight:700,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left"}}>
+              <button onClick={()=>setScreen("order")} style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"20px 20px",fontWeight:700,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left"}}>
                 <span style={{fontSize:32}}>⊕</span>
                 <div><div>Order Taker</div><div style={{fontSize:13,fontWeight:400,opacity:.8,marginTop:2}}>Take new manual orders</div></div>
               </button>
@@ -1776,7 +1776,7 @@ function BMOOrderTaker({user,showToast}){
             {outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
         </Field>
-        <button onClick={()=>{if(!selOutletId){showToast("Select an outlet","error");return;}setOutletReady(true);}} style={{...BPr,background:C.bmo}}>Continue →</button>
+        <button onClick={()=>{if(!selOutletId){showToast("Select an outlet","error");return;}setOutletReady(true);}} style={{...BPr,background:C.accent}}>Continue →</button>
       </div>
     </div>
   );
@@ -1787,12 +1787,12 @@ function BMOOrderTaker({user,showToast}){
       <div style={{...Cd,textAlign:"center",padding:32}}>
         <div style={{fontSize:48,marginBottom:12}}>✅</div>
         <div style={{fontWeight:800,fontSize:20,color:C.success,marginBottom:4}}>Order Placed!</div>
-        <div style={{fontSize:36,fontWeight:900,color:C.bmo,marginBottom:4}}>BMO #{lastOrder.bmoOrderNo}</div>
+        <div style={{fontSize:36,fontWeight:900,color:C.accent,marginBottom:4}}>BMO #{lastOrder.bmoOrderNo}</div>
         <div style={{color:C.sub,fontSize:13,marginBottom:4}}>{lastOrder.outletName}</div>
         <div style={{color:C.sub,fontSize:14,marginBottom:4}}>{lastOrder.paymentMode}{lastOrder.dineType==="takeaway"?" · Takeaway":" · Dine-in"}</div>
         {lastOrder.takeawayCharge>0&&<div style={{color:C.sub,fontSize:12,marginBottom:4}}>Includes {inr(lastOrder.takeawayCharge)} takeaway charge</div>}
         <div style={{fontSize:22,fontWeight:800,color:C.text,marginBottom:20}}>{inr(lastOrder.totalAmount)}</div>
-        <button onClick={()=>{setStage("menu");setLastOrder(null);}} style={{...BPr,background:C.bmo}}>New Order</button>
+        <button onClick={()=>{setStage("menu");setLastOrder(null);}} style={{...BPr,background:C.accent}}>New Order</button>
       </div>
     </div>
   );
@@ -1811,7 +1811,7 @@ function BMOOrderTaker({user,showToast}){
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,color:C.text,fontSize:14}}>{l.itemName}</div>
                   {l.customisations&&<div style={{color:C.sub,fontSize:12,marginTop:2}}>{l.customisations}</div>}
-                  <div style={{color:C.bmo,fontSize:11,marginTop:2}}>{l.counter}</div>
+                  <div style={{color:C.accent,fontSize:11,marginTop:2}}>{l.counter}</div>
                 </div>
                 <button onClick={()=>removeFromCart(l.lineId)} style={{background:"none",border:"none",color:C.danger,fontSize:18,cursor:"pointer",padding:"0 4px",lineHeight:1}}>✕</button>
               </div>
@@ -1819,7 +1819,7 @@ function BMOOrderTaker({user,showToast}){
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                   <button onClick={()=>updateQty(l.lineId,-1)} style={{width:36,height:36,borderRadius:4,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:20,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger}}>−</button>
                   <span style={{fontWeight:800,fontSize:18,minWidth:28,textAlign:"center",color:C.text}}>{l.quantity}</span>
-                  <button onClick={()=>updateQty(l.lineId,1)} style={{width:36,height:36,borderRadius:4,border:`1.5px solid ${C.bmo}`,background:C.bmoLight,cursor:"pointer",fontSize:20,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.bmo}}>+</button>
+                  <button onClick={()=>updateQty(l.lineId,1)} style={{width:36,height:36,borderRadius:4,border:`1.5px solid ${C.accent}`,background:C.accentLight,cursor:"pointer",fontSize:20,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent}}>+</button>
                 </div>
                 <div style={{fontWeight:800,color:C.success,fontSize:16}}>{inr(l.lineTotal)}</div>
               </div>
@@ -1843,8 +1843,8 @@ function BMOOrderTaker({user,showToast}){
               </div>
             )}
           </div>
-          <div style={{...Cd,background:C.bmoLight,border:`1px solid ${C.bmoBorder}`,marginBottom:16}}>
-            <div style={{fontWeight:700,fontSize:14,color:C.bmo,marginBottom:10}}>Payment Mode</div>
+          <div style={{...Cd,background:C.accentLight,border:`1px solid ${C.accentBorder}`,marginBottom:16}}>
+            <div style={{fontWeight:700,fontSize:14,color:C.accent,marginBottom:10}}>Payment Mode</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{BMO_PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={payMode===m} onClick={()=>setPayMode(m)}/>)}</div>
           </div>
           <div style={{...Cd,background:C.successLight,border:`1px solid ${C.successBorder}`,marginBottom:16}}>
@@ -1864,7 +1864,7 @@ function BMOOrderTaker({user,showToast}){
           </div>
           <div style={{display:"flex",gap:10}}>
             <button onClick={()=>setStage("menu")} style={{...BSc,flex:1}}>← Add More</button>
-            <button onClick={settle} disabled={busy} style={{...BPr,background:C.bmo,flex:2,opacity:busy?.7:1}}>{busy?"Saving…":"✓ Settle Bill"}</button>
+            <button onClick={settle} disabled={busy} style={{...BPr,background:C.accent,flex:2,opacity:busy?.7:1}}>{busy?"Saving…":"✓ Settle Bill"}</button>
           </div>
         </>
       }
@@ -1876,9 +1876,9 @@ function BMOOrderTaker({user,showToast}){
     <div style={{maxWidth:600,margin:"0 auto"}}>
       {/* Outlet badge for non-outlet users */}
       {!isOutlet&&outletReady&&(
-        <div style={{background:C.bmoLight,borderBottom:`1px solid ${C.bmoBorder}`,padding:"8px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span style={{fontSize:13,fontWeight:600,color:C.bmo}}>🏪 {outletName}</span>
-          {isAdminLevel&&<button onClick={()=>{setOutletReady(false);setCart([]);}} style={{background:"none",border:"none",color:C.bmo,fontSize:12,cursor:"pointer",textDecoration:"underline"}}>Change</button>}
+        <div style={{background:C.accentLight,borderBottom:`1px solid ${C.accentBorder}`,padding:"8px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span style={{fontSize:13,fontWeight:600,color:C.accent}}>🏪 {outletName}</span>
+          {isAdminLevel&&<button onClick={()=>{setOutletReady(false);setCart([]);}} style={{background:"none",border:"none",color:C.accent,fontSize:12,cursor:"pointer",textDecoration:"underline"}}>Change</button>}
         </div>
       )}
 
@@ -1887,9 +1887,9 @@ function BMOOrderTaker({user,showToast}){
         {BMO_CATEGORIES.map(cat=>{
           const catQty=cart.filter(l=>l.category===cat).reduce((s,l)=>s+l.quantity,0);
           return(
-            <button key={cat} onClick={()=>setSelCat(cat)} style={{flexShrink:0,background:"transparent",border:"none",borderBottom:selCat===cat?`2px solid ${C.bmo}`:"2px solid transparent",color:selCat===cat?C.bmo:C.sub,padding:"11px 14px",fontSize:13,cursor:"pointer",fontWeight:selCat===cat?700:500,whiteSpace:"nowrap",position:"relative"}}>
+            <button key={cat} onClick={()=>setSelCat(cat)} style={{flexShrink:0,background:"transparent",border:"none",borderBottom:selCat===cat?`2px solid ${C.accent}`:"2px solid transparent",color:selCat===cat?C.accent:C.sub,padding:"11px 14px",fontSize:13,cursor:"pointer",fontWeight:selCat===cat?700:500,whiteSpace:"nowrap",position:"relative"}}>
               {cat}
-              {catQty>0&&<span style={{marginLeft:5,background:C.bmo,color:"#fff",borderRadius:4,fontSize:9,padding:"1px 5px",fontWeight:800,verticalAlign:"middle"}}>{catQty}</span>}
+              {catQty>0&&<span style={{marginLeft:5,background:C.accent,color:"#fff",borderRadius:4,fontSize:9,padding:"1px 5px",fontWeight:800,verticalAlign:"middle"}}>{catQty}</span>}
             </button>
           );
         })}
@@ -1904,17 +1904,17 @@ function BMOOrderTaker({user,showToast}){
             const itemQty=getItemTotalQty(item.id);
             const inCart=itemQty>0;
             return(
-              <div key={item.id} style={{background:C.surface,border:`1.5px solid ${inCart?C.bmo:C.border}`,borderRadius:4,padding:"12px 12px 10px",display:"flex",flexDirection:"column",gap:6,position:"relative",boxShadow:inCart?`0 0 0 2px ${C.bmo}22`:"none"}}>
-                {inCart&&<div style={{position:"absolute",top:-8,right:-8,background:C.bmo,color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,boxShadow:"0 2px 6px rgba(0,0,0,.2)"}}>{itemQty}</div>}
+              <div key={item.id} style={{background:C.surface,border:`1.5px solid ${inCart?C.accent:C.border}`,borderRadius:4,padding:"12px 12px 10px",display:"flex",flexDirection:"column",gap:6,position:"relative",boxShadow:inCart?`0 0 0 2px ${C.accent}22`:"none"}}>
+                {inCart&&<div style={{position:"absolute",top:-8,right:-8,background:C.accent,color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,boxShadow:"0 2px 6px rgba(0,0,0,.2)"}}>{itemQty}</div>}
                 <div onClick={hasCustom?()=>openCustomModal(item):undefined} style={{cursor:hasCustom?"pointer":"default",flex:1}}>
                   <div style={{fontWeight:700,color:C.text,fontSize:13,lineHeight:1.35,marginBottom:4}}>{item.name}</div>
-                  <div style={{fontWeight:800,color:C.bmo,fontSize:16}}>{inr(item.price)}</div>
+                  <div style={{fontWeight:800,color:C.accent,fontSize:16}}>{inr(item.price)}</div>
                   <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:.3,marginTop:2}}>{item.counter}</div>
                   {hasCustom&&<div style={{fontSize:10,color:C.accent,marginTop:3,fontWeight:600}}>Tap to customise</div>}
                 </div>
                 {hasCustom?(
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:4}}>
-                    <button onClick={()=>openCustomModal(item)} style={{flex:1,background:inCart?C.bmo:C.bg,color:inCart?"#fff":C.bmo,border:`1.5px solid ${C.bmo}`,borderRadius:4,padding:"7px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                    <button onClick={()=>openCustomModal(item)} style={{flex:1,background:inCart?C.accent:C.bg,color:inCart?"#fff":C.accent,border:`1.5px solid ${C.accent}`,borderRadius:4,padding:"7px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>
                       {inCart?`+Add (${itemQty})`:"+ Add"}
                     </button>
                   </div>
@@ -1923,11 +1923,11 @@ function BMOOrderTaker({user,showToast}){
                     {inCart?(
                       <>
                         <button onClick={(e)=>handleDirectMinus(item,e)} style={{width:34,height:34,borderRadius:4,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:18,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger,flexShrink:0}}>−</button>
-                        <span style={{fontWeight:800,fontSize:16,color:C.bmo,minWidth:20,textAlign:"center"}}>{itemQty}</span>
-                        <button onClick={(e)=>handleDirectPlus(item,e)} style={{width:34,height:34,borderRadius:4,border:`1.5px solid ${C.bmo}`,background:C.bmoLight,cursor:"pointer",fontSize:18,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.bmo,flexShrink:0}}>+</button>
+                        <span style={{fontWeight:800,fontSize:16,color:C.accent,minWidth:20,textAlign:"center"}}>{itemQty}</span>
+                        <button onClick={(e)=>handleDirectPlus(item,e)} style={{width:34,height:34,borderRadius:4,border:`1.5px solid ${C.accent}`,background:C.accentLight,cursor:"pointer",fontSize:18,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent,flexShrink:0}}>+</button>
                       </>
                     ):(
-                      <button onClick={(e)=>handleDirectPlus(item,e)} style={{flex:1,background:C.bg,color:C.bmo,border:`1.5px solid ${C.bmo}`,borderRadius:4,padding:"7px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Add</button>
+                      <button onClick={(e)=>handleDirectPlus(item,e)} style={{flex:1,background:C.bg,color:C.accent,border:`1.5px solid ${C.accent}`,borderRadius:4,padding:"7px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Add</button>
                     )}
                   </div>
                 )}
@@ -1940,7 +1940,7 @@ function BMOOrderTaker({user,showToast}){
       {/* Floating cart bar */}
       {cart.length>0&&(
         <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"10px 12px",background:C.surface,borderTop:`1px solid ${C.border}`,zIndex:10}}>
-          <button onClick={()=>setStage("cart")} style={{...BPr,background:C.bmo,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 20px",borderRadius:4}}>
+          <button onClick={()=>setStage("cart")} style={{...BPr,background:C.accent,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 20px",borderRadius:4}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <span style={{background:"rgba(255,255,255,.2)",borderRadius:4,padding:"2px 10px",fontWeight:800,fontSize:13}}>{cartTotalQty}</span>
               <span style={{fontWeight:600,fontSize:13,opacity:.9}}>{cart.length} line{cart.length!==1?"s":""}</span>
@@ -1961,7 +1961,7 @@ function BMOOrderTaker({user,showToast}){
                 <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                   {g.options.map(opt=>(
                     <button key={opt} onClick={()=>setCustomModal(cm=>({...cm,selections:{...cm.selections,[g.name]:opt}}))}
-                      style={{background:customModal.selections[g.name]===opt?C.bmo:C.surface,color:customModal.selections[g.name]===opt?"#fff":C.sub,border:`1.5px solid ${customModal.selections[g.name]===opt?C.bmo:C.border}`,borderRadius:4,padding:"8px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>
+                      style={{background:customModal.selections[g.name]===opt?C.accent:C.surface,color:customModal.selections[g.name]===opt?"#fff":C.sub,border:`1.5px solid ${customModal.selections[g.name]===opt?C.accent:C.border}`,borderRadius:4,padding:"8px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>
                       {opt}
                     </button>
                   ))}
@@ -1974,14 +1974,14 @@ function BMOOrderTaker({user,showToast}){
               <div style={{display:"flex",alignItems:"center",gap:14}}>
                 <button onClick={()=>setCustomModal(cm=>({...cm,qty:Math.max(1,(cm.qty||1)-1)}))} style={{width:40,height:40,borderRadius:4,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger}}>−</button>
                 <span style={{fontWeight:800,fontSize:22,minWidth:32,textAlign:"center"}}>{customModal.qty||1}</span>
-                <button onClick={()=>setCustomModal(cm=>({...cm,qty:(cm.qty||1)+1}))} style={{width:40,height:40,borderRadius:4,border:`1.5px solid ${C.bmo}`,background:C.bmoLight,cursor:"pointer",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.bmo}}>+</button>
+                <button onClick={()=>setCustomModal(cm=>({...cm,qty:(cm.qty||1)+1}))} style={{width:40,height:40,borderRadius:4,border:`1.5px solid ${C.accent}`,background:C.accentLight,cursor:"pointer",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent}}>+</button>
               </div>
             </div>
             <div style={{background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
               <span style={{color:C.sub,fontSize:14}}>Subtotal</span>
               <span style={{fontWeight:800,color:C.success,fontSize:20}}>{inr(customModal.item.price*(customModal.qty||1))}</span>
             </div>
-            <button onClick={confirmCustom} style={{...BPr,background:C.bmo}}>Add to Cart</button>
+            <button onClick={confirmCustom} style={{...BPr,background:C.accent}}>Add to Cart</button>
           </>
         )}
       </Modal>
@@ -2076,7 +2076,7 @@ function BMOViewOrders({user}){
             ?orders.filter(o=>o.items.some(l=>l.status!=="completed")).length
             :orders.filter(o=>o.items.some(l=>(COUNTER_CATS[ct]||[]).includes(l.category)&&l.status!=="completed")).length;
           return(
-            <button key={ct} onClick={()=>setCounter(ct)} style={{flexShrink:0,background:"transparent",border:"none",borderBottom:counter===ct?`2px solid ${C.bmo}`:"2px solid transparent",color:counter===ct?C.bmo:C.sub,padding:"11px 16px",fontSize:13,cursor:"pointer",fontWeight:counter===ct?700:500,whiteSpace:"nowrap",position:"relative"}}>
+            <button key={ct} onClick={()=>setCounter(ct)} style={{flexShrink:0,background:"transparent",border:"none",borderBottom:counter===ct?`2px solid ${C.accent}`:"2px solid transparent",color:counter===ct?C.accent:C.sub,padding:"11px 16px",fontSize:13,cursor:"pointer",fontWeight:counter===ct?700:500,whiteSpace:"nowrap",position:"relative"}}>
               {ct}
               {pending>0&&<span style={{marginLeft:5,background:C.warn,color:"#fff",borderRadius:4,fontSize:9,padding:"1px 5px",fontWeight:800,verticalAlign:"middle"}}>{pending}</span>}
             </button>
@@ -2088,7 +2088,7 @@ function BMOViewOrders({user}){
       <div style={{padding:12}}>
         {/* Stats */}
         <div style={{display:"flex",gap:8,marginBottom:14,overflowX:"auto"}}>
-          {[["Pending Lines",pendingLineCount,C.warn],["Done Orders",completedOrders.length,C.success],["Total Today",orders.length,C.bmo]].map(([l,v,cl])=>(
+          {[["Pending Lines",pendingLineCount,C.warn],["Done Orders",completedOrders.length,C.success],["Total Today",orders.length,C.accent]].map(([l,v,cl])=>(
             <div key={l} style={{flexShrink:0,background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 14px",textAlign:"center",minWidth:90}}>
               <div style={{fontSize:9,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:2}}>{l}</div>
               <div style={{fontSize:20,fontWeight:800,color:cl}}>{v}</div>
@@ -2105,7 +2105,7 @@ function BMOViewOrders({user}){
             <div key={order.id} style={{...Cd,marginBottom:12,borderLeft:`4px solid ${C.warn}`}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{fontWeight:900,fontSize:22,color:C.bmo}}>#{order.bmoOrderNo}</div>
+                  <div style={{fontWeight:900,fontSize:22,color:C.accent}}>#{order.bmoOrderNo}</div>
                   <div>
                     <div style={{fontSize:11,color:C.muted}}>{fmt(order.createdAt)}</div>
                     <div style={{fontSize:11,color:C.sub}}>{order.paymentMode} · {order.outletName}</div>
@@ -2132,9 +2132,9 @@ function BMOViewOrders({user}){
                   </div>
                   <div style={{display:"flex",gap:8}}>
                     {line.quantity>1&&(
-                      <button onClick={()=>markPlusOne(order.id,line.lineId)} style={{flex:1,background:C.bmoLight,color:C.bmo,border:`1px solid ${C.bmoBorder}`,borderRadius:4,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer"}}>+1 Done</button>
+                      <button onClick={()=>markPlusOne(order.id,line.lineId)} style={{flex:1,background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer"}}>+1 Done</button>
                     )}
-                    <button onClick={()=>markLineDone(order.id,line.lineId)} style={{flex:2,background:C.bmo,color:"#fff",border:"none",borderRadius:4,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ All Done</button>
+                    <button onClick={()=>markLineDone(order.id,line.lineId)} style={{flex:2,background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ All Done</button>
                   </div>
                 </div>
               ))}
@@ -2245,7 +2245,7 @@ function BMOReports({user}){
           <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
             <div><label style={LS}>From</label><input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={IS}/></div>
             <div><label style={LS}>To</label><input type="date" value={to} onChange={e=>setTo(e.target.value)} style={IS}/></div>
-            <button onClick={generate} style={{...BPr,width:"auto",padding:"10px 20px",background:C.bmo}}>{loading?"Generating…":"Generate"}</button>
+            <button onClick={generate} style={{...BPr,width:"auto",padding:"10px 20px",background:C.accent}}>{loading?"Generating…":"Generate"}</button>
           </div>
         </div>
 
@@ -2257,7 +2257,7 @@ function BMOReports({user}){
 
           {/* KPIs */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:20}}>
-            <StatCard label="Gross Sales" value={inr(rep.grossSales)} color={C.bmo}/>
+            <StatCard label="Gross Sales" value={inr(rep.grossSales)} color={C.accent}/>
             <StatCard label="Cancelled" value={"−"+inr(rep.cancelledAmt)} color={C.danger}/>
             <StatCard label="Net Sales" value={inr(rep.netSales)} color={C.success}/>
             <StatCard label="Orders" value={rep.totalOrders} color={C.text}/>
@@ -2279,18 +2279,18 @@ function BMOReports({user}){
               <div style={{...Cd,padding:0,overflow:"hidden"}}>
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
                   <thead><tr><th style={thS}>{title}</th><th style={{...thS,textAlign:"right"}}>Qty / Orders</th><th style={{...thS,textAlign:"right"}}>Amount</th></tr></thead>
-                  <tbody>{rows.map(r=><tr key={r.name}><td style={tdS}>{r.name}</td><td style={{...tdS,textAlign:"right",color:C.sub}}>{r.qty}</td><td style={{...tdS,textAlign:"right",fontWeight:700,color:C.bmo}}>{inr(r.total)}</td></tr>)}</tbody>
+                  <tbody>{rows.map(r=><tr key={r.name}><td style={tdS}>{r.name}</td><td style={{...tdS,textAlign:"right",color:C.sub}}>{r.qty}</td><td style={{...tdS,textAlign:"right",fontWeight:700,color:C.accent}}>{inr(r.total)}</td></tr>)}</tbody>
                 </table>
               </div>
             </div>
           ))}
 
           {/* Summary card */}
-          <div style={{...Cd,background:C.bmoLight,border:`1px solid ${C.bmoBorder}`}}>
+          <div style={{...Cd,background:C.accentLight,border:`1px solid ${C.accentBorder}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
               <div>
-                <div style={{fontSize:11,color:C.bmo,fontWeight:700,textTransform:"uppercase"}}>BMO Net Sales</div>
-                <div style={{fontSize:26,fontWeight:800,color:C.bmo,marginTop:4}}>{inr(rep.netSales)}</div>
+                <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase"}}>BMO Net Sales</div>
+                <div style={{fontSize:26,fontWeight:800,color:C.accent,marginTop:4}}>{inr(rep.netSales)}</div>
               </div>
               <div style={{textAlign:"right",fontSize:13,color:C.sub}}>
                 <div>Gross: {inr(rep.grossSales)}</div>
@@ -2335,11 +2335,11 @@ function BMOMenuManager({showToast}){
     <div style={{padding:20,maxWidth:800,margin:"0 auto"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
         <div style={{fontSize:22,fontWeight:800,color:C.text}}>BMO Menu</div>
-        <button onClick={()=>setAddOpen(true)} style={{...BPr,width:"auto",padding:"9px 18px",background:C.bmo}}>+ Add Item</button>
+        <button onClick={()=>setAddOpen(true)} style={{...BPr,width:"auto",padding:"9px 18px",background:C.accent}}>+ Add Item</button>
       </div>
       <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:16}}>
         {cats.map(c=>(
-          <button key={c} onClick={()=>setFilterCat(c)} style={{flexShrink:0,background:filterCat===c?C.bmo:C.surface,color:filterCat===c?"#fff":C.sub,border:`1px solid ${filterCat===c?C.bmo:C.border}`,borderRadius:4,padding:"6px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>{c}</button>
+          <button key={c} onClick={()=>setFilterCat(c)} style={{flexShrink:0,background:filterCat===c?C.accent:C.surface,color:filterCat===c?"#fff":C.sub,border:`1px solid ${filterCat===c?C.accent:C.border}`,borderRadius:4,padding:"6px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>{c}</button>
         ))}
       </div>
       {filtered.map(item=>(
@@ -2350,7 +2350,7 @@ function BMOMenuManager({showToast}){
               <div style={{fontSize:12,color:C.sub,marginTop:2}}>{item.category} · {item.counter}</div>
               {item.customGroups?.length>0&&<div style={{fontSize:11,color:C.muted,marginTop:2}}>Customisations: {item.customGroups.map(g=>g.name).join(", ")}</div>}
             </div>
-            <div style={{fontWeight:800,color:C.bmo,fontSize:16}}>{inr(item.price)}</div>
+            <div style={{fontWeight:800,color:C.accent,fontSize:16}}>{inr(item.price)}</div>
             <Badge label={item.active?"Active":"Inactive"} color={item.active?C.success:C.sub} bg={item.active?C.successLight:C.bg} border={item.active?C.successBorder:C.border}/>
             <button onClick={()=>setEditItem({...item,customGroups:item.customGroups||[]})} style={BEd}>Edit</button>
             <button onClick={()=>toggleItem(item.id)} style={{...BSc,padding:"4px 10px",fontSize:12}}>{item.active?"Deactivate":"Activate"}</button>
@@ -2412,7 +2412,7 @@ function MenuItemForm({item,onSave,onClose,isNew}){
       ))}
       <Divider/>
       <div style={{display:"flex",gap:8}}>
-        <button onClick={save} style={{...BPr,background:C.bmo,flex:1}}>{isNew?"Add Item":"Save Changes"}</button>
+        <button onClick={save} style={{...BPr,background:C.accent,flex:1}}>{isNew?"Add Item":"Save Changes"}</button>
         <button onClick={onClose} style={{...BSc,flex:1}}>Cancel</button>
       </div>
     </Modal>
