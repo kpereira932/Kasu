@@ -466,7 +466,7 @@ function OutletApp({user,onLogout,showToast,onBMO}){
 
       <div style={{flex:1,overflowY:"auto",paddingBottom:72}}>
         {screen==="entry"&&<EntryScreen user={user} dayDone={dayDone} onSaved={load} showToast={showToast} txns={txns}/>}
-        {screen==="orders"&&<OrdersScreen txns={txns} editable canEdit={canEdit} onEdit={doEdit}/>}
+        {screen==="orders"&&<OrdersScreen txns={txns} editable canEdit={canEdit} onEdit={doEdit} user={user}/>}
       </div>
 
       <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:540,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",zIndex:10}}>
@@ -777,16 +777,79 @@ function BoxChargeModal({open,onClose,user,showToast,onSaved}){
   );
 }
 
-function OrdersScreen({txns,editable,canEdit,onEdit}){
+function OrdersScreen({txns,editable,canEdit,onEdit,user}){
   const [editTxn,setEditTxn]=useState(null);
-  return <div style={{padding:16}}>
-    <SectionHeader title={`Today's Orders (${txns.length})`}/>
-    {txns.length===0?<EmptyState icon="📋" title="No orders yet" desc="Saved orders appear here"/>
-      :txns.slice().reverse().map(t=>(
-        <TxnCard key={t.id} txn={t} editable={editable&&canEdit&&canEdit(t)} onEdit={()=>setEditTxn(t)}/>
-      ))}
-    {editTxn&&<EditTxnModal txn={editTxn} onSave={(updated,reason,orig)=>{onEdit(updated,reason,orig);setEditTxn(null);}} onClose={()=>setEditTxn(null)}/>}
-  </div>;
+  const [fMode,setFMode]=useState("all");
+  const [fDate,setFDate]=useState(TODAY);
+  const [fOutlet,setFOutlet]=useState("all");
+  const [outlets,setOutlets]=useState([]);
+  const [allTxns,setAllTxns]=useState(null); // null = use passed txns (outlet), array = loaded all (admin)
+
+  const isAdmin=user&&["superadmin","admin","manager"].includes(user.role);
+
+  useEffect(()=>{
+    if(isAdmin){
+      Promise.all([sget("transactions"),sget("outlets")]).then(([t,o])=>{
+        setAllTxns(t||[]);setOutlets(o||[]);
+      });
+    }
+  },[isAdmin]);
+
+  // Outlet users: filter today's own txns by mode only
+  // Admin/Manager: filter all txns by outlet + date + mode
+  const source = isAdmin ? (allTxns||[]) : txns;
+  const filtered = source.filter(t=>
+    (fMode==="all"||t.payments.some(p=>p.mode===fMode))&&
+    (!isAdmin||(fOutlet==="all"||t.outletId===fOutlet))&&
+    (!isAdmin||!fDate||t.day===fDate)
+  );
+
+  return(
+    <div style={{padding:16}}>
+      {/* Filters */}
+      <div style={{...Cd,padding:12,marginBottom:14}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
+          {isAdmin&&(
+            <div style={{flex:"1 1 120px"}}>
+              <label style={LS}>Outlet</label>
+              <select value={fOutlet} onChange={e=>setFOutlet(e.target.value)} style={{...IS,fontSize:13,padding:"7px 10px"}}>
+                <option value="all">All Outlets</option>
+                {outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
+              </select>
+            </div>
+          )}
+          {isAdmin&&(
+            <div style={{flex:"1 1 130px"}}>
+              <label style={LS}>Date</label>
+              <input type="date" value={fDate} onChange={e=>setFDate(e.target.value)} style={{...IS,fontSize:13,padding:"7px 10px"}}/>
+            </div>
+          )}
+          <div style={{flex:"1 1 130px"}}>
+            <label style={LS}>Payment Mode</label>
+            <select value={fMode} onChange={e=>setFMode(e.target.value)} style={{...IS,fontSize:13,padding:"7px 10px"}}>
+              <option value="all">All Modes</option>
+              {PAYMENT_MODES.map(m=><option key={m}>{m}</option>)}
+            </select>
+          </div>
+          {(fMode!=="all"||fOutlet!=="all"||(isAdmin&&fDate!==TODAY))&&(
+            <button onClick={()=>{setFMode("all");setFOutlet("all");setFDate(TODAY);}}
+              style={{...BSc,padding:"7px 12px",fontSize:12,alignSelf:"flex-end"}}>Clear</button>
+          )}
+        </div>
+      </div>
+
+      <SectionHeader title={`Orders (${filtered.length})`}/>
+      {isAdmin&&allTxns===null
+        ?<div style={{display:"flex",justifyContent:"center",padding:32}}><Spinner/></div>
+        :filtered.length===0
+          ?<EmptyState icon="📋" title="No orders" desc="Try adjusting the filters"/>
+          :filtered.slice().reverse().map(t=>(
+            <TxnCard key={t.id} txn={t} editable={editable&&canEdit&&canEdit(t)} onEdit={()=>setEditTxn(t)}/>
+          ))
+      }
+      {editTxn&&<EditTxnModal txn={editTxn} onSave={(updated,reason,orig)=>{onEdit(updated,reason,orig);setEditTxn(null);}} onClose={()=>setEditTxn(null)}/>}
+    </div>
+  );
 }
 
 function RefundsScreen({user,dayDone,onSaved,refs,showToast}){
