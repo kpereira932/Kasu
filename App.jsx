@@ -354,7 +354,7 @@ function Login({onLogin,showToast}){
       <div style={{...Cd,width:"100%",maxWidth:380,padding:32}}>
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{display:"flex",justifyContent:"center",marginBottom:10}}><BenneLogo size={110}/></div>
-          <div className="font-serif" style={{fontSize:26,fontWeight:400,color:C.text}}>ಕಾಸು</div>
+          <div className="font-serif" style={{fontSize:26,fontWeight:600,color:C.text}}>ಕಾಸು</div>
           <div style={{color:C.sub,fontSize:13,marginTop:3}}>Benne Operations Platform</div>
         </div>
         <Field label="Username"><Inp value={un} onChange={setUn} placeholder="Enter username" onEnter={go}/></Field>
@@ -411,38 +411,28 @@ function OutletApp({user,onLogout,showToast,onBMO}){
 
   return(
     <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",maxWidth:540,margin:"0 auto"}}>
-      <div style={{background:C.accent,borderBottom:`1px solid ${C.accentDark}`,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:10}}>
+      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:10}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <BenneLogo size={36}/>
-          <div><div className="font-serif" style={{fontWeight:400,fontSize:17,color:"#fff"}}>ಕಾಸು</div><div style={{color:"rgba(255,255,255,0.85)",fontSize:11}}>{user.name}</div></div>
+          <div><div className="font-serif" style={{fontWeight:600,fontSize:17,color:C.text}}>ಕಾಸು</div><div style={{color:C.sub,fontSize:11}}>{user.name}</div></div>
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
           <button onClick={onBMO} title="Emergency manual ordering — use only if POS is down" style={{background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:4,padding:"7px 12px",fontWeight:800,fontSize:12,cursor:"pointer",letterSpacing:".5px",display:"flex",alignItems:"center",gap:5}}>⚠ BMO</button>
-          {!dayDone?<button onClick={()=>setDayModal(true)} style={{background:"#fff",color:C.accentDark,border:"none",borderRadius:4,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>Day End</button>
-          :<span style={{display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",background:"rgba(255,255,255,0.2)",color:"#fff",border:"1px solid rgba(255,255,255,0.4)",borderRadius:4,padding:"4px 8px",whiteSpace:"nowrap"}}>Day Closed</span>}
-          <button onClick={onLogout} style={{background:"transparent",color:"#fff",border:"1px solid rgba(255,255,255,0.5)",borderRadius:4,padding:"7px 10px",fontWeight:600,fontSize:12,cursor:"pointer"}}>Logout</button>
+          {!dayDone?<button onClick={()=>setDayModal(true)} style={{background:C.accentLight,color:C.accentDark,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>Day End</button>
+          :<span style={{display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",background:C.successLight,color:C.success,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:"4px 8px",whiteSpace:"nowrap"}}>Day Closed</span>}
+          <button onClick={onLogout} style={{background:"transparent",color:C.sub,border:`1px solid ${C.border}`,borderRadius:4,padding:"7px 10px",fontWeight:600,fontSize:12,cursor:"pointer"}}>Logout</button>
         </div>
       </div>
 
-      {/* Summary strip */}
-      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"8px 10px",display:"flex",gap:5,overflowX:"auto",flexShrink:0}}>
-        {PAYMENT_MODES.map(m=>(
-          <div key={m} style={{flexShrink:0,background:MODE_BG[m],border:`1px solid ${C.border}`,borderRadius:4,padding:"5px 9px",minWidth:68,textAlign:"center"}}>
-            <div style={{fontSize:8,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:1}}>{m.split(" ")[0]}</div>
-            <div style={{fontSize:12,fontWeight:700,color:MODE_COLORS[m]}}>{inr(totals[m]||0)}</div>
-          </div>
-        ))}
-        <div style={{flexShrink:0,background:C.dangerLight,border:`1px solid ${C.dangerBorder}`,borderRadius:4,padding:"5px 9px",minWidth:62,textAlign:"center"}}>
-          <div style={{fontSize:8,color:C.danger,fontWeight:700,textTransform:"uppercase",marginBottom:1}}>Refunds</div>
-          <div style={{fontSize:12,fontWeight:700,color:C.danger}}>−{inr(totalRef)}</div>
+      {/* Summary strip — Cash IH and Net only */}
+      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"8px 16px",display:"flex",gap:8,flexShrink:0}}>
+        <div style={{flex:1,background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:"7px 12px",textAlign:"center"}}>
+          <div style={{fontSize:9,color:C.success,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:2}}>Cash in Hand</div>
+          <div style={{fontSize:14,fontWeight:700,color:C.success}}>{inr(cashInHand)}</div>
         </div>
-        <div style={{flexShrink:0,background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:"5px 9px",minWidth:62,textAlign:"center"}}>
-          <div style={{fontSize:8,color:C.success,fontWeight:700,textTransform:"uppercase",marginBottom:1}}>Cash IH</div>
-          <div style={{fontSize:12,fontWeight:700,color:C.success}}>{inr(cashInHand)}</div>
-        </div>
-        <div style={{flexShrink:0,background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"5px 9px",minWidth:62,textAlign:"center"}}>
-          <div style={{fontSize:8,color:C.accent,fontWeight:700,textTransform:"uppercase",marginBottom:1}}>Net</div>
-          <div style={{fontSize:12,fontWeight:700,color:C.accent}}>{inr(grand-totalRef)}</div>
+        <div style={{flex:1,background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"7px 12px",textAlign:"center"}}>
+          <div style={{fontSize:9,color:C.accentDark,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:2}}>Net</div>
+          <div style={{fontSize:14,fontWeight:700,color:C.accent}}>{inr(grand-totalRef)}</div>
         </div>
       </div>
 
@@ -468,6 +458,37 @@ function OutletApp({user,onLogout,showToast,onBMO}){
   );
 }
 
+// ─── Standalone Refund Modal ──────────────────────────────────────────────────
+function RefundModal({open,onClose,user,showToast,onSaved}){
+  const [orderNo,setOrderNo]=useState("");const [amt,setAmt]=useState("");const [note,setNote]=useState("");
+  const [busy,setBusy]=useState(false);const [errors,setErrors]=useState({});
+  const reset=()=>{setOrderNo("");setAmt("");setNote("");setErrors({});};
+  const validate=()=>{const e={};if(!orderNo.trim())e.orderNo="Order number required.";if(!amt||isNaN(amt)||Number(amt)<=0)e.amt="Enter a valid amount.";return e;};
+  const save=async()=>{
+    const e=validate();setErrors(e);if(Object.keys(e).length>0)return;
+    setBusy(true);
+    const all=await sget("refunds")||[];
+    all.push({id:`r${Date.now()}`,orderNo:orderNo.trim(),amount:Number(amt),note,outletId:user.outlets[0],outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
+    await sset("refunds",all);await addLog("ADD_REFUND",user.id,"Refund order "+orderNo.trim()+" "+inr(amt));
+    showToast("Refund recorded for Order #"+orderNo.trim(),"success");
+    reset();onClose();onSaved&&onSaved();setBusy(false);
+  };
+  return(
+    <Modal open={open} onClose={()=>{reset();onClose();}} title="↩ Add Refund" width={380}>
+      <div style={{background:C.dangerLight,border:`1px solid ${C.dangerBorder}`,borderRadius:4,padding:"9px 12px",fontSize:13,color:C.danger,marginBottom:16,display:"flex",gap:8,alignItems:"center"}}>
+        <span>💸</span><span>Refunds are always paid out in <strong>Cash</strong></span>
+      </div>
+      <Field label="Order Number" error={errors.orderNo}><Inp value={orderNo} onChange={v=>{setOrderNo(v);setErrors(e=>({...e,orderNo:""}));}} placeholder="e.g. 1042" large/></Field>
+      <Field label="Refund Amount (₹)" error={errors.amt}><Inp type="number" value={amt} onChange={v=>{setAmt(v);setErrors(e=>({...e,amt:""}));}} placeholder="0" large/></Field>
+      <Field label="Note" hint="(optional)"><Inp value={note} onChange={setNote} placeholder="Reason for refund"/></Field>
+      <div style={{display:"flex",gap:8,marginTop:4}}>
+        <button onClick={save} disabled={busy} style={{...BPr,background:C.danger,flex:1,opacity:busy?.7:1}}>{busy?"Saving…":"Record Refund"}</button>
+        <button onClick={()=>{reset();onClose();}} style={{...BSc,flex:1}}>Cancel</button>
+      </div>
+    </Modal>
+  );
+}
+
 // ─── Entry Screen ─────────────────────────────────────────────────────────────
 const BOX_ITEMS = [
   {key:"food",label:"Food Box",icon:"📦",rate:20},
@@ -483,6 +504,7 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
   const [dupConfirm,setDupConfirm]=useState(false);
   const [showGuide,setShowGuide]=useState(false);
   const [boxModalOpen,setBoxModalOpen]=useState(false);
+  const [refundModalOpen,setRefundModalOpen]=useState(false);
   const orderRef=useRef(null);
   const amt0Ref=useRef(null);
   const amt1Ref=useRef(null);
@@ -609,6 +631,14 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
       </button>
 
       <BoxChargeModal open={boxModalOpen} onClose={()=>setBoxModalOpen(false)} user={user} showToast={showToast} onSaved={onSaved}/>
+
+      {/* ── Standalone Refund Button ── */}
+      {!dayDone&&<button onClick={()=>setRefundModalOpen(true)}
+        style={{width:"100%",marginTop:10,background:"#fff",border:`1.5px dashed ${C.dangerBorder}`,borderRadius:4,padding:"14px",display:"flex",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",color:C.danger,fontWeight:700,fontSize:14}}>
+        ↩ Add Refund
+      </button>}
+
+      <RefundModal open={refundModalOpen} onClose={()=>setRefundModalOpen(false)} user={user} showToast={showToast} onSaved={onSaved}/>
 
       <ConfirmDialog open={dupConfirm} onClose={()=>setDupConfirm(false)} onConfirm={doSave} title="Duplicate Order Number" warn
         message={`Order #${orderNo} already exists today. Save another entry anyway?`} confirmLabel="Yes, Save Anyway"/>
@@ -844,7 +874,7 @@ function AdminApp({user,onLogout,showToast,onBMO}){
     <>
       <div style={{padding:"18px 16px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:10}}>
         <div style={{width:36,height:36,background:C.accentLight,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",}}><BenneLogo size={38}/></div>
-        <div><div className="font-serif" style={{fontWeight:400,fontSize:16,color:C.text}}>ಕಾಸು</div><div style={{fontSize:10,color:C.sub}}>Benne</div></div>
+        <div><div className="font-serif" style={{fontWeight:600,fontSize:16,color:C.text}}>ಕಾಸು</div><div style={{fontSize:10,color:C.sub}}>Benne</div></div>
       </div>
       <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}`}}>
         <div style={{fontWeight:600,color:C.text,fontSize:13,marginBottom:4}}>{user.name}</div>
