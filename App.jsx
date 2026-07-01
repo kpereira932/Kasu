@@ -214,9 +214,21 @@ const Cd ={background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,pa
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 function Inp({value,onChange,placeholder,type="text",onEnter,large,style:sx={},readOnly}){
-  return <input readOnly={readOnly} type={type} value={value} onChange={e=>onChange&&onChange(e.target.value)} placeholder={placeholder}
+  const [show,setShow]=useState(false);
+  const isPw=type==="password";
+  const inputEl=<input readOnly={readOnly} type={isPw&&show?"text":type} value={value} onChange={e=>onChange&&onChange(e.target.value)} placeholder={placeholder}
     onKeyDown={e=>e.key==="Enter"&&onEnter&&onEnter()}
-    style={{...IS,fontSize:large?20:14,padding:large?"13px 16px":"10px 12px",...sx}}/>;
+    style={{...IS,fontSize:large?20:14,padding:large?"13px 16px":"10px 12px",paddingRight:isPw?40:undefined,...sx}}/>;
+  if(!isPw)return inputEl;
+  return(
+    <div style={{position:"relative"}}>
+      {inputEl}
+      <button type="button" onClick={()=>setShow(s=>!s)} tabIndex={-1}
+        style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:C.sub,fontSize:13,fontWeight:600,padding:"2px 4px",userSelect:"none"}}>
+        {show?"Hide":"Show"}
+      </button>
+    </div>
+  );
 }
 function Sel({value,onChange,options,labels}){
   return <select value={value} onChange={e=>onChange(e.target.value)} style={IS}>
@@ -675,24 +687,38 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
 // ─── Standalone Box Charge Modal ──────────────────────────────────────────────
 function BoxChargeModal({open,onClose,user,showToast,onSaved}){
   const [qty,setQty]=useState({food:0,cup:0});
+  const [extras,setExtras]=useState([]);
   const [mode,setMode]=useState("Cash");
   const [busy,setBusy]=useState(false);
-  const total = qty.food*BOX_ITEMS[0].rate + qty.cup*BOX_ITEMS[1].rate;
 
-  const reset=()=>{setQty({food:0,cup:0});setMode("Cash");};
+  const fixedTotal = qty.food*BOX_ITEMS[0].rate + qty.cup*BOX_ITEMS[1].rate;
+  const extrasTotal = extras.reduce((s,e)=>s+(Number(e.amt)||0),0);
+  const total = fixedTotal + extrasTotal;
+
+  const reset=()=>{setQty({food:0,cup:0});setExtras([]);setMode("Cash");};
+
+  const addExtra=()=>setExtras(ex=>[...ex,{id:Date.now(),name:"",amt:""}]);
+  const removeExtra=(id)=>setExtras(ex=>ex.filter(e=>e.id!==id));
+  const updateExtra=(id,field,val)=>setExtras(ex=>ex.map(e=>e.id===id?{...e,[field]:val}:e));
 
   const save=async()=>{
     if(total<=0)return;
+    // Validate extras — each must have a name if amount is entered
+    const invalid=extras.some(e=>Number(e.amt)>0&&!e.name.trim());
+    if(invalid){showToast("Please add a name for each extra charge","error");return;}
     setBusy(true);
     const all=await sget("boxCharges")||[];
-    all.push({id:`b${Date.now()}`,amount:total,mode,items:{food:qty.food,cup:qty.cup},
+    all.push({id:`b${Date.now()}`,amount:total,mode,
+      items:{food:qty.food,cup:qty.cup},
+      extras:extras.filter(e=>Number(e.amt)>0).map(e=>({name:e.name.trim(),amt:Number(e.amt)})),
       outletId:user.outlets[0],outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
     await sset("boxCharges",all);await addLog("ADD_BOX",user.id,"Box/Cup charge "+inr(total));
-    setBusy(false);reset();onClose();showToast("Box charge of "+inr(total)+" recorded","success");onSaved&&onSaved();
+    setBusy(false);reset();onClose();showToast("Charge of "+inr(total)+" recorded","success");onSaved&&onSaved();
   };
 
   return(
-    <Modal open={open} onClose={()=>{reset();onClose();}} title="📦 Box / Cup Charges" width={400}>
+    <Modal open={open} onClose={()=>{reset();onClose();}} title="Box / Cup Charges" width={420}>
+      {/* Fixed items */}
       {BOX_ITEMS.map(bi=>(
         <div key={bi.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,gap:10}}>
           <div style={{flex:1}}>
@@ -708,7 +734,34 @@ function BoxChargeModal({open,onClose,user,showToast,onSaved}){
           </div>
         </div>
       ))}
+
       <Divider/>
+
+      {/* Manual extras */}
+      <div style={{marginBottom:12}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:extras.length>0?10:0}}>
+          <label style={LS}>Extra Charges</label>
+          <button onClick={addExtra}
+            style={{background:"none",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 10px",fontSize:12,fontWeight:600,color:C.accent,cursor:"pointer"}}>
+            + Add
+          </button>
+        </div>
+        {extras.map(e=>(
+          <div key={e.id} style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+            <input value={e.name} onChange={ev=>updateExtra(e.id,"name",ev.target.value)}
+              placeholder="Name (e.g. Carry bag)"
+              style={{...IS,flex:2,fontSize:13,padding:"8px 10px"}}/>
+            <input type="number" value={e.amt} onChange={ev=>updateExtra(e.id,"amt",ev.target.value)}
+              placeholder="₹"
+              style={{...IS,flex:1,fontSize:13,padding:"8px 10px"}}/>
+            <button onClick={()=>removeExtra(e.id)}
+              style={{background:"none",border:"none",color:C.danger,fontSize:18,cursor:"pointer",padding:"0 4px",flexShrink:0,lineHeight:1}}>✕</button>
+          </div>
+        ))}
+      </div>
+
+      <Divider/>
+
       <Field label="Payment Mode">
         <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{BMO_PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={mode===m} onClick={()=>setMode(m)}/>)}</div>
       </Field>
