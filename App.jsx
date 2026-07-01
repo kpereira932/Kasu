@@ -84,7 +84,8 @@ async function sget(key) {
     } else {
       val = null;
     }
-    if (key==="transactions" && val) val = migrateTxns(val);
+    // Migrate legacy mode names for any transaction array
+    if(Array.isArray(val) && (key==="transactions" || key.startsWith("transactions_"))) val = migrateTxns(val);
     cache[key] = val;
     return cache[key];
   } catch(e) { console.error("sget",key,e); return null; }
@@ -117,16 +118,12 @@ async function saveTxnsForOutlet(outletId,txns){
   await sset(txnKey(outletId),txns);
 }
 async function updateTxnAcrossOutlets(updater){
-  // For admin edits/deletes: update across all outlet keys
   for(const id of OUTLET_IDS){
     const txns=await sget(txnKey(id))||[];
-    const updated=updater(txns);
-    if(updated!==txns)await sset(txnKey(id),updated);
+    await sset(txnKey(id),updater(txns));
   }
-  // Also update legacy key
   const legacy=await sget("transactions")||[];
-  const updatedLegacy=updater(legacy);
-  if(updatedLegacy!==legacy)await sset("transactions",updatedLegacy);
+  if(legacy.length>0) await sset("transactions",updater(legacy));
 }
 
 // ─── Benne Logo ───────────────────────────────────────────────────────────────
@@ -429,8 +426,11 @@ function OutletApp({user,onLogout,showToast,onBMO}){
   const outletId=user.outlets[0];
 
   const load=useCallback(async()=>{
-    const [all,allR,allB,ds]=await Promise.all([getTxnsForOutlet(outletId),sget("refunds"),sget("boxCharges"),sget("dayStatus")]);
-    setTxns((all||[]).filter(t=>t.outletId===outletId&&t.day===TODAY));
+    const [all,allR,allB,ds]=await Promise.all([getAllTxns(),sget("refunds"),sget("boxCharges"),sget("dayStatus")]);
+    console.log("DEBUG load - outletId:",outletId,"TODAY:",TODAY,"all txns count:",all?.length,"sample:",all?.[0]);
+    const filtered=(all||[]).filter(t=>t.outletId===outletId&&t.day===TODAY);
+    console.log("DEBUG filtered txns:",filtered.length, filtered.map(t=>({id:t.id,day:t.day,outlet:t.outletId})));
+    setTxns(filtered);
     setRefs((allR||[]).filter(r=>r.outletId===outletId&&r.day===TODAY));
     setBoxCharges((allB||[]).filter(b=>b.outletId===outletId&&b.day===TODAY));
     if((ds||{})[outletId]===TODAY)setDayDone(true);
