@@ -463,7 +463,7 @@ function RefundModal({open,onClose,user,showToast,onSaved}){
   const [orderNo,setOrderNo]=useState("");const [amt,setAmt]=useState("");const [note,setNote]=useState("");
   const [busy,setBusy]=useState(false);const [errors,setErrors]=useState({});
   const reset=()=>{setOrderNo("");setAmt("");setNote("");setErrors({});};
-  const validate=()=>{const e={};if(!orderNo.trim())e.orderNo="Order number required.";if(!amt||isNaN(amt)||Number(amt)<=0)e.amt="Enter a valid amount.";return e;};
+  const validate=()=>{const e={};if(!orderNo.trim())e.orderNo="Order number required.";if(!amt||isNaN(amt)||Number(amt)<=0)e.amt="Enter a valid amount.";if(!note.trim())e.note="Reason is required.";return e;};
   const save=async()=>{
     const e=validate();setErrors(e);if(Object.keys(e).length>0)return;
     setBusy(true);
@@ -474,13 +474,10 @@ function RefundModal({open,onClose,user,showToast,onSaved}){
     reset();onClose();onSaved&&onSaved();setBusy(false);
   };
   return(
-    <Modal open={open} onClose={()=>{reset();onClose();}} title="↩ Add Refund" width={380}>
-      <div style={{background:C.dangerLight,border:`1px solid ${C.dangerBorder}`,borderRadius:4,padding:"9px 12px",fontSize:13,color:C.danger,marginBottom:16,display:"flex",gap:8,alignItems:"center"}}>
-        <span>💸</span><span>Refunds are always paid out in <strong>Cash</strong></span>
-      </div>
+    <Modal open={open} onClose={()=>{reset();onClose();}} title="Add Refund" width={380}>
       <Field label="Order Number" error={errors.orderNo}><Inp value={orderNo} onChange={v=>{setOrderNo(v);setErrors(e=>({...e,orderNo:""}));}} placeholder="e.g. 1042" large/></Field>
       <Field label="Refund Amount (₹)" error={errors.amt}><Inp type="number" value={amt} onChange={v=>{setAmt(v);setErrors(e=>({...e,amt:""}));}} placeholder="0" large/></Field>
-      <Field label="Note" hint="(optional)"><Inp value={note} onChange={setNote} placeholder="Reason for refund"/></Field>
+      <Field label="Reason" error={errors.note} hint="(required)"><Inp value={note} onChange={v=>{setNote(v);setErrors(e=>({...e,note:""}));}} placeholder="Reason for refund"/></Field>
       <div style={{display:"flex",gap:8,marginTop:4}}>
         <button onClick={save} disabled={busy} style={{...BPr,background:C.danger,flex:1,opacity:busy?.7:1}}>{busy?"Saving…":"Record Refund"}</button>
         <button onClick={()=>{reset();onClose();}} style={{...BSc,flex:1}}>Cancel</button>
@@ -505,17 +502,20 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
   const [showGuide,setShowGuide]=useState(false);
   const [boxModalOpen,setBoxModalOpen]=useState(false);
   const [refundModalOpen,setRefundModalOpen]=useState(false);
+  const [compReason,setCompReason]=useState("");
   const orderRef=useRef(null);
   const amt0Ref=useRef(null);
   const amt1Ref=useRef(null);
   const saveRef=useRef(null);
 
+  const hasComp=pays.some(p=>p.mode==="Comp");
   const checkDup=useCallback((val)=>{if(!val.trim()){setDupWarn(false);return;}setDupWarn(txns.some(t=>t.orderNo===val.trim()));},[txns]);
 
   const validate=()=>{
     const e={};
     if(!orderNo.trim())e.orderNo="Order number is required.";
     pays.forEach((p,i)=>{if(!p.amount||isNaN(p.amount)||Number(p.amount)<=0)e[`amt${i}`]="Enter a valid amount (>0).";else if(Number(p.amount)>999999)e[`amt${i}`]="Amount seems too large.";});
+    if(hasComp&&!compReason.trim())e.compReason="Reason is required for Comp orders.";
     return e;
   };
 
@@ -525,10 +525,10 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
     setDupConfirm(false);setBusy(true);
     const all=await sget("transactions")||[];
     all.push({id:`t${Date.now()}`,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)})),
-      boxAmount:0,boxMode:"Cash",boxItems:null,
+      boxAmount:0,boxMode:"Cash",boxItems:null,compReason:hasComp?compReason.trim():"",
       outletId:user.outlets[0],outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
-    await sset("transactions",all);await addLog("ADD_TXN",user.id,"Order "+orderNo.trim());
-    setOrderNo("");setPays([{mode:"Cash",amount:""}]);setErrors({});setDupWarn(false);
+    await sset("transactions",all);await addLog("ADD_TXN",user.id,"Order "+orderNo.trim()+(hasComp?` [Comp: ${compReason.trim()}]`:""));
+    setOrderNo("");setPays([{mode:"Cash",amount:""}]);setCompReason("");setErrors({});setDupWarn(false);
     setBusy(false);showToast("Order #"+orderNo.trim()+" saved!","success");onSaved();
     setTimeout(()=>orderRef.current&&orderRef.current.focus(),100);
   };
@@ -611,6 +611,17 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
             style={{background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:600,marginBottom:14}}>
             + Split Payment
           </button>
+        )}
+
+        {/* Comp reason — shown only when Comp mode is selected */}
+        {hasComp&&(
+          <div style={{background:C.surface2,border:`1px solid ${C.border}`,borderRadius:4,padding:"12px 14px",marginBottom:14}}>
+            <label style={{...LS,marginBottom:6}}>Reason for Comp <span style={{color:C.danger}}>*</span></label>
+            <textarea value={compReason} onChange={e=>{setCompReason(e.target.value);setErrors(ev=>({...ev,compReason:""}));}}
+              rows={2} placeholder="e.g. Staff meal, Guest complaint, Owner authorised…"
+              style={{...IS,resize:"none"}}/>
+            {errors.compReason&&<div style={{color:C.danger,fontSize:11,marginTop:4}}>⚠ {errors.compReason}</div>}
+          </div>
         )}
 
         {/* ── Save ── */}
@@ -713,7 +724,7 @@ function OrdersScreen({txns,editable,canEdit,onEdit}){
 function RefundsScreen({user,dayDone,onSaved,refs,showToast}){
   const [open,setOpen]=useState(false);const [orderNo,setOrderNo]=useState("");const [amt,setAmt]=useState("");const [note,setNote]=useState("");
   const [busy,setBusy]=useState(false);const [errors,setErrors]=useState({});
-  const validate=()=>{const e={};if(!orderNo.trim())e.orderNo="Order number is required.";if(!amt||isNaN(amt)||Number(amt)<=0)e.amt="Enter a valid amount (>0).";return e;};
+  const validate=()=>{const e={};if(!orderNo.trim())e.orderNo="Order number is required.";if(!amt||isNaN(amt)||Number(amt)<=0)e.amt="Enter a valid amount (>0).";if(!note.trim())e.note="Reason is required.";return e;};
   const save=async()=>{
     const e=validate();setErrors(e);if(Object.keys(e).length>0)return;
     setBusy(true);
@@ -727,10 +738,9 @@ function RefundsScreen({user,dayDone,onSaved,refs,showToast}){
     <div style={{padding:16}}>
       {!dayDone&&<button onClick={()=>setOpen(true)} style={{...BPr,background:C.danger,marginBottom:16,padding:14,fontSize:15,fontWeight:700}}>+ Add Refund</button>}
       <Modal open={open} onClose={()=>{setOpen(false);setErrors({});}} title="Add Refund" width={380}>
-        <div style={{background:C.dangerLight,border:`1px solid ${C.dangerBorder}`,borderRadius:4,padding:"9px 12px",fontSize:13,color:C.danger,marginBottom:16,display:"flex",gap:8,alignItems:"center"}}><span>💸</span><span>Refunds are always paid out in <strong>Cash</strong></span></div>
         <Field label="Order Number" error={errors.orderNo}><Inp value={orderNo} onChange={v=>{setOrderNo(v);setErrors(e=>({...e,orderNo:""}));}} placeholder="e.g. 1042" large/></Field>
         <Field label="Refund Amount (₹)" error={errors.amt}><Inp type="number" value={amt} onChange={v=>{setAmt(v);setErrors(e=>({...e,amt:""}));}} placeholder="0" large/></Field>
-        <Field label="Note" hint="(optional)"><Inp value={note} onChange={setNote} placeholder="Reason for refund"/></Field>
+        <Field label="Reason" error={errors.note} hint="(required)"><Inp value={note} onChange={v=>{setNote(v);setErrors(e=>({...e,note:""}));}} placeholder="Reason for refund"/></Field>
         <div style={{display:"flex",gap:8,marginTop:4}}>
           <button onClick={save} disabled={busy} style={{...BPr,background:C.danger,flex:1,opacity:busy?.7:1}}>{busy?"Saving…":"Record Refund"}</button>
           <button onClick={()=>{setOpen(false);setErrors({});}} style={{...BSc,flex:1}}>Cancel</button>
@@ -1573,28 +1583,27 @@ function BMOApp({user,onClose,showToast}){
       <div style={{flex:1,overflowY:"auto"}}>
         {screen==="home"&&(
           <div style={{padding:20,maxWidth:480,margin:"0 auto"}}>
-            <div style={{textAlign:"center",padding:"24px 0 28px"}}>
-              <div style={{fontSize:48,marginBottom:12}}>🍽</div>
-              <div style={{fontWeight:800,fontSize:24,color:C.text,letterSpacing:"-0.5px"}}>Benne Manual Orders</div>
-              <div style={{color:C.sub,fontSize:14,marginTop:6}}>Emergency ordering system · {fmtD(TODAY)}</div>
+            <div style={{padding:"28px 0 32px"}}>
+              <div style={{fontWeight:700,fontSize:22,color:C.text,letterSpacing:"-0.3px"}}>Benne Manual Orders</div>
+              <div style={{color:C.sub,fontSize:13,marginTop:4}}>Emergency ordering system · {fmtD(TODAY)}</div>
             </div>
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              <button onClick={()=>setScreen("order")} style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"20px 20px",fontWeight:700,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left"}}>
-                <span style={{fontSize:32}}>⊕</span>
-                <div><div>Order Taker</div><div style={{fontSize:13,fontWeight:400,opacity:.8,marginTop:2}}>Take new manual orders</div></div>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <button onClick={()=>setScreen("order")} style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"18px 20px",fontWeight:600,fontSize:15,cursor:"pointer",textAlign:"left"}}>
+                <div style={{fontWeight:700,fontSize:16}}>Order Taker</div>
+                <div style={{fontSize:12,opacity:.85,marginTop:3,fontWeight:400}}>Take new manual orders</div>
               </button>
-              <button onClick={()=>setScreen("view")} style={{background:C.surface,color:C.text,border:`2px solid ${C.border}`,borderRadius:4,padding:"20px 20px",fontWeight:700,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left"}}>
-                <span style={{fontSize:32}}>📺</span>
-                <div><div>View Orders</div><div style={{fontSize:13,fontWeight:400,color:C.sub,marginTop:2}}>Kitchen display & counter view</div></div>
+              <button onClick={()=>setScreen("view")} style={{background:C.surface,color:C.text,border:`1px solid ${C.border}`,borderRadius:4,padding:"18px 20px",fontWeight:600,fontSize:15,cursor:"pointer",textAlign:"left"}}>
+                <div style={{fontWeight:700,fontSize:16}}>View Orders</div>
+                <div style={{fontSize:12,color:C.sub,marginTop:3,fontWeight:400}}>Kitchen display & counter view</div>
               </button>
-              <button onClick={()=>setScreen("reports")} style={{background:C.surface,color:C.text,border:`2px solid ${C.border}`,borderRadius:4,padding:"20px 20px",fontWeight:700,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left"}}>
-                <span style={{fontSize:32}}>📊</span>
-                <div><div>BMO Reports</div><div style={{fontSize:13,fontWeight:400,color:C.sub,marginTop:2}}>Sales, items, payment summary</div></div>
+              <button onClick={()=>setScreen("reports")} style={{background:C.surface,color:C.text,border:`1px solid ${C.border}`,borderRadius:4,padding:"18px 20px",fontWeight:600,fontSize:15,cursor:"pointer",textAlign:"left"}}>
+                <div style={{fontWeight:700,fontSize:16}}>BMO Reports</div>
+                <div style={{fontSize:12,color:C.sub,marginTop:3,fontWeight:400}}>Sales, items, payment summary</div>
               </button>
               {canManageMenu&&(
-                <button onClick={()=>setScreen("menu")} style={{background:C.surface,color:C.text,border:`2px solid ${C.border}`,borderRadius:4,padding:"20px 20px",fontWeight:700,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left"}}>
-                  <span style={{fontSize:32}}>📝</span>
-                  <div><div>Manage Menu</div><div style={{fontSize:13,fontWeight:400,color:C.sub,marginTop:2}}>Items, prices, categories</div></div>
+                <button onClick={()=>setScreen("menu")} style={{background:C.surface,color:C.text,border:`1px solid ${C.border}`,borderRadius:4,padding:"18px 20px",fontWeight:600,fontSize:15,cursor:"pointer",textAlign:"left"}}>
+                  <div style={{fontWeight:700,fontSize:16}}>Manage Menu</div>
+                  <div style={{fontSize:12,color:C.sub,marginTop:3,fontWeight:400}}>Items, prices, categories</div>
                 </button>
               )}
             </div>
