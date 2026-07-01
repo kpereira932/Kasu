@@ -424,15 +424,15 @@ function OutletApp({user,onLogout,showToast,onBMO}){
         </div>
       </div>
 
-      {/* Summary strip — Cash IH and Net only */}
-      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"8px 16px",display:"flex",gap:8,flexShrink:0}}>
-        <div style={{flex:1,background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:"7px 12px",textAlign:"center"}}>
-          <div style={{fontSize:9,color:C.success,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:2}}>Cash in Hand</div>
-          <div style={{fontSize:14,fontWeight:700,color:C.success}}>{inr(cashInHand)}</div>
+      {/* Summary strip — Total (ex Comp) + Date */}
+      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"8px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+        <div>
+          <div style={{fontSize:9,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:2}}>Total</div>
+          <div style={{fontSize:16,fontWeight:700,color:C.text}}>{inr(Object.entries(totals).filter(([m])=>m!=="Comp").reduce((s,[,v])=>s+v,0))}</div>
         </div>
-        <div style={{flex:1,background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"7px 12px",textAlign:"center"}}>
-          <div style={{fontSize:9,color:C.accentDark,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:2}}>Net</div>
-          <div style={{fontSize:14,fontWeight:700,color:C.accent}}>{inr(grand-totalRef)}</div>
+        <div style={{textAlign:"right"}}>
+          <div style={{fontSize:9,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:2}}>Date</div>
+          <div style={{fontSize:13,fontWeight:600,color:C.text}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</div>
         </div>
       </div>
 
