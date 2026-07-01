@@ -99,12 +99,9 @@ async function appendTxn(txn){
       const arr=snap.exists()&&snap.data().value?migrateTxns(snap.data().value):[];
       t.set(ref,{value:[...arr,txn]});
     });
-    // Refresh cache after transaction
     clearCache("transactions");
-    await sget("transactions");
   } catch(e){
     console.error("appendTxn failed, falling back",e);
-    // Fallback: read-modify-write
     const all=await sget("transactions")||[];
     all.push(txn);
     await sset("transactions",all);
@@ -423,6 +420,7 @@ function OutletApp({user,onLogout,showToast,onBMO}){
   const outletId=user.outlets[0];
 
   const load=useCallback(async()=>{
+    clearCache("transactions");clearCache("refunds");clearCache("boxCharges");clearCache("dayStatus");
     const [all,allR,allB,ds]=await Promise.all([getAllTxns(),sget("refunds"),sget("boxCharges"),sget("dayStatus")]);
     setTxns((all||[]).filter(t=>t&&t.outletId===outletId&&t.day===TODAY));
     setRefs((allR||[]).filter(r=>r&&r.outletId===outletId&&r.day===TODAY));
