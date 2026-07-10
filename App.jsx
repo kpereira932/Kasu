@@ -17,26 +17,50 @@ const C = {
   bmo:"#0F766E",bmoLight:"#F0FDFA",bmoBorder:"#99F6E4",
 };
 
-const BMO_CATEGORIES = ["Benne Dosa","Idli Vada","Bangalore Specials","Beverages","Dessert"];
+const BMO_CATEGORIES = ["Dosa","Idli Vada","Bangalore Specials","Beverages","Desserts"];
 const BMO_COUNTERS   = ["Dosa Counter","IV Counter","Bevs Bar"];
-const COUNTER_CATS   = {"Dosa Counter":["Benne Dosa"],"IV Counter":["Idli Vada","Bangalore Specials"],"Bevs Bar":["Beverages","Dessert"]};
+const COUNTER_CATS   = {"Dosa Counter":["Dosa"],"IV Counter":["Idli Vada","Bangalore Specials"],"Bevs Bar":["Beverages","Desserts"]};
 
 const DEFAULT_MENU = [
-  {id:"m1",name:"Benne Plain Dosa",category:"Benne Dosa",counter:"Dosa Counter",price:120,active:true,customGroups:[{name:"Style",options:["Classic","Less ghee & less butter","Vegan"],required:true}]},
-  {id:"m2",name:"Benne Masala Dosa",category:"Benne Dosa",counter:"Dosa Counter",price:140,active:true,customGroups:[{name:"Style",options:["Classic","Less ghee & less butter","Vegan"],required:true},{name:"Masala",options:["Regular Masala","Jain"],required:true}]},
-  {id:"m3",name:"Benne Podi Plain Dosa",category:"Benne Dosa",counter:"Dosa Counter",price:130,active:true,customGroups:[{name:"Style",options:["Classic","Less ghee & less butter","Vegan"],required:true}]},
-  {id:"m4",name:"Benne Podi Masala Dosa",category:"Benne Dosa",counter:"Dosa Counter",price:150,active:true,customGroups:[{name:"Style",options:["Classic","Less ghee & less butter","Vegan"],required:true},{name:"Masala",options:["Regular Masala","Jain"],required:true}]},
-  {id:"m5",name:"Benne Garlic Roast",category:"Benne Dosa",counter:"Dosa Counter",price:160,active:true,customGroups:[{name:"Style",options:["Classic","Less ghee & less butter","Vegan"],required:true}]},
-  {id:"m6",name:"Idli (2 pcs)",category:"Idli Vada",counter:"IV Counter",price:80,active:true,customGroups:[]},
-  {id:"m7",name:"Medu Vada",category:"Idli Vada",counter:"IV Counter",price:70,active:true,customGroups:[]},
-  {id:"m8",name:"Idli Vada Combo",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[]},
-  {id:"m9",name:"Masala Dosa (BLR Special)",category:"Bangalore Specials",counter:"IV Counter",price:120,active:true,customGroups:[]},
-  {id:"m10",name:"Rava Idli",category:"Bangalore Specials",counter:"IV Counter",price:90,active:true,customGroups:[]},
-  {id:"m11",name:"Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:40,active:true,customGroups:[{name:"Size",options:["Regular","Large"],required:false}]},
-  {id:"m12",name:"Masala Tea",category:"Beverages",counter:"Bevs Bar",price:35,active:true,customGroups:[]},
-  {id:"m13",name:"Fresh Lime Soda",category:"Beverages",counter:"Bevs Bar",price:60,active:true,customGroups:[{name:"Type",options:["Sweet","Salt","Mix"],required:false}]},
-  {id:"m14",name:"Gulab Jamun",category:"Dessert",counter:"Bevs Bar",price:60,active:true,customGroups:[]},
-  {id:"m15",name:"Kesari Bath",category:"Dessert",counter:"Bevs Bar",price:50,active:true,customGroups:[]},
+  // Dosa
+  {id:"m1",name:"Benne Plain Dosa",category:"Dosa",counter:"Dosa Counter",price:180,active:true,customGroups:[]},
+  {id:"m2",name:"Benne Masala Dosa",category:"Dosa",counter:"Dosa Counter",price:200,active:true,customGroups:[]},
+  {id:"m3",name:"Benne Pudi Plain Dosa",category:"Dosa",counter:"Dosa Counter",price:200,active:true,customGroups:[]},
+  {id:"m4",name:"Benne Pudi Masala Dosa",category:"Dosa",counter:"Dosa Counter",price:210,active:true,customGroups:[]},
+  {id:"m5",name:"Benne Garlic Roast",category:"Dosa",counter:"Dosa Counter",price:190,active:true,customGroups:[]},
+  // Idli Vada
+  {id:"m6",name:"Vada",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[]},
+  {id:"m7",name:"Idly Vada",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[]},
+  {id:"m8",name:"Idly",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[]},
+  {id:"m9",name:"Ghee Idly",category:"Idli Vada",counter:"IV Counter",price:120,active:true,customGroups:[]},
+  {id:"m10",name:"Ghee Pudi Idli",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[]},
+  {id:"m11",name:"Thatte Idly",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[]},
+  {id:"m12",name:"Ghee Thatte Idly",category:"Idli Vada",counter:"IV Counter",price:120,active:true,customGroups:[]},
+  {id:"m13",name:"Ghee Pudi Thatte Idli",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[]},
+  // Bangalore Specials
+  {id:"m14",name:"Shavige Bath",category:"Bangalore Specials",counter:"IV Counter",price:140,active:true,customGroups:[]},
+  {id:"m15",name:"Mangalore Buns (Single)",category:"Bangalore Specials",counter:"IV Counter",price:90,active:true,customGroups:[]},
+  {id:"m16",name:"Mangalore Buns (Double)",category:"Bangalore Specials",counter:"IV Counter",price:180,active:true,customGroups:[]},
+  {id:"m17",name:"Donne Pulao",category:"Bangalore Specials",counter:"IV Counter",price:180,active:true,customGroups:[]},
+  // Beverages
+  {id:"m18",name:"Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true}]},
+  {id:"m19",name:"Iced Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:100,active:true,customGroups:[{name:"Size",options:["Regular (₹100)","Large (₹150)"],required:true}]},
+  {id:"m20",name:"Vegan Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true},{name:"Milk",options:["Black","Oat Milk"],required:true}]},
+  {id:"m21",name:"Horlicks",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true}]},
+  {id:"m22",name:"Iced Horlicks",category:"Beverages",counter:"Bevs Bar",price:100,active:true,customGroups:[{name:"Size",options:["Regular (₹100)","Large (₹150)"],required:true}]},
+  {id:"m23",name:"Bournvita",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true}]},
+  {id:"m24",name:"Iced Bournvita",category:"Beverages",counter:"Bevs Bar",price:100,active:true,customGroups:[{name:"Size",options:["Regular (₹100)","Large (₹150)"],required:true}]},
+  // Desserts
+  {id:"m25",name:"Badam Halwa",category:"Desserts",counter:"Bevs Bar",price:120,active:true,customGroups:[]},
+  {id:"m26",name:"Mysore Pak",category:"Desserts",counter:"Bevs Bar",price:110,active:true,customGroups:[]},
+  {id:"m27",name:"Filter Coffee Praline Cookie",category:"Desserts",counter:"Bevs Bar",price:200,active:true,customGroups:[]},
+  {id:"m28",name:"Ice Cream Scoop",category:"Desserts",counter:"Bevs Bar",price:120,active:true,customGroups:[{name:"Flavour",options:["Vanilla","Filter Coffee"],required:true}]},
+  {id:"m29",name:"Filter Coffee Soft Serve",category:"Desserts",counter:"Bevs Bar",price:120,active:true,customGroups:[]},
+  {id:"m30",name:"Hot Chocolate Fudge",category:"Desserts",counter:"Bevs Bar",price:190,active:true,customGroups:[{name:"Flavour",options:["Chocolate","Vanilla","Filter Coffee"],required:true}]},
+  {id:"m31",name:"Benne Fudge",category:"Desserts",counter:"Bevs Bar",price:240,active:true,customGroups:[]},
+  {id:"m32",name:"Indu Fudge",category:"Desserts",counter:"Bevs Bar",price:240,active:true,customGroups:[]},
+  {id:"m33",name:"Soft Serve",category:"Desserts",counter:"Bevs Bar",price:160,active:true,customGroups:[]},
+  {id:"m34",name:"Kaju Praline (extra)",category:"Desserts",counter:"Bevs Bar",price:10,active:true,customGroups:[]},
 ];
 
 // ─── Responsive ───────────────────────────────────────────────────────────────
@@ -180,7 +204,7 @@ async function seed(){
   if(!await sget("refunds"))      await sset("refunds",[]);
   if(!await sget("logs"))         await sset("logs",[]);
   if(!await sget("dayStatus"))    await sset("dayStatus",{});
-  if(!await sget("bmoMenu"))      await sset("bmoMenu",DEFAULT_MENU);
+  await sset("bmoMenu",DEFAULT_MENU);
   if(!await sget("bmoOrders"))    await sset("bmoOrders",[]);
   if(!await sget("bmoOrderCounter")) await sset("bmoOrderCounter",{});
 }
