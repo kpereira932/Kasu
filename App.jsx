@@ -96,6 +96,7 @@ function migrateTxns(arr){
 const cache = {};
 // Keys that must always be read fresh (multi-user writes)
 const NO_CACHE_KEYS=new Set(["transactions","bmoOrders","bmoOrderCounter","refunds","boxCharges","dayStatus"]);
+function isNoCacheKey(key){return NO_CACHE_KEYS.has(key)||key.startsWith("bmoOrders_")||key.startsWith("txn_");}
 async function sget(key) {
   if(key==="transactions"){
     try {
@@ -107,7 +108,7 @@ async function sget(key) {
       return val;
     } catch(e){console.error("sget",key,e);return null;}
   }
-  if(NO_CACHE_KEYS.has(key)){
+  if(isNoCacheKey(key)){
     try{
       const snap=await getDoc(doc(db,"kasu",key));
       if(!snap.exists())return null;
@@ -125,7 +126,7 @@ async function sget(key) {
   } catch(e){console.error("sget",key,e);return null;}
 }
 async function sset(key,val){
-  if(!NO_CACHE_KEYS.has(key)) cache[key]=val;
+  if(!isNoCacheKey(key)) cache[key]=val;
   try { await setDoc(doc(db,"kasu",key),{value:val}); }
   catch(e){console.error("sset",key,e);}
 }
@@ -154,6 +155,37 @@ async function appendTxn(txn){
   }catch(e){
     console.error("appendTxn error",e);
     throw e;
+  }
+}
+
+function bmoMonthKey(dateStr){
+  const d=(dateStr||getToday()).slice(0,7).replace("-","_");
+  return `bmoOrders_${d}`;
+}
+async function getAllBmoOrders(businessDay){
+  // Read current month shard + legacy bmoOrders doc
+  const today=businessDay||getToday();
+  const key=bmoMonthKey(today);
+  const [curr,legacy]=await Promise.all([
+    getDoc(doc(db,"kasu",key)).then(s=>s.exists()?s.data().value||[]:[]).catch(()=>[]),
+    getDoc(doc(db,"kasu","bmoOrders")).then(s=>s.exists()?s.data().value||[]:[]).catch(()=>[]),
+  ]);
+  const all=[...legacy,...curr].filter(o=>o&&o.id);
+  const seen=new Set();
+  return all.filter(o=>{if(seen.has(o.id))return false;seen.add(o.id);return true;});
+}
+async function updateBmoOrder(orderId,updater){
+  const today=getToday();
+  const keys=[bmoMonthKey(today),"bmoOrders"];
+  for(const key of keys){
+    try{
+      const snap=await getDoc(doc(db,"kasu",key));
+      if(!snap.exists())continue;
+      const arr=snap.data().value||[];
+      if(!arr.some(o=>o.id===orderId))continue;
+      await setDoc(doc(db,"kasu",key),{value:arr.map(o=>o.id===orderId?updater(o):o)});
+      return;
+    }catch(e){console.error("updateBmoOrder",key,e);}
   }
 }
 
@@ -286,10 +318,15 @@ async function seed(){
   if(!exBmoCounter)   writes.push(sset("bmoOrderCounter",{}));
   if(writes.length>0) await Promise.all(writes);
 }
-async function addLog(action,userId,detail,reason="",extra={}){
-  const logs=await sget("logs")||[];
-  logs.unshift({id:`l${Date.now()}`,action,userId,detail,reason,extra,ts:new Date().toISOString()});
-  await sset("logs",logs.slice(0,500));
+function addLog(action,userId,detail,reason="",extra={}){
+  // Fire and forget — never block user actions for logging
+  (async()=>{
+    try{
+      const logs=await sget("logs")||[];
+      logs.unshift({id:`l${Date.now()}`,action,userId,detail,reason,extra,ts:new Date().toISOString()});
+      await sset("logs",logs.slice(0,500));
+    }catch(e){console.error("addLog",e);}
+  })();
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -536,7 +573,7 @@ function OutletApp({user,onLogout,showToast,onBMO}){
     if((ds||{})[outletId]===getToday())setDayDone(true);
   },[outletId]);
 
-  useEffect(()=>{load();const t=setInterval(load,10000);return()=>clearInterval(t);},[load]);
+  useEffect(()=>{load();const t=setInterval(load,15000);return()=>clearInterval(t);},[load]);
   useEffect(()=>{const chk=()=>{const n=new Date();if(n.getHours()===2&&n.getMinutes()>=30)setDayDone(true);};chk();const t=setInterval(chk,60000);return()=>clearInterval(t);},[]);
 
   const totals={};PAYMENT_MODES.forEach(m=>{totals[m]=0;});
@@ -2079,21 +2116,23 @@ function BMOOrderTaker({user,showToast}){
     if(!outletId){showToast("Select an outlet first","error");return;}
     setBusy(true);
     try{
-      // Increment counter
-      const counterKey=`${getToday()}_${outletId}`;
+      const today=getToday();
+      const counterKey=`${today}_${outletId}`;
+      // Read counter and bmoOrders in parallel
+      const bmoKey=`bmoOrders_${today.slice(0,7).replace("-","_")}`;
       const ctrRef=doc(db,"kasu","bmoOrderCounter");
-      const ctrSnap=await getDoc(ctrRef);
+      const bmoRef=doc(db,"kasu",bmoKey);
+      const [ctrSnap,bmoSnap]=await Promise.all([getDoc(ctrRef),getDoc(bmoRef)]);
       const counter=ctrSnap.exists()&&ctrSnap.data().value?ctrSnap.data().value:{};
       const dayCount=(counter[counterKey]||0)+1;
       if(dayCount>2000){showToast("BMO order limit reached for today.","error");setBusy(false);return;}
       counter[counterKey]=dayCount;
-      await setDoc(ctrRef,{value:counter});
-      // Build order
+      const arr=bmoSnap.exists()&&bmoSnap.data().value?bmoSnap.data().value:[];
       const order={
         id:`bmo${Date.now()}`,
         bmoOrderNo:dayCount,
         outletId,outletName,
-        businessDay:getToday(),
+        businessDay:today,
         createdBy:user.id,createdByName:user.name,
         createdAt:new Date().toISOString(),
         paymentMode:payMode,
@@ -2105,12 +2144,12 @@ function BMOOrderTaker({user,showToast}){
         cancelled:false,
         items:cart.map(l=>({...l}))
       };
-      // Append to bmoOrders
-      const bmoRef=doc(db,"kasu","bmoOrders");
-      const bmoSnap=await getDoc(bmoRef);
-      const arr=bmoSnap.exists()&&bmoSnap.data().value?bmoSnap.data().value:[];
-      await setDoc(bmoRef,{value:[...arr,order]});
-      await addLog("BMO_ORDER",user.id,`BMO #${dayCount} — ${outletName} — ${inr(grandTotal)} — ${payMode}${dineType==="takeaway"?" — Takeaway":""}`);
+      // Write counter and order in parallel
+      await Promise.all([
+        setDoc(ctrRef,{value:counter}),
+        setDoc(bmoRef,{value:[...arr,order]})
+      ]);
+      addLog("BMO_ORDER",user.id,`BMO #${dayCount} — ${outletName} — ${inr(grandTotal)} — ${payMode}${dineType==="takeaway"?" — Takeaway":""}`);
       setLastOrder(order);setCart([]);setPayMode("Cash");setDineType("dinein");setStage("done");
       showToast(`BMO Order #${dayCount} saved!`,"success");
     }catch(e){
@@ -2357,19 +2396,19 @@ function BMOViewOrders({user}){
   const {outletId,selOutlet,Selector}=useBMOOutlet(user);
 
   const load=useCallback(async()=>{
-    const all=await sget("bmoOrders")||[];
-    let filtered=all.filter(o=>o.businessDay===getToday()&&!o.cancelled);
-    // outlet filter
+    const today=getToday();
+    const all=await getAllBmoOrders(today);
+    let filtered=all.filter(o=>o.businessDay===today&&!o.cancelled);
     if(user.role==="outlet") filtered=filtered.filter(o=>o.outletId===user.outlets[0]);
     else if(selOutlet&&selOutlet!=="all") filtered=filtered.filter(o=>o.outletId===selOutlet);
     setOrders(filtered.slice().reverse());
     setLoading(false);
   },[selOutlet,user]);
 
-  useEffect(()=>{load();const t=setInterval(load,5000);return()=>clearInterval(t);},[load]);
+  useEffect(()=>{load();const t=setInterval(load,15000);return()=>clearInterval(t);},[load]);
 
-  const updateOrderItems=async(orderId,updater)=>{
-    // Update local state immediately so UI responds instantly
+  const updateOrderItems=(orderId,updater)=>{
+    // Update local state instantly
     setOrders(prev=>{
       const updated=prev.map(o=>{
         if(o.id!==orderId)return o;
@@ -2378,17 +2417,12 @@ function BMOViewOrders({user}){
         const anyDone=items.some(l=>l.completedQuantity>0);
         return{...o,items,status:allDone?"completed":anyDone?"partially_completed":"open"};
       });
-      // Write to Firestore in background (don't await — don't block UI)
-      sget("bmoOrders").then(all=>{
-        if(!all)return;
-        const written=all.map(o=>{
-          if(o.id!==orderId)return o;
-          const items=updater(o.items);
-          const allDone=items.every(l=>l.status==="completed");
-          const anyDone=items.some(l=>l.completedQuantity>0);
-          return{...o,items,status:allDone?"completed":anyDone?"partially_completed":"open"};
-        });
-        sset("bmoOrders",written);
+      // Write to Firestore in background
+      updateBmoOrder(orderId,o=>{
+        const items=updater(o.items);
+        const allDone=items.every(l=>l.status==="completed");
+        const anyDone=items.some(l=>l.completedQuantity>0);
+        return{...o,items,status:allDone?"completed":anyDone?"partially_completed":"open"};
       });
       return updated;
     });
@@ -2406,11 +2440,10 @@ function BMOViewOrders({user}){
   }));
 
   const cancelOrder=async(orderId)=>{
-    const all=await sget("bmoOrders")||[];
-    const updated=all.map(o=>o.id===orderId?{...o,cancelled:true,status:"cancelled"}:o);
-    await sset("bmoOrders",updated);
-    await addLog("BMO_CANCEL",user.id,`Cancelled BMO order ${orderId}`);
-    setCancelId(null);load();
+    setOrders(prev=>prev.filter(o=>o.id!==orderId));
+    updateBmoOrder(orderId,o=>({...o,cancelled:true,status:"cancelled"}));
+    addLog("BMO_CANCEL",user.id,`Cancelled BMO order ${orderId}`);
+    setCancelId(null);
   };
 
   const counterTabs=["All","Dosa Counter","IV Counter","Bevs Bar"];
