@@ -135,13 +135,12 @@ function clearCache(k){delete cache[k];}
 async function appendTxn(txn){
   try {
     const ref=doc(db,"kasu","transactions");
-    await runTransaction(db,async t=>{
-      const snap=await t.get(ref);
-      const arr=snap.exists()&&snap.data().value?migrateTxns(snap.data().value):[];
-      t.set(ref,{value:[...arr,txn]});
-    });
+    const snap=await getDoc(ref);
+    const arr=snap.exists()&&snap.data().value?migrateTxns(snap.data().value):[];
+    await setDoc(ref,{value:[...arr,txn]});
   } catch(e){
     console.error("appendTxn error",e);
+    throw e;
   }
 }
 
@@ -610,7 +609,11 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
     const txn={id:`t${Date.now()}`,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)})),
       boxAmount:0,boxMode:"Cash",boxItems:null,compReason:hasComp?compReason.trim():"",
       outletId,outletName:user.name,day:getToday(),ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name};
-    await appendTxn(txn);
+    try{
+      await appendTxn(txn);
+    }catch(e){
+      setBusy(false);showToast("Save failed — check connection","error");return;
+    }
     await addLog("ADD_TXN",user.id,"Order "+orderNo.trim()+(hasComp?` [Comp: ${compReason.trim()}]`:""));
     setOrderNo("");setPays([{mode:"Cash",amount:""}]);setCompReason("");setErrors({});setDupWarn(false);
     setBusy(false);showToast("Order #"+orderNo.trim()+" saved!","success");onSaved();
