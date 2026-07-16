@@ -95,7 +95,7 @@ function migrateTxns(arr){
 }
 const cache = {};
 // Keys that must always be read fresh (multi-user writes)
-const NO_CACHE_KEYS=new Set(["transactions","bmoOrders","bmoOrderCounter"]);
+const NO_CACHE_KEYS=new Set(["transactions","bmoOrders","bmoOrderCounter","refunds","boxCharges","dayStatus"]);
 async function sget(key) {
   if(key==="transactions"){
     try {
@@ -229,7 +229,7 @@ function bizDay(d=new Date()){
   if(ist.getUTCHours()<3||(ist.getUTCHours()===2&&ist.getUTCMinutes()<30))ist.setUTCDate(ist.getUTCDate()-1);
   return ist.toISOString().split("T")[0];
 }
-const TODAY=bizDay();
+function getToday(){return bizDay();}
 const fmt  =ts=>new Date(ts).toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
 const fmtT =ts=>new Date(ts).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
 const fmtD =d =>new Date(d+"T00:00:00").toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
@@ -460,10 +460,10 @@ function OutletApp({user,onLogout,showToast,onBMO}){
 
   const load=useCallback(async()=>{
     const [all,allR,allB,ds]=await Promise.all([getAllTxns(),sget("refunds"),sget("boxCharges"),sget("dayStatus")]);
-    setTxns((all||[]).filter(t=>t&&t.outletId===outletId&&t.day===TODAY));
-    setRefs((allR||[]).filter(r=>r&&r.outletId===outletId&&r.day===TODAY));
-    setBoxCharges((allB||[]).filter(b=>b&&b.outletId===outletId&&b.day===TODAY));
-    if((ds||{})[outletId]===TODAY)setDayDone(true);
+    setTxns((all||[]).filter(t=>t&&t.outletId===outletId&&t.day===getToday()));
+    setRefs((allR||[]).filter(r=>r&&r.outletId===outletId&&r.day===getToday()));
+    setBoxCharges((allB||[]).filter(b=>b&&b.outletId===outletId&&b.day===getToday()));
+    if((ds||{})[outletId]===getToday())setDayDone(true);
   },[outletId]);
 
   useEffect(()=>{load();const t=setInterval(load,10000);return()=>clearInterval(t);},[load]);
@@ -477,13 +477,13 @@ function OutletApp({user,onLogout,showToast,onBMO}){
   const cashInHand=(totals["Cash"]||0)-totalRef;
 
   const confirmDayEnd=async()=>{
-    const ds=await sget("dayStatus")||{};ds[outletId]=TODAY;
+    const ds=await sget("dayStatus")||{};ds[outletId]=getToday();
     await sset("dayStatus",ds);setDayDone(true);setDayModal(false);
     await addLog("DAY_END",user.id,"Day end — "+outletId);
     showToast("Day closed successfully!","success");
   };
 
-  const canEdit=t=>t.day===TODAY;
+  const canEdit=t=>t.day===getToday();
   const doEdit=async(updated,reason,oldVals)=>{
     await updateOneTxn(updated);
     await addLog("EDIT_TXN",user.id,"Edited order "+updated.orderNo,reason,{oldPayments:oldVals.payments,newPayments:updated.payments});
@@ -551,7 +551,7 @@ function RefundModal({open,onClose,user,showToast,onSaved}){
     const e=validate();setErrors(e);if(Object.keys(e).length>0)return;
     setBusy(true);
     const all=await sget("refunds")||[];
-    all.push({id:`r${Date.now()}`,orderNo:orderNo.trim(),amount:Number(amt),note,outletId:user.outlets[0],outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
+    all.push({id:`r${Date.now()}`,orderNo:orderNo.trim(),amount:Number(amt),note,outletId:user.outlets[0],outletName:user.name,day:getToday(),ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
     await sset("refunds",all);await addLog("ADD_REFUND",user.id,"Refund order "+orderNo.trim()+" "+inr(amt));
     showToast("Refund recorded for Order #"+orderNo.trim(),"success");
     reset();onClose();onSaved&&onSaved();setBusy(false);
@@ -609,7 +609,7 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
     const outletId=user.outlets[0];
     const txn={id:`t${Date.now()}`,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)})),
       boxAmount:0,boxMode:"Cash",boxItems:null,compReason:hasComp?compReason.trim():"",
-      outletId,outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name};
+      outletId,outletName:user.name,day:getToday(),ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name};
     await appendTxn(txn);
     await addLog("ADD_TXN",user.id,"Order "+orderNo.trim()+(hasComp?` [Comp: ${compReason.trim()}]`:""));
     setOrderNo("");setPays([{mode:"Cash",amount:""}]);setCompReason("");setErrors({});setDupWarn(false);
@@ -768,7 +768,7 @@ function BoxChargeModal({open,onClose,user,showToast,onSaved}){
     all.push({id:`b${Date.now()}`,amount:total,mode,
       items:{food:qty.food,cup:qty.cup},
       extras:extras.filter(e=>Number(e.amt)>0).map(e=>({name:e.name.trim(),amt:Number(e.amt)})),
-      outletId:user.outlets[0],outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
+      outletId:user.outlets[0],outletName:user.name,day:getToday(),ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
     await sset("boxCharges",all);await addLog("ADD_BOX",user.id,"Box/Cup charge "+inr(total));
     setBusy(false);reset();onClose();showToast("Charge of "+inr(total)+" recorded","success");onSaved&&onSaved();
   };
@@ -837,7 +837,7 @@ function BoxChargeModal({open,onClose,user,showToast,onSaved}){
 function OrdersScreen({txns,editable,canEdit,onEdit,user}){
   const [editTxn,setEditTxn]=useState(null);
   const [fMode,setFMode]=useState("all");
-  const [fDate,setFDate]=useState(TODAY);
+  const [fDate,setFDate]=useState(getToday());
   const [fOutlet,setFOutlet]=useState("all");
   const [outlets,setOutlets]=useState([]);
   const [allTxns,setAllTxns]=useState(null); // null = use passed txns (outlet), array = loaded all (admin)
@@ -888,8 +888,8 @@ function OrdersScreen({txns,editable,canEdit,onEdit,user}){
               {PAYMENT_MODES.map(m=><option key={m}>{m}</option>)}
             </select>
           </div>
-          {(fMode!=="all"||fOutlet!=="all"||(isAdmin&&fDate!==TODAY))&&(
-            <button onClick={()=>{setFMode("all");setFOutlet("all");setFDate(TODAY);}}
+          {(fMode!=="all"||fOutlet!=="all"||(isAdmin&&fDate!==getToday()))&&(
+            <button onClick={()=>{setFMode("all");setFOutlet("all");setFDate(getToday());}}
               style={{...BSc,padding:"7px 12px",fontSize:12,alignSelf:"flex-end"}}>Clear</button>
           )}
         </div>
@@ -917,7 +917,7 @@ function RefundsScreen({user,dayDone,onSaved,refs,showToast}){
     const e=validate();setErrors(e);if(Object.keys(e).length>0)return;
     setBusy(true);
     const all=await sget("refunds")||[];
-    all.push({id:`r${Date.now()}`,orderNo:orderNo.trim(),amount:Number(amt),note,outletId:user.outlets[0],outletName:user.name,day:TODAY,ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
+    all.push({id:`r${Date.now()}`,orderNo:orderNo.trim(),amount:Number(amt),note,outletId:user.outlets[0],outletName:user.name,day:getToday(),ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
     await sset("refunds",all);await addLog("ADD_REFUND",user.id,"Refund order "+orderNo.trim()+" "+inr(amt));
     setOrderNo("");setAmt("");setNote("");setOpen(false);setBusy(false);setErrors({});
     showToast("Refund recorded for Order #"+orderNo.trim(),"success");onSaved();
@@ -987,12 +987,12 @@ function DayEndModal({open,onClose,onConfirm,totals,totalRef,grand,txnCount,outl
 
   const buildWA=()=>{
     const label=endType==="shift"?"Shift End":"Day End";
-    const lines=[`ಕಾಸು *Kāsu ${label}*`,`📍 ${outletName}`,`📅 ${fmtD(TODAY)}`,``,`💰 Gross: ${inr(grand)}`,`↩ Refunds: −${inr(totalRef)}`,`✅ Net: *${inr(net)}*`,`📋 Orders: ${txnCount}`,`💵 Cash in Hand: *${inr(cashInHand)}*`,``,`*Breakdown:*`];
+    const lines=[`ಕಾಸು *Kāsu ${label}*`,`📍 ${outletName}`,`📅 ${fmtD(getToday())}`,``,`💰 Gross: ${inr(grand)}`,`↩ Refunds: −${inr(totalRef)}`,`✅ Net: *${inr(net)}*`,`📋 Orders: ${txnCount}`,`💵 Cash in Hand: *${inr(cashInHand)}*`,``,`*Breakdown:*`];
     PAYMENT_MODES.filter(m=>totals[m]>0).forEach(m=>lines.push(`• ${m}: ${inr(totals[m])}`));
     return lines.join("\n");
   };
   const buildPrintHTML=()=>`
-    <h1>${endType==="shift"?"Shift End":"Day End"} Summary</h1><div class="sub">${outletName} · ${fmtD(TODAY)}</div>
+    <h1>${endType==="shift"?"Shift End":"Day End"} Summary</h1><div class="sub">${outletName} · ${fmtD(getToday())}</div>
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-label">Gross Sales</div><div class="kpi-val green">${inr(grand)}</div></div>
       <div class="kpi"><div class="kpi-label">Net Sales</div><div class="kpi-val">${inr(net)}</div></div>
@@ -1033,14 +1033,14 @@ function DayEndModal({open,onClose,onConfirm,totals,totalRef,grand,txnCount,outl
           <div style={{textAlign:"center",padding:"20px 0"}}>
             <div style={{fontSize:36,marginBottom:12}}>✅</div>
             <div style={{fontWeight:700,fontSize:16,color:C.success,marginBottom:8}}>Day Already Closed</div>
-            <div style={{color:C.sub,fontSize:13,marginBottom:20}}>This outlet closed for {fmtD(TODAY)}.</div>
+            <div style={{color:C.sub,fontSize:13,marginBottom:20}}>This outlet closed for {fmtD(getToday())}.</div>
             <button onClick={handleClose} style={{...BSc,width:"100%"}}>Close</button>
           </div>
         ):(
           <>
             <div style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:12,textAlign:"center",marginBottom:16}}>
               <div style={{fontSize:11,color:C.accent,fontWeight:700,marginBottom:2}}>{endType==="shift"?"SHIFT END":"BUSINESS DAY"}</div>
-              <div style={{fontSize:18,fontWeight:800,color:C.text}}>{fmtD(TODAY)}</div>
+              <div style={{fontSize:18,fontWeight:800,color:C.text}}>{fmtD(getToday())}</div>
               <div style={{fontSize:12,color:C.sub,marginTop:2}}>{outletName}</div>
             </div>
             {txnCount===0&&<Msg type="warn">⚠ No orders recorded today.</Msg>}
@@ -1167,7 +1167,7 @@ function AdminApp({user,onLogout,showToast,onBMO}){
 function Dashboard({user}){
   const [txns,setTxns]=useState([]);const [refs,setRefs]=useState([]);const [boxCharges,setBoxCharges]=useState([]);const [outlets,setOutlets]=useState([]);const [dayStatus,setDayStatus]=useState({});const [loading,setLoading]=useState(true);
   useEffect(()=>{
-    getAllTxns().then(a=>{Promise.all([sget("refunds"),sget("boxCharges"),sget("outlets"),sget("dayStatus")]).then(([b,bx,o,ds])=>{setTxns((a||[]).filter(t=>t.day===TODAY));setRefs((b||[]).filter(r=>r.day===TODAY));setBoxCharges((bx||[]).filter(x=>x.day===TODAY));setOutlets(o||[]);setDayStatus(ds||{});setLoading(false);});});
+    getAllTxns().then(a=>{Promise.all([sget("refunds"),sget("boxCharges"),sget("outlets"),sget("dayStatus")]).then(([b,bx,o,ds])=>{setTxns((a||[]).filter(t=>t.day===getToday()));setRefs((b||[]).filter(r=>r.day===getToday()));setBoxCharges((bx||[]).filter(x=>x.day===getToday()));setOutlets(o||[]);setDayStatus(ds||{});setLoading(false);});});
   },[]);
   const totals={};PAYMENT_MODES.forEach(m=>{totals[m]=0;});
   txns.forEach(t=>{t.payments.forEach(p=>{totals[p.mode]=(totals[p.mode]||0)+Number(p.amount);});if(t.boxAmount)totals[t.boxMode||"Cash"]=(totals[t.boxMode||"Cash"]||0)+Number(t.boxAmount);});
@@ -1183,7 +1183,7 @@ function Dashboard({user}){
   if(loading)return <div style={{display:"flex",justifyContent:"center",padding:48}}><Spinner/></div>;
   return(
     <div style={{padding:20,maxWidth:960,margin:"0 auto"}}>
-      <div style={{marginBottom:20}}><div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Dashboard</div><div style={{color:C.sub,fontSize:13,marginTop:2}}>Business day: {fmtD(TODAY)}</div></div>
+      <div style={{marginBottom:20}}><div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Dashboard</div><div style={{color:C.sub,fontSize:13,marginTop:2}}>Business day: {fmtD(getToday())}</div></div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:20}}>
         <StatCard label="Gross Sales" value={inr(grand)} color={C.success} icon="💰"/>
         <StatCard label="Net Sales" value={inr(net)} color={C.accent} icon="📊"/>
@@ -1209,7 +1209,7 @@ function Dashboard({user}){
         <div style={Cd}>
           <SectionHeader title="🏪 Outlet Closing Status"/>
           {outlets.filter(o=>o.active).map(o=>{
-            const closed=dayStatus[o.id]===TODAY;
+            const closed=dayStatus[o.id]===getToday();
             const oT=txns.filter(t=>t.outletId===o.id);
             const oTot=oT.reduce((s,t)=>s+t.payments.reduce((a,p)=>a+Number(p.amount),0)+(t.boxAmount||0),0);
             return(<div key={o.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:`1px solid ${C.border}`}}>
@@ -1248,7 +1248,7 @@ function Dashboard({user}){
 // ─── Transactions ─────────────────────────────────────────────────────────────
 function Transactions({user,showToast}){
   const [all,setAll]=useState([]);const [refs,setRefs]=useState([]);const [outlets,setOutlets]=useState([]);
-  const [fO,setFO]=useState("all");const [fD,setFD]=useState(TODAY);const [fM,setFM]=useState("all");const [search,setSearch]=useState("");
+  const [fO,setFO]=useState("all");const [fD,setFD]=useState(getToday());const [fM,setFM]=useState("all");const [search,setSearch]=useState("");
   const [editTxn,setEditTxn]=useState(null);const [delTxn,setDelTxn]=useState(null);const [loading,setLoading]=useState(true);
   const load=useCallback(async()=>{
     // Always bypass cache for admin to get fresh data from Firestore
@@ -1267,7 +1267,7 @@ function Transactions({user,showToast}){
     await addLog("EDIT_TXN",user.id,"Edited order "+updated.orderNo,reason,{oldPayments:oldVals.payments,newPayments:updated.payments});
     setAll(all.map(t=>t.id===updated.id?updated:t));setEditTxn(null);showToast("Updated","success");
   };
-  const canEdit=t=>user.role==="superadmin"||(user.role==="manager"&&t.day===TODAY);
+  const canEdit=t=>user.role==="superadmin"||(user.role==="manager"&&t.day===getToday());
   const canDel=["superadmin","admin"].includes(user.role);
   const filtered=all.filter(t=>(fO==="all"||t.outletId===fO)&&(!fD||t.day===fD)&&(fM==="all"||t.payments.some(p=>p.mode===fM))&&(!search||t.orderNo.includes(search.trim())));
   const filteredR=refs.filter(r=>(fO==="all"||r.outletId===fO)&&(!fD||r.day===fD));
@@ -1361,7 +1361,7 @@ function EditTxnModal({txn,onSave,onClose}){
 // ─── Reports ──────────────────────────────────────────────────────────────────
 function Reports(){
   const [outlets,setOutlets]=useState([]);
-  const [from,setFrom]=useState(TODAY);const [to,setTo]=useState(TODAY);const [sel,setSel]=useState("all");const [selMode,setSelMode]=useState("all");
+  const [from,setFrom]=useState(getToday());const [to,setTo]=useState(getToday());const [sel,setSel]=useState("all");const [selMode,setSelMode]=useState("all");
   const [rep,setRep]=useState(null);const [loading,setLoading]=useState(false);const [dateErr,setDateErr]=useState("");
   useEffect(()=>{sget("outlets").then(o=>setOutlets(o||[]));},[]);
   const generate=async()=>{
@@ -1818,7 +1818,7 @@ function BMOApp({user,onClose,showToast}){
           <div style={{padding:20,maxWidth:480,margin:"0 auto"}}>
             <div style={{padding:"28px 0 32px"}}>
               <div style={{fontWeight:700,fontSize:22,color:C.text,letterSpacing:"-0.3px"}}>Benne Manual Orders</div>
-              <div style={{color:C.sub,fontSize:13,marginTop:4}}>Emergency ordering system · {fmtD(TODAY)}</div>
+              <div style={{color:C.sub,fontSize:13,marginTop:4}}>Emergency ordering system · {fmtD(getToday())}</div>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               <button onClick={()=>setScreen("order")} style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"18px 20px",fontWeight:600,fontSize:15,cursor:"pointer",textAlign:"left"}}>
@@ -2005,7 +2005,7 @@ function BMOOrderTaker({user,showToast}){
     if(!outletId){showToast("Select an outlet first","error");return;}
     setBusy(true);
     // Per-outlet per-day counter
-    const counterKey=`${TODAY}_${outletId}`;
+    const counterKey=`${getToday()}_${outletId}`;
     let dayCount=1;
     const ctrRef=doc(db,"kasu","bmoOrderCounter");
     await runTransaction(db,async t=>{
@@ -2021,7 +2021,7 @@ function BMOOrderTaker({user,showToast}){
       id:`bmo${Date.now()}`,
       bmoOrderNo:dayCount,
       outletId,outletName,
-      businessDay:TODAY,
+      businessDay:getToday(),
       createdBy:user.id,createdByName:user.name,
       createdAt:new Date().toISOString(),
       paymentMode:payMode,
@@ -2282,7 +2282,7 @@ function BMOViewOrders({user}){
 
   const load=useCallback(async()=>{
     const all=await sget("bmoOrders")||[];
-    let filtered=all.filter(o=>o.businessDay===TODAY&&!o.cancelled);
+    let filtered=all.filter(o=>o.businessDay===getToday()&&!o.cancelled);
     // outlet filter
     if(user.role==="outlet") filtered=filtered.filter(o=>o.outletId===user.outlets[0]);
     else if(selOutlet&&selOutlet!=="all") filtered=filtered.filter(o=>o.outletId===selOutlet);
@@ -2351,8 +2351,8 @@ function BMOViewOrders({user}){
       {/* Outlet selector */}
       {Selector}
 
-      {/* Counter tabs */}
-      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,display:"flex",overflowX:"auto",gap:0,padding:"0 4px"}}>
+      {/* Refresh + Counter tabs */}
+      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,display:"flex",overflowX:"auto",gap:0,padding:"0 4px",alignItems:"center"}}>
         {counterTabs.map(ct=>{
           const pending=ct==="All"
             ?orders.filter(o=>o.items.some(l=>l.status!=="completed")).length
@@ -2364,7 +2364,7 @@ function BMOViewOrders({user}){
             </button>
           );
         })}
-        <button onClick={load} style={{flexShrink:0,marginLeft:"auto",background:"transparent",border:"none",color:C.sub,padding:"11px 14px",fontSize:13,cursor:"pointer"}}>↻</button>
+        <button onClick={load} style={{flexShrink:0,marginLeft:"auto",background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,color:C.accent,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer",margin:"0 8px",whiteSpace:"nowrap"}}>↻ Refresh</button>
       </div>
 
       <div style={{padding:12}}>
@@ -2454,8 +2454,8 @@ function BMOViewOrders({user}){
 
 // ─── BMO Reports ──────────────────────────────────────────────────────────────
 function BMOReports({user}){
-  const [from,setFrom]=useState(TODAY);
-  const [to,setTo]=useState(TODAY);
+  const [from,setFrom]=useState(getToday());
+  const [to,setTo]=useState(getToday());
   const [rep,setRep]=useState(null);
   const [loading,setLoading]=useState(false);
   const {outletId,selOutlet,Selector}=useBMOOutlet(user);
