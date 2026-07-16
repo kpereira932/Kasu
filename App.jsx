@@ -94,8 +94,9 @@ function migrateTxns(arr){
   }));
 }
 const cache = {};
+// Keys that must always be read fresh (multi-user writes)
+const NO_CACHE_KEYS=new Set(["transactions","bmoOrders","bmoOrderCounter"]);
 async function sget(key) {
-  // Never cache transactions - always read fresh
   if(key==="transactions"){
     try {
       const snap = await getDoc(doc(db,"kasu",key));
@@ -105,6 +106,13 @@ async function sget(key) {
       if(Array.isArray(val)) val=migrateTxns(val);
       return val;
     } catch(e){console.error("sget",key,e);return null;}
+  }
+  if(NO_CACHE_KEYS.has(key)){
+    try{
+      const snap=await getDoc(doc(db,"kasu",key));
+      if(!snap.exists())return null;
+      return snap.data().value??null;
+    }catch(e){console.error("sget",key,e);return null;}
   }
   if (cache[key]!==undefined) return cache[key];
   try {
@@ -117,7 +125,7 @@ async function sget(key) {
   } catch(e){console.error("sget",key,e);return null;}
 }
 async function sset(key,val){
-  if(key!=="transactions") cache[key]=val;
+  if(!NO_CACHE_KEYS.has(key)) cache[key]=val;
   try { await setDoc(doc(db,"kasu",key),{value:val}); }
   catch(e){console.error("sset",key,e);}
 }
@@ -374,11 +382,13 @@ function Toast({toast}){
 
 // ─── Root App ─────────────────────────────────────────────────────────────────
 export default function App(){
-  const [user,setUser]=useState(null);
+  const [user,setUser]=useState(()=>{try{const u=localStorage.getItem("kasu_user");return u?JSON.parse(u):null;}catch{return null;}});
   const [ready,setReady]=useState(false);
   const [toast,setToast]=useState(null);
   const [bmoOpen,setBmoOpen]=useState(false);
   const showToast=useCallback((msg,type="success")=>{setToast({msg,type,id:Date.now()});setTimeout(()=>setToast(null),3200);},[]);
+  const handleLogin=useCallback((u)=>{localStorage.setItem("kasu_user",JSON.stringify(u));addLog("LOGIN",u.id,u.name+" logged in");setUser(u);},[]);
+  const handleLogout=useCallback(()=>{localStorage.removeItem("kasu_user");setUser(null);},[]);
 
   useEffect(()=>{
     seed().finally(()=>setReady(true));
@@ -406,9 +416,9 @@ export default function App(){
       {toast&&<Toast toast={toast}/>}
       {bmoOpen&&user&&<BMOApp user={user} onClose={()=>setBmoOpen(false)} showToast={showToast}/>}
       {!bmoOpen&&(
-        !user?<Login onLogin={u=>{addLog("LOGIN",u.id,u.name+" logged in");setUser(u);}} showToast={showToast}/>
-        :user.role==="outlet"?<OutletApp user={user} onLogout={()=>setUser(null)} showToast={showToast} onBMO={()=>setBmoOpen(true)}/>
-        :<AdminApp user={user} onLogout={()=>setUser(null)} showToast={showToast} onBMO={()=>setBmoOpen(true)}/>
+        !user?<Login onLogin={handleLogin} showToast={showToast}/>
+        :user.role==="outlet"?<OutletApp user={user} onLogout={handleLogout} showToast={showToast} onBMO={()=>setBmoOpen(true)}/>
+        :<AdminApp user={user} onLogout={handleLogout} showToast={showToast} onBMO={()=>setBmoOpen(true)}/>
       )}
     </div>
   );
@@ -456,7 +466,7 @@ function OutletApp({user,onLogout,showToast,onBMO}){
     if((ds||{})[outletId]===TODAY)setDayDone(true);
   },[outletId]);
 
-  useEffect(()=>{load();},[load]);
+  useEffect(()=>{load();const t=setInterval(load,10000);return()=>clearInterval(t);},[load]);
   useEffect(()=>{const chk=()=>{const n=new Date();if(n.getHours()===2&&n.getMinutes()>=30)setDayDone(true);};chk();const t=setInterval(chk,60000);return()=>clearInterval(t);},[]);
 
   const totals={};PAYMENT_MODES.forEach(m=>{totals[m]=0;});
@@ -497,12 +507,13 @@ function OutletApp({user,onLogout,showToast,onBMO}){
         </div>
       </div>
 
-      {/* Summary strip — Total (ex Comp) + Date */}
+      {/* Summary strip — Total (ex Comp) + Date + Refresh */}
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"8px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
         <div>
           <div style={{fontSize:9,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:2}}>Total</div>
           <div style={{fontSize:16,fontWeight:700,color:C.text}}>{inr(Object.entries(totals).filter(([m])=>m!=="Comp").reduce((s,[,v])=>s+v,0))}</div>
         </div>
+        <button onClick={load} style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"6px 12px",cursor:"pointer",color:C.accent,fontWeight:700,fontSize:12}}>↻ Refresh</button>
         <div style={{textAlign:"right"}}>
           <div style={{fontSize:9,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:2}}>Date</div>
           <div style={{fontSize:13,fontWeight:600,color:C.text}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</div>
@@ -1995,11 +2006,17 @@ function BMOOrderTaker({user,showToast}){
     setBusy(true);
     // Per-outlet per-day counter
     const counterKey=`${TODAY}_${outletId}`;
-    const counter=await sget("bmoOrderCounter")||{};
-    const dayCount=(counter[counterKey]||0)+1;
-    if(dayCount>2000){showToast("BMO order limit reached for this outlet today.","error");setBusy(false);return;}
-    counter[counterKey]=dayCount;
-    await sset("bmoOrderCounter",counter);
+    let dayCount=1;
+    const ctrRef=doc(db,"kasu","bmoOrderCounter");
+    await runTransaction(db,async t=>{
+      const snap=await t.get(ctrRef);
+      const counter=snap.exists()&&snap.data().value?snap.data().value:{};
+      dayCount=(counter[counterKey]||0)+1;
+      if(dayCount>2000)throw new Error("limit");
+      counter[counterKey]=dayCount;
+      t.set(ctrRef,{value:counter});
+    }).catch(e=>{if(e.message==="limit"){showToast("BMO order limit reached for this outlet today.","error");setBusy(false);throw e;}throw e;});
+    if(busy===false)return;// was set false by limit handler
     const order={
       id:`bmo${Date.now()}`,
       bmoOrderNo:dayCount,
@@ -2016,9 +2033,13 @@ function BMOOrderTaker({user,showToast}){
       cancelled:false,
       items:cart.map(l=>({...l}))
     };
-    const orders=await sget("bmoOrders")||[];
-    orders.push(order);
-    await sset("bmoOrders",orders);
+    // Atomic append — prevents order mixing when 2 users save simultaneously
+    const bmoRef=doc(db,"kasu","bmoOrders");
+    await runTransaction(db,async t=>{
+      const snap=await t.get(bmoRef);
+      const arr=snap.exists()&&snap.data().value?snap.data().value:[];
+      t.set(bmoRef,{value:[...arr,order]});
+    });
     await addLog("BMO_ORDER",user.id,`BMO #${dayCount} — ${outletName} — ${inr(grandTotal)} — ${payMode}${dineType==="takeaway"?" — Takeaway":""}`);
     setLastOrder(order);setCart([]);setPayMode("Cash");setDineType("dinein");setStage("done");setBusy(false);
     showToast(`BMO Order #${dayCount} saved!`,"success");
