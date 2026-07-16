@@ -253,35 +253,38 @@ async function seed(){
     {id:"u8",username:"gk2",password:"gk2@123",role:"outlet",name:"Benne GK2",outlets:["o4"],active:true},
   ];
 
+  // Run all seed reads in parallel
+  const [exO,exU,exRefunds,exLogs,exDayStatus,exBmoOrders,exBmoCounter]=await Promise.all([
+    sget("outlets"),sget("users"),sget("refunds"),sget("logs"),
+    sget("dayStatus"),sget("bmoOrders"),sget("bmoOrderCounter")
+  ]);
+
   // Migrate outlets
-  let exO=await sget("outlets");
   if(!exO){
     await sset("outlets",DEFAULT_OUTLETS);
   } else {
-    let ch=false;
-    exO=exO.map(o=>{if(o.id==="o1"&&o.name==="Main Branch"){ch=true;return{...o,name:"Benne Juhu"};}return o;});
-    for(const d of DEFAULT_OUTLETS){if(!exO.find(o=>o.id===d.id)){exO.push(d);ch=true;}}
-    if(ch)await sset("outlets",exO);
+    let ch=false,o2=exO.map(o=>{if(o.id==="o1"&&o.name==="Main Branch"){ch=true;return{...o,name:"Benne Juhu"};}return o;});
+    for(const d of DEFAULT_OUTLETS){if(!o2.find(o=>o.id===d.id)){o2.push(d);ch=true;}}
+    if(ch)await sset("outlets",o2);
   }
 
   // Migrate users
-  let exU=await sget("users");
   if(!exU){
     await sset("users",DEFAULT_USERS);
   } else {
-    let ch=false;
-    exU=exU.map(u=>{if(u.id==="u5"&&u.username==="outlet1"){ch=true;return{...u,username:"juhu",name:"Benne Juhu",outlets:["o1"]};}return u;});
-    for(const d of DEFAULT_USERS.filter(u=>["u6","u7","u8"].includes(u.id))){if(!exU.find(u=>u.id===d.id)){exU.push(d);ch=true;}}
-    if(ch)await sset("users",exU);
+    let ch=false,u2=exU.map(u=>{if(u.id==="u5"&&u.username==="outlet1"){ch=true;return{...u,username:"juhu",name:"Benne Juhu",outlets:["o1"]};}return u;});
+    for(const d of DEFAULT_USERS.filter(u=>["u6","u7","u8"].includes(u.id))){if(!u2.find(u=>u.id===d.id)){u2.push(d);ch=true;}}
+    if(ch)await sset("users",u2);
   }
 
-  // transactions stored in monthly shards (txn_YYYY_MM) - no seed needed
-  if(!await sget("refunds"))      await sset("refunds",[]);
-  if(!await sget("logs"))         await sset("logs",[]);
-  if(!await sget("dayStatus"))    await sset("dayStatus",{});
-  await sset("bmoMenu",DEFAULT_MENU);
-  if(!await sget("bmoOrders"))    await sset("bmoOrders",[]);
-  if(!await sget("bmoOrderCounter")) await sset("bmoOrderCounter",{});
+  // Only write defaults if docs don't exist — skip bmoMenu force-write on every load
+  const writes=[];
+  if(!exRefunds)      writes.push(sset("refunds",[]));
+  if(!exLogs)         writes.push(sset("logs",[]));
+  if(!exDayStatus)    writes.push(sset("dayStatus",{}));
+  if(!exBmoOrders)    writes.push(sset("bmoOrders",[]));
+  if(!exBmoCounter)   writes.push(sset("bmoOrderCounter",{}));
+  if(writes.length>0) await Promise.all(writes);
 }
 async function addLog(action,userId,detail,reason="",extra={}){
   const logs=await sget("logs")||[];
@@ -2366,15 +2369,29 @@ function BMOViewOrders({user}){
   useEffect(()=>{load();const t=setInterval(load,5000);return()=>clearInterval(t);},[load]);
 
   const updateOrderItems=async(orderId,updater)=>{
-    const all=await sget("bmoOrders")||[];
-    const updated=all.map(o=>{
-      if(o.id!==orderId)return o;
-      const items=updater(o.items);
-      const allDone=items.every(l=>l.status==="completed");
-      const anyDone=items.some(l=>l.completedQuantity>0);
-      return{...o,items,status:allDone?"completed":anyDone?"partially_completed":"open"};
+    // Update local state immediately so UI responds instantly
+    setOrders(prev=>{
+      const updated=prev.map(o=>{
+        if(o.id!==orderId)return o;
+        const items=updater(o.items);
+        const allDone=items.every(l=>l.status==="completed");
+        const anyDone=items.some(l=>l.completedQuantity>0);
+        return{...o,items,status:allDone?"completed":anyDone?"partially_completed":"open"};
+      });
+      // Write to Firestore in background (don't await — don't block UI)
+      sget("bmoOrders").then(all=>{
+        if(!all)return;
+        const written=all.map(o=>{
+          if(o.id!==orderId)return o;
+          const items=updater(o.items);
+          const allDone=items.every(l=>l.status==="completed");
+          const anyDone=items.some(l=>l.completedQuantity>0);
+          return{...o,items,status:allDone?"completed":anyDone?"partially_completed":"open"};
+        });
+        sset("bmoOrders",written);
+      });
+      return updated;
     });
-    await sset("bmoOrders",updated);load();
   };
 
   const markPlusOne=(orderId,lineId)=>updateOrderItems(orderId,items=>items.map(l=>{
