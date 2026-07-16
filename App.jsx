@@ -95,7 +95,7 @@ function migrateTxns(arr){
 }
 const cache = {};
 // Keys that must always be read fresh (multi-user writes)
-const NO_CACHE_KEYS=new Set(["transactions","bmoOrders","bmoOrderCounter","refunds","boxCharges","dayStatus"]);
+const NO_CACHE_KEYS=new Set(["transactions","bmoOrders","bmoOrderCounter","refunds","boxCharges","dayStatus","bmoMenu","users"]);
 function isNoCacheKey(key){return NO_CACHE_KEYS.has(key)||key.startsWith("bmoOrders_")||key.startsWith("txn_");}
 async function sget(key) {
   if(key==="transactions"){
@@ -300,12 +300,12 @@ async function seed(){
     if(ch)await sset("outlets",o2);
   }
 
-  // Migrate users
+  // Migrate users — add ALL missing default users
   if(!exU){
     await sset("users",DEFAULT_USERS);
   } else {
     let ch=false,u2=exU.map(u=>{if(u.id==="u5"&&u.username==="outlet1"){ch=true;return{...u,username:"juhu",name:"Benne Juhu",outlets:["o1"]};}return u;});
-    for(const d of DEFAULT_USERS.filter(u=>["u6","u7","u8"].includes(u.id))){if(!u2.find(u=>u.id===d.id)){u2.push(d);ch=true;}}
+    for(const d of DEFAULT_USERS){if(!u2.find(u=>u.id===d.id)){u2.push(d);ch=true;}}
     if(ch)await sset("users",u2);
   }
 
@@ -2118,15 +2118,26 @@ function BMOOrderTaker({user,showToast}){
     try{
       const today=getToday();
       const counterKey=`${today}_${outletId}`;
-      // Read counter and bmoOrders in parallel
       const bmoKey=`bmoOrders_${today.slice(0,7).replace("-","_")}`;
       const ctrRef=doc(db,"kasu","bmoOrderCounter");
       const bmoRef=doc(db,"kasu",bmoKey);
-      const [ctrSnap,bmoSnap]=await Promise.all([getDoc(ctrRef),getDoc(bmoRef)]);
-      const counter=ctrSnap.exists()&&ctrSnap.data().value?ctrSnap.data().value:{};
-      const dayCount=(counter[counterKey]||0)+1;
-      if(dayCount>2000){showToast("BMO order limit reached for today.","error");setBusy(false);return;}
-      counter[counterKey]=dayCount;
+
+      // Atomically increment counter so two cashiers never get the same number
+      let dayCount=1;
+      await runTransaction(db,async t=>{
+        const snap=await t.get(ctrRef);
+        const counter=snap.exists()&&snap.data().value?snap.data().value:{};
+        dayCount=(counter[counterKey]||0)+1;
+        if(dayCount>2000)throw new Error("limit");
+        counter[counterKey]=dayCount;
+        t.set(ctrRef,{value:counter});
+      }).catch(e=>{
+        if(e.message==="limit"){showToast("BMO order limit reached for today.","error");setBusy(false);}
+        throw e;
+      });
+
+      // Read bmoOrders and write new order
+      const bmoSnap=await getDoc(bmoRef);
       const arr=bmoSnap.exists()&&bmoSnap.data().value?bmoSnap.data().value:[];
       const order={
         id:`bmo${Date.now()}`,
@@ -2144,11 +2155,7 @@ function BMOOrderTaker({user,showToast}){
         cancelled:false,
         items:cart.map(l=>({...l}))
       };
-      // Write counter and order in parallel
-      await Promise.all([
-        setDoc(ctrRef,{value:counter}),
-        setDoc(bmoRef,{value:[...arr,order]})
-      ]);
+      await setDoc(bmoRef,{value:[...arr,order]});
       addLog("BMO_ORDER",user.id,`BMO #${dayCount} — ${outletName} — ${inr(grandTotal)} — ${payMode}${dineType==="takeaway"?" — Takeaway":""}`);
       setLastOrder(order);setCart([]);setPayMode("Cash");setDineType("dinein");setStage("done");
       showToast(`BMO Order #${dayCount} saved!`,"success");
