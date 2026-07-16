@@ -2075,45 +2075,47 @@ function BMOOrderTaker({user,showToast}){
     if(cart.length===0){showToast("Cart is empty","error");return;}
     if(!outletId){showToast("Select an outlet first","error");return;}
     setBusy(true);
-    // Per-outlet per-day counter
-    const counterKey=`${getToday()}_${outletId}`;
-    let dayCount=1;
-    const ctrRef=doc(db,"kasu","bmoOrderCounter");
-    await runTransaction(db,async t=>{
-      const snap=await t.get(ctrRef);
-      const counter=snap.exists()&&snap.data().value?snap.data().value:{};
-      dayCount=(counter[counterKey]||0)+1;
-      if(dayCount>2000)throw new Error("limit");
+    try{
+      // Increment counter
+      const counterKey=`${getToday()}_${outletId}`;
+      const ctrRef=doc(db,"kasu","bmoOrderCounter");
+      const ctrSnap=await getDoc(ctrRef);
+      const counter=ctrSnap.exists()&&ctrSnap.data().value?ctrSnap.data().value:{};
+      const dayCount=(counter[counterKey]||0)+1;
+      if(dayCount>2000){showToast("BMO order limit reached for today.","error");setBusy(false);return;}
       counter[counterKey]=dayCount;
-      t.set(ctrRef,{value:counter});
-    }).catch(e=>{if(e.message==="limit"){showToast("BMO order limit reached for this outlet today.","error");setBusy(false);throw e;}throw e;});
-    if(busy===false)return;// was set false by limit handler
-    const order={
-      id:`bmo${Date.now()}`,
-      bmoOrderNo:dayCount,
-      outletId,outletName,
-      businessDay:getToday(),
-      createdBy:user.id,createdByName:user.name,
-      createdAt:new Date().toISOString(),
-      paymentMode:payMode,
-      dineType,
-      takeawayCharge:takeawayTotal,
-      itemsAmount:cartTotal,
-      totalAmount:grandTotal,
-      status:"open",
-      cancelled:false,
-      items:cart.map(l=>({...l}))
-    };
-    // Atomic append — prevents order mixing when 2 users save simultaneously
-    const bmoRef=doc(db,"kasu","bmoOrders");
-    await runTransaction(db,async t=>{
-      const snap=await t.get(bmoRef);
-      const arr=snap.exists()&&snap.data().value?snap.data().value:[];
-      t.set(bmoRef,{value:[...arr,order]});
-    });
-    await addLog("BMO_ORDER",user.id,`BMO #${dayCount} — ${outletName} — ${inr(grandTotal)} — ${payMode}${dineType==="takeaway"?" — Takeaway":""}`);
-    setLastOrder(order);setCart([]);setPayMode("Cash");setDineType("dinein");setStage("done");setBusy(false);
-    showToast(`BMO Order #${dayCount} saved!`,"success");
+      await setDoc(ctrRef,{value:counter});
+      // Build order
+      const order={
+        id:`bmo${Date.now()}`,
+        bmoOrderNo:dayCount,
+        outletId,outletName,
+        businessDay:getToday(),
+        createdBy:user.id,createdByName:user.name,
+        createdAt:new Date().toISOString(),
+        paymentMode:payMode,
+        dineType,
+        takeawayCharge:takeawayTotal,
+        itemsAmount:cartTotal,
+        totalAmount:grandTotal,
+        status:"open",
+        cancelled:false,
+        items:cart.map(l=>({...l}))
+      };
+      // Append to bmoOrders
+      const bmoRef=doc(db,"kasu","bmoOrders");
+      const bmoSnap=await getDoc(bmoRef);
+      const arr=bmoSnap.exists()&&bmoSnap.data().value?bmoSnap.data().value:[];
+      await setDoc(bmoRef,{value:[...arr,order]});
+      await addLog("BMO_ORDER",user.id,`BMO #${dayCount} — ${outletName} — ${inr(grandTotal)} — ${payMode}${dineType==="takeaway"?" — Takeaway":""}`);
+      setLastOrder(order);setCart([]);setPayMode("Cash");setDineType("dinein");setStage("done");
+      showToast(`BMO Order #${dayCount} saved!`,"success");
+    }catch(e){
+      console.error("settle error",e);
+      showToast("Failed to save order — "+e.message,"error");
+    }finally{
+      setBusy(false);
+    }
   };
 
   // ── Admin outlet picker ──
