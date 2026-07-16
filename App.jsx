@@ -489,13 +489,13 @@ function Toast({toast}){
 
 // ─── Root App ─────────────────────────────────────────────────────────────────
 export default function App(){
-  const [user,setUser]=useState(()=>{try{const u=localStorage.getItem("kasu_user");return u?JSON.parse(u):null;}catch{return null;}});
+  const [user,setUser]=useState(()=>{try{const u=sessionStorage.getItem("kasu_user");return u?JSON.parse(u):null;}catch{return null;}});
   const [ready,setReady]=useState(false);
   const [toast,setToast]=useState(null);
   const [bmoOpen,setBmoOpen]=useState(false);
   const showToast=useCallback((msg,type="success")=>{setToast({msg,type,id:Date.now()});setTimeout(()=>setToast(null),3200);},[]);
-  const handleLogin=useCallback((u)=>{localStorage.setItem("kasu_user",JSON.stringify(u));addLog("LOGIN",u.id,u.name+" logged in");setUser(u);},[]);
-  const handleLogout=useCallback(()=>{localStorage.removeItem("kasu_user");setUser(null);},[]);
+  const handleLogin=useCallback((u)=>{sessionStorage.setItem("kasu_user",JSON.stringify(u));addLog("LOGIN",u.id,u.name+" logged in");setUser(u);},[]);
+  const handleLogout=useCallback(()=>{sessionStorage.removeItem("kasu_user");setUser(null);},[]);
 
   useEffect(()=>{
     seed().finally(()=>setReady(true));
