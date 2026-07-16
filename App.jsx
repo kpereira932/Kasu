@@ -132,28 +132,96 @@ async function sset(key,val){
 function clearCache(k){delete cache[k];}
 
 // Atomically append a transaction - prevents race conditions between outlets
+// ─── Transaction sharding by month ───────────────────────────────────────────
+// Each month stored in "txn_YYYY_MM" doc. Legacy data in "transactions".
+function txnMonthKey(dateStr){
+  // dateStr is YYYY-MM-DD
+  const parts=(dateStr||getToday()).split("-");
+  return `txn_${parts[0]}_${parts[1]}`;
+}
+function currentMonthKey(){
+  const t=getToday();
+  return txnMonthKey(t);
+}
+
 async function appendTxn(txn){
-  try {
-    const ref=doc(db,"kasu","transactions");
+  const key=txnMonthKey(txn.day||getToday());
+  const ref=doc(db,"kasu",key);
+  try{
     const snap=await getDoc(ref);
-    const arr=snap.exists()&&snap.data().value?migrateTxns(snap.data().value):[];
+    const arr=snap.exists()&&snap.data().value?snap.data().value:[];
     await setDoc(ref,{value:[...arr,txn]});
-  } catch(e){
+  }catch(e){
     console.error("appendTxn error",e);
     throw e;
   }
 }
 
-async function getAllTxns(){return await sget("transactions")||[];}
+async function getAllTxns(){
+  // Read current month + previous month + legacy doc
+  const today=getToday();
+  const parts=today.split("-");
+  const yr=parseInt(parts[0]),mo=parseInt(parts[1]);
+  const prevMo=mo===1?12:mo-1;
+  const prevYr=mo===1?yr-1:yr;
+  const prevKey=`txn_${prevYr}_${String(prevMo).padStart(2,"0")}`;
+  const currKey=currentMonthKey();
+  const keys=currKey!==prevKey?[currKey,prevKey]:["transactions",currKey];
+  // Always include legacy key
+  const allKeys=[...new Set(["transactions",currKey,prevKey])];
+  const results=await Promise.all(allKeys.map(async k=>{
+    try{
+      const snap=await getDoc(doc(db,"kasu",k));
+      if(!snap.exists())return[];
+      let val=snap.data().value||[];
+      if(k==="transactions")val=migrateTxns(val);
+      return val;
+    }catch(e){console.error("getAllTxns",k,e);return[];}
+  }));
+  const all=results.flat().filter(t=>t&&t.id);
+  const seen=new Set();
+  return all.filter(t=>{if(seen.has(t.id))return false;seen.add(t.id);return true;});
+}
 
 async function updateOneTxn(updated){
-  const all=await getAllTxns();
-  const next=all.map(t=>t.id===updated.id?updated:t);
-  await sset("transactions",next);
+  // Try current month key first, then previous, then legacy
+  const today=getToday();
+  const parts=today.split("-");
+  const yr=parseInt(parts[0]),mo=parseInt(parts[1]);
+  const prevMo=mo===1?12:mo-1;
+  const prevYr=mo===1?yr-1:yr;
+  const keysToTry=[currentMonthKey(),`txn_${prevYr}_${String(prevMo).padStart(2,"0")}`,txnMonthKey(updated.day),"transactions"];
+  const uniqueKeys=[...new Set(keysToTry)];
+  for(const key of uniqueKeys){
+    try{
+      const snap=await getDoc(doc(db,"kasu",key));
+      if(!snap.exists())continue;
+      const arr=snap.data().value||[];
+      if(!arr.some(t=>t.id===updated.id))continue;
+      await setDoc(doc(db,"kasu",key),{value:arr.map(t=>t.id===updated.id?updated:t)});
+      return;
+    }catch(e){console.error("updateOneTxn",key,e);}
+  }
 }
+
 async function deleteOneTxn(id){
-  const all=await getAllTxns();
-  await sset("transactions",all.filter(t=>t.id!==id));
+  const today=getToday();
+  const parts=today.split("-");
+  const yr=parseInt(parts[0]),mo=parseInt(parts[1]);
+  const prevMo=mo===1?12:mo-1;
+  const prevYr=mo===1?yr-1:yr;
+  const keysToTry=[currentMonthKey(),`txn_${prevYr}_${String(prevMo).padStart(2,"0")}`,"transactions"];
+  const uniqueKeys=[...new Set(keysToTry)];
+  for(const key of uniqueKeys){
+    try{
+      const snap=await getDoc(doc(db,"kasu",key));
+      if(!snap.exists())continue;
+      const arr=snap.data().value||[];
+      if(!arr.some(t=>t.id===id))continue;
+      await setDoc(doc(db,"kasu",key),{value:arr.filter(t=>t.id!==id)});
+      return;
+    }catch(e){console.error("deleteOneTxn",key,e);}
+  }
 }
 
 // ─── Benne Logo ───────────────────────────────────────────────────────────────
@@ -207,7 +275,7 @@ async function seed(){
     if(ch)await sset("users",exU);
   }
 
-  if(!await sget("transactions")) await sset("transactions",[]);
+  // transactions stored in monthly shards (txn_YYYY_MM) - no seed needed
   if(!await sget("refunds"))      await sset("refunds",[]);
   if(!await sget("logs"))         await sset("logs",[]);
   if(!await sget("dayStatus"))    await sset("dayStatus",{});
