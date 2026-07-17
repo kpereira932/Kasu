@@ -23,20 +23,20 @@ const COUNTER_CATS   = {"Dosa Counter":["Dosa"],"IV Counter":["Idli Vada","Banga
 
 const DEFAULT_MENU = [
   // Dosa — Style (mandatory) + Optional incl. Jain [+ MOTS for masala items]
-  {id:"m1",name:"Benne Plain Dosa",category:"Dosa",counter:"Dosa Counter",price:180,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["None","Jain"],required:false}]},
-  {id:"m2",name:"Benne Masala Dosa",category:"Dosa",counter:"Dosa Counter",price:200,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["None","Jain","MOTS"],required:false}]},
-  {id:"m3",name:"Benne Pudi Plain Dosa",category:"Dosa",counter:"Dosa Counter",price:200,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["None","Jain"],required:false}]},
-  {id:"m4",name:"Benne Pudi Masala Dosa",category:"Dosa",counter:"Dosa Counter",price:210,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["None","Jain","MOTS"],required:false}]},
-  {id:"m5",name:"Benne Garlic Roast",category:"Dosa",counter:"Dosa Counter",price:190,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["None","Jain"],required:false}]},
+  {id:"m1",name:"Benne Plain Dosa",category:"Dosa",counter:"Dosa Counter",price:180,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain"],required:false}]},
+  {id:"m2",name:"Benne Masala Dosa",category:"Dosa",counter:"Dosa Counter",price:200,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain","MOTS"],required:false}]},
+  {id:"m3",name:"Benne Pudi Plain Dosa",category:"Dosa",counter:"Dosa Counter",price:200,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain"],required:false}]},
+  {id:"m4",name:"Benne Pudi Masala Dosa",category:"Dosa",counter:"Dosa Counter",price:210,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain","MOTS"],required:false}]},
+  {id:"m5",name:"Benne Garlic Roast",category:"Dosa",counter:"Dosa Counter",price:190,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain"],required:false}]},
   // Idli Vada — Style (mandatory) + Optional COTS; Idly Vada has special style options with extras
-  {id:"m6",name:"Vada",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["None","COTS"],required:false}]},
+  {id:"m6",name:"Vada",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
   {id:"m7",name:"Idly Vada",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:[{label:"Classic",extra:0},{label:"Jain",extra:0},{label:"Ghee Podi (+₹20)",extra:20},{label:"Jain Ghee Podi (+₹20)",extra:20}],required:true}]},
-  {id:"m8",name:"Idly",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["None","COTS"],required:false}]},
-  {id:"m9",name:"Ghee Idly",category:"Idli Vada",counter:"IV Counter",price:120,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["None","COTS"],required:false}]},
-  {id:"m10",name:"Ghee Pudi Idli",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["None","COTS"],required:false}]},
-  {id:"m11",name:"Thatte Idly",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["None","COTS"],required:false}]},
-  {id:"m12",name:"Ghee Thatte Idly",category:"Idli Vada",counter:"IV Counter",price:120,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["None","COTS"],required:false}]},
-  {id:"m13",name:"Ghee Pudi Thatte Idli",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["None","COTS"],required:false}]},
+  {id:"m8",name:"Idly",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
+  {id:"m9",name:"Ghee Idly",category:"Idli Vada",counter:"IV Counter",price:120,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
+  {id:"m10",name:"Ghee Pudi Idli",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
+  {id:"m11",name:"Thatte Idly",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
+  {id:"m12",name:"Ghee Thatte Idly",category:"Idli Vada",counter:"IV Counter",price:120,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
+  {id:"m13",name:"Ghee Pudi Thatte Idli",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
   // Bangalore Specials
   {id:"m14",name:"Shavige Bath",category:"Bangalore Specials",counter:"IV Counter",price:140,active:true,customGroups:[]},
   {id:"m15",name:"Mangalore Buns",category:"Bangalore Specials",counter:"IV Counter",price:90,active:true,customGroups:[{name:"Size",options:[{label:"1 Piece",extra:0},{label:"2 Pieces",extra:90}],required:true}]},
@@ -58,7 +58,7 @@ const DEFAULT_MENU = [
   {id:"m30",name:"Hot Chocolate Fudge",category:"Desserts",counter:"Bevs Bar",price:190,active:true,customGroups:[{name:"Flavour",options:["Chocolate","Vanilla","Filter Coffee"],required:true}]},
   {id:"m31",name:"Benne Fudge",category:"Desserts",counter:"Bevs Bar",price:240,active:true,customGroups:[]},
   {id:"m32",name:"Indu Fudge",category:"Desserts",counter:"Bevs Bar",price:240,active:true,customGroups:[]},
-  {id:"m33",name:"Soft Serve",category:"Desserts",counter:"Bevs Bar",price:160,active:true,customGroups:[{name:"Add-on",options:["None",{label:"Kaju Praline (+₹10)",extra:10}],required:false}]},
+  {id:"m33",name:"Soft Serve",category:"Desserts",counter:"Bevs Bar",price:160,active:true,customGroups:[{name:"Add-on",options:[{label:"Kaju Praline (+₹10)",extra:10}],required:false}]},
   {id:"m34",name:"Kaju Praline (extra)",category:"Desserts",counter:"Bevs Bar",price:10,active:true,customGroups:[]},
 ];
 
