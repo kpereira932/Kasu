@@ -22,29 +22,28 @@ const BMO_COUNTERS   = ["Dosa Counter","IV Counter","Bevs Bar"];
 const COUNTER_CATS   = {"Dosa Counter":["Dosa"],"IV Counter":["Idli Vada","Bangalore Specials"],"Bevs Bar":["Beverages","Desserts"]};
 
 const DEFAULT_MENU = [
-  // Dosa
-  {id:"m1",name:"Benne Plain Dosa",category:"Dosa",counter:"Dosa Counter",price:180,active:true,customGroups:[]},
-  {id:"m2",name:"Benne Masala Dosa",category:"Dosa",counter:"Dosa Counter",price:200,active:true,customGroups:[]},
-  {id:"m3",name:"Benne Pudi Plain Dosa",category:"Dosa",counter:"Dosa Counter",price:200,active:true,customGroups:[]},
-  {id:"m4",name:"Benne Pudi Masala Dosa",category:"Dosa",counter:"Dosa Counter",price:210,active:true,customGroups:[]},
-  {id:"m5",name:"Benne Garlic Roast",category:"Dosa",counter:"Dosa Counter",price:190,active:true,customGroups:[]},
-  // Idli Vada
-  {id:"m6",name:"Vada",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[]},
-  {id:"m7",name:"Idly Vada",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[]},
-  {id:"m8",name:"Idly",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[]},
-  {id:"m9",name:"Ghee Idly",category:"Idli Vada",counter:"IV Counter",price:120,active:true,customGroups:[]},
-  {id:"m10",name:"Ghee Pudi Idli",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[]},
-  {id:"m11",name:"Thatte Idly",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[]},
-  {id:"m12",name:"Ghee Thatte Idly",category:"Idli Vada",counter:"IV Counter",price:120,active:true,customGroups:[]},
-  {id:"m13",name:"Ghee Pudi Thatte Idli",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[]},
+  // Dosa — Style (mandatory) + Optional incl. Jain [+ MOTS for masala items]
+  {id:"m1",name:"Benne Plain Dosa",category:"Dosa",counter:"Dosa Counter",price:180,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["None","Jain"],required:false}]},
+  {id:"m2",name:"Benne Masala Dosa",category:"Dosa",counter:"Dosa Counter",price:200,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["None","Jain","MOTS"],required:false}]},
+  {id:"m3",name:"Benne Pudi Plain Dosa",category:"Dosa",counter:"Dosa Counter",price:200,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["None","Jain"],required:false}]},
+  {id:"m4",name:"Benne Pudi Masala Dosa",category:"Dosa",counter:"Dosa Counter",price:210,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["None","Jain","MOTS"],required:false}]},
+  {id:"m5",name:"Benne Garlic Roast",category:"Dosa",counter:"Dosa Counter",price:190,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["None","Jain"],required:false}]},
+  // Idli Vada — Style (mandatory) + Optional COTS; Idly Vada has special style options with extras
+  {id:"m6",name:"Vada",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["None","COTS"],required:false}]},
+  {id:"m7",name:"Idly Vada",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:[{label:"Classic",extra:0},{label:"Jain",extra:0},{label:"Ghee Podi (+₹20)",extra:20},{label:"Jain Ghee Podi (+₹20)",extra:20}],required:true}]},
+  {id:"m8",name:"Idly",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["None","COTS"],required:false}]},
+  {id:"m9",name:"Ghee Idly",category:"Idli Vada",counter:"IV Counter",price:120,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["None","COTS"],required:false}]},
+  {id:"m10",name:"Ghee Pudi Idli",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["None","COTS"],required:false}]},
+  {id:"m11",name:"Thatte Idly",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["None","COTS"],required:false}]},
+  {id:"m12",name:"Ghee Thatte Idly",category:"Idli Vada",counter:"IV Counter",price:120,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["None","COTS"],required:false}]},
+  {id:"m13",name:"Ghee Pudi Thatte Idli",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["None","COTS"],required:false}]},
   // Bangalore Specials
   {id:"m14",name:"Shavige Bath",category:"Bangalore Specials",counter:"IV Counter",price:140,active:true,customGroups:[]},
-  {id:"m15",name:"Mangalore Buns (Single)",category:"Bangalore Specials",counter:"IV Counter",price:90,active:true,customGroups:[]},
-  {id:"m16",name:"Mangalore Buns (Double)",category:"Bangalore Specials",counter:"IV Counter",price:180,active:true,customGroups:[]},
+  {id:"m15",name:"Mangalore Buns",category:"Bangalore Specials",counter:"IV Counter",price:90,active:true,customGroups:[{name:"Size",options:[{label:"1 Piece",extra:0},{label:"2 Pieces",extra:90}],required:true}]},
   {id:"m17",name:"Donne Pulao",category:"Bangalore Specials",counter:"IV Counter",price:180,active:true,customGroups:[]},
   // Beverages
-  {id:"m18",name:"Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true}]},
-  {id:"m19",name:"Iced Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:100,active:true,customGroups:[{name:"Size",options:["Regular (₹100)","Large (₹150)"],required:true}]},
+  {id:"m18",name:"Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true},{name:"Sugar",options:["With Sugar","Without Sugar"],required:true}]},
+  {id:"m19",name:"Iced Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:100,active:true,customGroups:[{name:"Size",options:["Regular (₹100)","Large (₹150)"],required:true},{name:"Sugar",options:["With Sugar","Without Sugar"],required:true}]},
   {id:"m20",name:"Vegan Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true},{name:"Milk",options:["Black","Oat Milk"],required:true}]},
   {id:"m21",name:"Horlicks",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true}]},
   {id:"m22",name:"Iced Horlicks",category:"Beverages",counter:"Bevs Bar",price:100,active:true,customGroups:[{name:"Size",options:["Regular (₹100)","Large (₹150)"],required:true}]},
@@ -59,7 +58,7 @@ const DEFAULT_MENU = [
   {id:"m30",name:"Hot Chocolate Fudge",category:"Desserts",counter:"Bevs Bar",price:190,active:true,customGroups:[{name:"Flavour",options:["Chocolate","Vanilla","Filter Coffee"],required:true}]},
   {id:"m31",name:"Benne Fudge",category:"Desserts",counter:"Bevs Bar",price:240,active:true,customGroups:[]},
   {id:"m32",name:"Indu Fudge",category:"Desserts",counter:"Bevs Bar",price:240,active:true,customGroups:[]},
-  {id:"m33",name:"Soft Serve",category:"Desserts",counter:"Bevs Bar",price:160,active:true,customGroups:[]},
+  {id:"m33",name:"Soft Serve",category:"Desserts",counter:"Bevs Bar",price:160,active:true,customGroups:[{name:"Add-on",options:["None",{label:"Kaju Praline (+₹10)",extra:10}],required:false}]},
   {id:"m34",name:"Kaju Praline (extra)",category:"Desserts",counter:"Bevs Bar",price:10,active:true,customGroups:[]},
 ];
 
@@ -309,7 +308,7 @@ async function seed(){
     if(ch)await sset("users",u2);
   }
 
-  // Only write defaults if docs don't exist — skip bmoMenu force-write on every load
+  await sset("bmoMenu",DEFAULT_MENU); // force update menu with new customisations
   const writes=[];
   if(!exRefunds)      writes.push(sset("refunds",[]));
   if(!exLogs)         writes.push(sset("logs",[]));
@@ -2090,16 +2089,33 @@ function BMOOrderTaker({user,showToast}){
   const handleDirectPlus=(item,e)=>{e.stopPropagation();mergeIntoCart(item,"",1);};
   const handleDirectMinus=(item,e)=>{e.stopPropagation();mergeIntoCart(item,"",-1);};
 
+  // Options can be a string or {label, extra} — helpers normalise
+  const optLabel=o=>typeof o==="object"?o.label:o;
+  const optExtra=o=>typeof o==="object"?(o.extra||0):0;
+  // Total extra price from all selected options for an item
+  const calcExtra=(item,selections)=>{
+    let extra=0;
+    (item.customGroups||[]).forEach(g=>{
+      const sel=selections[g.name];
+      const opt=g.options.find(o=>optLabel(o)===optLabel(sel));
+      if(opt) extra+=optExtra(opt);
+    });
+    return extra;
+  };
+
   const openCustomModal=(item,e)=>{
     e&&e.stopPropagation();
-    const init={};(item.customGroups||[]).forEach(g=>{init[g.name]=g.options[0];});
+    const init={};(item.customGroups||[]).forEach(g=>{init[g.name]=optLabel(g.options[0]);});
     setCustomModal({item,selections:init,qty:1});
   };
 
   const confirmCustom=()=>{
     const {item,selections,qty}=customModal;
+    const extras=calcExtra(item,selections);
+    const effectivePrice=item.price+extras;
     const customs=Object.entries(selections).map(([k,v])=>`${k}: ${v}`).join(", ");
-    mergeIntoCart(item,customs,qty);
+    // pass effectivePrice into mergeIntoCart via a patched item
+    mergeIntoCart({...item,price:effectivePrice},customs,qty);
     setCustomModal(null);
   };
 
@@ -2364,9 +2380,9 @@ function BMOOrderTaker({user,showToast}){
                 <div style={{fontSize:12,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:.4,marginBottom:8}}>{g.name}{g.required&&<span style={{color:C.danger,marginLeft:4}}>*</span>}</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                   {g.options.map(opt=>(
-                    <button key={opt} onClick={()=>setCustomModal(cm=>({...cm,selections:{...cm.selections,[g.name]:opt}}))}
-                      style={{background:customModal.selections[g.name]===opt?C.accent:C.surface,color:customModal.selections[g.name]===opt?"#fff":C.sub,border:`1.5px solid ${customModal.selections[g.name]===opt?C.accent:C.border}`,borderRadius:4,padding:"8px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>
-                      {opt}
+                    <button key={optLabel(opt)} onClick={()=>setCustomModal(cm=>({...cm,selections:{...cm.selections,[g.name]:optLabel(opt)}}))}
+                      style={{background:customModal.selections[g.name]===optLabel(opt)?C.accent:C.surface,color:customModal.selections[g.name]===optLabel(opt)?"#fff":C.sub,border:`1.5px solid ${customModal.selections[g.name]===optLabel(opt)?C.accent:C.border}`,borderRadius:4,padding:"8px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>
+                      {optLabel(opt)}
                     </button>
                   ))}
                 </div>
@@ -2383,7 +2399,7 @@ function BMOOrderTaker({user,showToast}){
             </div>
             <div style={{background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
               <span style={{color:C.sub,fontSize:14}}>Subtotal</span>
-              <span style={{fontWeight:800,color:C.success,fontSize:20}}>{inr(customModal.item.price*(customModal.qty||1))}</span>
+              <span style={{fontWeight:800,color:C.success,fontSize:20}}>{inr((customModal.item.price+calcExtra(customModal.item,customModal.selections))*(customModal.qty||1))}</span>
             </div>
             <button onClick={confirmCustom} style={{...BPr,background:C.accent}}>Add to Cart</button>
           </>
