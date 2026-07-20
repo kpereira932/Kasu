@@ -1199,6 +1199,7 @@ function DayEndModal({open,onClose,onConfirm,totals,totalRef,grand,txnCount,outl
 function AdminApp({user,onLogout,showToast,onBMO}){
   const [screen,setScreen]=useState("dashboard");
   const [menuOpen,setMenuOpen]=useState(false);
+  const [txnFilter,setTxnFilter]=useState({outlet:"all",date:null});
   const isMobile=useIsMobile();
   const navItems=[
     {id:"dashboard",icon:"📊",label:"Dashboard"},
@@ -1207,7 +1208,7 @@ function AdminApp({user,onLogout,showToast,onBMO}){
     ...( ["superadmin","admin"].includes(user.role)?[{id:"outlets",icon:"🏪",label:"Outlets"},{id:"users",icon:"👥",label:"Users"}]:[]),
     ...(user.role==="superadmin"?[{id:"logs",icon:"🔍",label:"Audit Logs"},{id:"backup",icon:"💾",label:"Backup"}]:[]),
   ];
-  const goTo=(id)=>{setScreen(id);setMenuOpen(false);};
+  const goTo=(id,filter)=>{if(filter)setTxnFilter(filter);setScreen(id);setMenuOpen(false);};
   const SidebarContent=()=>(
     <>
       <div style={{padding:"18px 16px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:10}}>
@@ -1260,8 +1261,8 @@ function AdminApp({user,onLogout,showToast,onBMO}){
           </>
         )}
         <div style={{flex:1}}>
-          {screen==="dashboard"&&<Dashboard user={user}/>}
-          {screen==="transactions"&&<Transactions user={user} showToast={showToast}/>}
+          {screen==="dashboard"&&<Dashboard user={user} goTo={goTo}/>}
+          {screen==="transactions"&&<Transactions user={user} showToast={showToast} initFilter={txnFilter}/>}
           {screen==="reports"&&<Reports/>}
           {screen==="outlets"&&<Outlets user={user} showToast={showToast}/>}
           {screen==="users"&&<Users user={user} showToast={showToast}/>}
@@ -1274,7 +1275,7 @@ function AdminApp({user,onLogout,showToast,onBMO}){
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-function Dashboard({user}){
+function Dashboard({user,goTo}){
   const [txns,setTxns]=useState([]);const [refs,setRefs]=useState([]);const [boxCharges,setBoxCharges]=useState([]);const [outlets,setOutlets]=useState([]);const [dayStatus,setDayStatus]=useState({});const [loading,setLoading]=useState(true);
   useEffect(()=>{
     getAllTxns().then(a=>{Promise.all([sget("refunds"),sget("boxCharges"),sget("outlets"),sget("dayStatus")]).then(([b,bx,o,ds])=>{setTxns((a||[]).filter(t=>t.day===getToday()));setRefs((b||[]).filter(r=>r.day===getToday()));setBoxCharges((bx||[]).filter(x=>x.day===getToday()));setOutlets(o||[]);setDayStatus(ds||{});setLoading(false);});});
@@ -1295,13 +1296,13 @@ function Dashboard({user}){
     <div style={{padding:20,maxWidth:960,margin:"0 auto"}}>
       <div style={{marginBottom:20}}><div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Dashboard</div><div style={{color:C.sub,fontSize:13,marginTop:2}}>Business day: {fmtD(getToday())}</div></div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:20}}>
-        <StatCard label="Gross Sales" value={inr(grand)} color={C.success} icon="💰"/>
-        <StatCard label="Net Sales" value={inr(net)} color={C.accent} icon="📊"/>
-        <StatCard label="Cash in Hand" value={inr(cashInHand)} color={C.success} icon="💵" sub="Cash − Refunds"/>
-        <StatCard label="Refunds" value={"−"+inr(totalRef)} color={C.danger} icon="↩"/>
-        <StatCard label="Orders" value={txns.length} color={C.text} icon="📋"/>
-        <StatCard label="QR/Card Fails" value={inr(cashFails)} color={C.warn} icon="⚠"/>
-        <StatCard label="Avg Order" value={inr(avgOrder)} color={C.sub} icon="📐"/>
+        <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Gross Sales" value={inr(grand)} color={C.success} icon="💰"/></div>
+        <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Net Sales" value={inr(net)} color={C.accent} icon="📊"/></div>
+        <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Cash in Hand" value={inr(cashInHand)} color={C.success} icon="💵" sub="Cash − Refunds"/></div>
+        <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Refunds" value={"−"+inr(totalRef)} color={C.danger} icon="↩"/></div>
+        <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Orders" value={txns.length} color={C.text} icon="📋"/></div>
+        <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="QR/Card Fails" value={inr(cashFails)} color={C.warn} icon="⚠"/></div>
+        <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Avg Order" value={inr(avgOrder)} color={C.sub} icon="📐"/></div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:16}}>
         <div style={Cd}>
@@ -1322,8 +1323,10 @@ function Dashboard({user}){
             const closed=dayStatus[o.id]===getToday();
             const oT=txns.filter(t=>t.outletId===o.id);
             const oTot=oT.reduce((s,t)=>s+t.payments.reduce((a,p)=>a+Number(p.amount),0)+(t.boxAmount||0),0);
-            return(<div key={o.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:`1px solid ${C.border}`}}>
-              <div><div style={{fontWeight:600,color:C.text,fontSize:13}}>{o.name}</div><div style={{color:C.sub,fontSize:11}}>{oT.length} orders · {inr(oTot)}</div></div>
+            return(<div key={o.id} onClick={()=>goTo("transactions",{outlet:o.id,date:getToday()})} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:`1px solid ${C.border}`,cursor:"pointer",borderRadius:4,transition:"background .15s"}}
+              onMouseEnter={e=>e.currentTarget.style.background=C.accentLight}
+              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              <div><div style={{fontWeight:600,color:C.accent,fontSize:13}}>{o.name} →</div><div style={{color:C.sub,fontSize:11}}>{oT.length} orders · {inr(oTot)}</div></div>
               <Badge label={closed?"Closed":"Open"} color={closed?C.success:C.warn} bg={closed?C.successLight:C.warnLight} border={closed?C.successBorder:C.warnBorder}/>
             </div>);
           })}
@@ -1340,7 +1343,7 @@ function Dashboard({user}){
           }
         </div>
         <div style={{...Cd,gridColumn:"1/-1"}}>
-          <SectionHeader title="Recent Transactions" action={<span style={{fontSize:12,color:C.sub}}>{txns.length} today</span>}/>
+          <SectionHeader title="Recent Transactions" action={<button onClick={()=>goTo("transactions")} style={{fontSize:12,color:C.accent,background:"transparent",border:"none",cursor:"pointer",fontWeight:600}}>View all →</button>}/>
           {txns.length===0?<EmptyState icon="📋" title="No transactions" desc=""/>:txns.slice(-5).reverse().map(t=><TxnCard key={t.id} txn={t}/>)}
         </div>
         {(totalRef>grand*0.1||cashFails>grand*0.2)&&(
@@ -1356,9 +1359,9 @@ function Dashboard({user}){
 }
 
 // ─── Transactions ─────────────────────────────────────────────────────────────
-function Transactions({user,showToast}){
+function Transactions({user,showToast,initFilter}){
   const [all,setAll]=useState([]);const [refs,setRefs]=useState([]);const [outlets,setOutlets]=useState([]);
-  const [fO,setFO]=useState("all");const [fD,setFD]=useState(getToday());const [fM,setFM]=useState("all");const [search,setSearch]=useState("");
+  const [fO,setFO]=useState(initFilter?.outlet||"all");const [fD,setFD]=useState(initFilter?.date||getToday());const [fM,setFM]=useState("all");const [search,setSearch]=useState("");
   const [editTxn,setEditTxn]=useState(null);const [delTxn,setDelTxn]=useState(null);const [loading,setLoading]=useState(true);
   const load=useCallback(async()=>{
     // Always bypass cache for admin to get fresh data from Firestore
