@@ -133,15 +133,15 @@ function clearCache(k){delete cache[k];}
 
 // Atomically append a transaction - prevents race conditions between outlets
 // ─── Transaction sharding by month ───────────────────────────────────────────
-// Each month stored in "txn_YYYY_MM" doc. Legacy data in "transactions".
+// Transactions sharded by week: txn_YYYY_WNN
+// Max ~4 outlets × 300 orders/day × 7 days = ~8400 entries/week — well under 1MB
 function txnMonthKey(dateStr){
-  // dateStr is YYYY-MM-DD
-  const parts=(dateStr||getToday()).split("-");
-  return `txn_${parts[0]}_${parts[1]}`;
+  // Shard by month: txn_2025_07
+  const d=dateStr||getToday();
+  return `txn_${d.slice(0,4)}_${d.slice(5,7)}`;
 }
 function currentMonthKey(){
-  const t=getToday();
-  return txnMonthKey(t);
+  return txnMonthKey(getToday());
 }
 
 async function appendTxn(txn){
@@ -189,17 +189,24 @@ async function updateBmoOrder(orderId,updater){
 }
 
 async function getAllTxns(){
-  // Read current month + previous month + legacy doc
   const today=getToday();
-  const parts=today.split("-");
-  const yr=parseInt(parts[0]),mo=parseInt(parts[1]);
+  const yr=parseInt(today.slice(0,4)),mo=parseInt(today.slice(5,7));
   const prevMo=mo===1?12:mo-1;
   const prevYr=mo===1?yr-1:yr;
+  const currKey=`txn_${yr}_${String(mo).padStart(2,"0")}`;
   const prevKey=`txn_${prevYr}_${String(prevMo).padStart(2,"0")}`;
-  const currKey=currentMonthKey();
-  const keys=currKey!==prevKey?[currKey,prevKey]:["transactions",currKey];
-  // Always include legacy key
-  const allKeys=[...new Set(["transactions",currKey,prevKey])];
+  // Also include any weekly-sharded docs that may exist from a previous bug
+  const weeklyKeys=[];
+  for(let i=0;i<6;i++){
+    const d=new Date(today+"T12:00:00Z");
+    d.setUTCDate(d.getUTCDate()-(i*7));
+    const ds=d.toISOString().split("T")[0];
+    const jan4=new Date(Date.UTC(d.getUTCFullYear(),0,4));
+    const s1=new Date(jan4);s1.setUTCDate(jan4.getUTCDate()-((jan4.getUTCDay()+6)%7));
+    const wn=Math.floor((d-s1)/(7*24*3600*1000))+1;
+    weeklyKeys.push(`txn_${d.getUTCFullYear()}_W${String(wn).padStart(2,"0")}`);
+  }
+  const allKeys=[...new Set(["transactions",currKey,prevKey,...weeklyKeys])];
   const results=await Promise.all(allKeys.map(async k=>{
     try{
       const snap=await getDoc(doc(db,"kasu",k));
@@ -308,7 +315,7 @@ async function seed(){
     if(ch)await sset("users",u2);
   }
 
-  await sset("bmoMenu",DEFAULT_MENU); // force update menu with new customisations
+  if(!await sget("bmoMenu")) await sset("bmoMenu",DEFAULT_MENU);
   const writes=[];
   if(!exRefunds)      writes.push(sset("refunds",[]));
   if(!exLogs)         writes.push(sset("logs",[]));
@@ -1293,7 +1300,7 @@ function Dashboard({user,goTo}){
   const userMap={};txns.forEach(t=>{const k=t.createdBy||"?";if(!userMap[k])userMap[k]={name:t.createdByName||k,orders:0,total:0};t.payments.forEach(p=>{userMap[k].total+=Number(p.amount);});userMap[k].orders+=1;});
   if(loading)return <div style={{display:"flex",justifyContent:"center",padding:48}}><Spinner/></div>;
   return(
-    <div style={{padding:20,maxWidth:960,margin:"0 auto"}}>
+    <div style={{padding:"20px 28px",maxWidth:1100,margin:"0 auto"}}>
       <div style={{marginBottom:20}}><div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Dashboard</div><div style={{color:C.sub,fontSize:13,marginTop:2}}>Business day: {fmtD(getToday())}</div></div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:20}}>
         <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Gross Sales" value={inr(grand)} color={C.success} icon="💰"/></div>
@@ -1391,7 +1398,7 @@ function Transactions({user,showToast,initFilter}){
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`kasu_txns_${fD||"all"}.csv`;a.click();
   };
   return(
-    <div style={{padding:20,maxWidth:960,margin:"0 auto"}}>
+    <div style={{padding:"20px 28px",maxWidth:1100,margin:"0 auto"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
         <div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Transactions</div>
         <button onClick={exportCSV} style={{...BSc,display:"flex",alignItems:"center",gap:6,padding:"8px 14px",fontSize:12}}>⬇ CSV</button>
@@ -1509,7 +1516,7 @@ function Reports(){
   const thS={padding:"9px 14px",textAlign:"left",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",background:C.bg,borderBottom:`1px solid ${C.border}`};
   const tdS={padding:"9px 14px",color:C.text,fontSize:13,borderBottom:`1px solid ${C.border}`};
   return(
-    <div style={{padding:20,maxWidth:960,margin:"0 auto"}}>
+    <div style={{padding:"20px 28px",maxWidth:1100,margin:"0 auto"}}>
       <div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px",marginBottom:16}}>Reports</div>
       <div style={{...Cd,marginBottom:20,padding:14}}>
         <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
@@ -1556,7 +1563,7 @@ function Reports(){
           </div>
         ))}
         <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:8}}>Daily Breakdown</div>
-        <div style={{...Cd,padding:0,overflow:"hidden",marginBottom:16}}>
+        <div style={{...Cd,padding:0,overflowX:"auto",marginBottom:16}}>
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead><tr><th style={thS}>Date</th><th style={{...thS,textAlign:"right"}}>Orders</th><th style={{...thS,textAlign:"right"}}>Sales</th><th style={{...thS,textAlign:"right"}}>Refunds</th><th style={{...thS,textAlign:"right"}}>Net</th></tr></thead>
             <tbody>{Object.entries(rep.byDay).sort().map(([d,v])=>(
@@ -1626,7 +1633,7 @@ function Outlets({user,showToast}){
   };
 
   return(
-    <div style={{padding:20,maxWidth:700,margin:"0 auto"}}>
+    <div style={{padding:"20px 28px",maxWidth:800,margin:"0 auto"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
         <div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Outlets</div>
         {canEdit&&<button onClick={()=>setAddOpen(true)} style={{...BPr,width:"auto",padding:"9px 18px"}}>+ Add Outlet</button>}
@@ -1740,7 +1747,7 @@ function Users({user,showToast}){
   const canAct=(u)=>isSuperAdmin||(u&&!PROT.includes(u.id));
 
   return(
-    <div style={{padding:20,maxWidth:700,margin:"0 auto"}}>
+    <div style={{padding:"20px 28px",maxWidth:800,margin:"0 auto"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
         <div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Users</div>
         <button onClick={()=>setAddOpen(true)} style={{...BPr,width:"auto",padding:"9px 18px"}}>+ Add User</button>
@@ -1821,7 +1828,7 @@ function Logs(){
   useEffect(()=>{sget("logs").then(l=>{setLogs(l||[]);setLoading(false);});},[]);
   const AC={"LOGIN":C.success,"LOGOUT":C.sub,"ADD_TXN":C.accent,"EDIT_TXN":C.warn,"DEL_TXN":C.danger,"ADD_REFUND":C.danger,"DAY_END":C.success,"BMO_ORDER":C.accent};
   return(
-    <div style={{padding:20,maxWidth:800,margin:"0 auto"}}>
+    <div style={{padding:"20px 28px",maxWidth:960,margin:"0 auto"}}>
       <div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px",marginBottom:4}}>Audit Logs</div>
       <div style={{color:C.sub,fontSize:13,marginBottom:16}}>Last 500 events</div>
       {loading?<div style={{display:"flex",justifyContent:"center",padding:40}}><Spinner/></div>
@@ -2763,7 +2770,7 @@ function BMOMenuManager({showToast}){
   if(loading)return <div style={{display:"flex",justifyContent:"center",padding:48}}><Spinner/></div>;
 
   return(
-    <div style={{padding:20,maxWidth:800,margin:"0 auto"}}>
+    <div style={{padding:"20px 28px",maxWidth:960,margin:"0 auto"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
         <div style={{fontSize:22,fontWeight:800,color:C.text}}>BMO Menu</div>
         <button onClick={()=>setAddOpen(true)} style={{...BPr,width:"auto",padding:"9px 18px",background:C.accent}}>+ Add Item</button>
