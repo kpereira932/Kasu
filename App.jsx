@@ -95,7 +95,7 @@ function migrateTxns(arr){
 const cache = {};
 // Keys that must always be read fresh (multi-user writes)
 const NO_CACHE_KEYS=new Set(["transactions","bmoOrders","bmoOrderCounter","refunds","boxCharges","dayStatus","bmoMenu","users"]);
-function isNoCacheKey(key){return NO_CACHE_KEYS.has(key)||key.startsWith("bmoOrders_")||key.startsWith("txn_");}
+function isNoCacheKey(key){return NO_CACHE_KEYS.has(key)||key.startsWith("bmoOrders_")||key.startsWith("txn_")||key==="transactions";}
 async function sget(key) {
   if(key==="transactions"){
     try {
@@ -135,17 +135,14 @@ function clearCache(k){delete cache[k];}
 // ─── Transaction sharding by month ───────────────────────────────────────────
 // Transactions sharded by week: txn_YYYY_WNN
 // Max ~4 outlets × 300 orders/day × 7 days = ~8400 entries/week — well under 1MB
-function txnMonthKey(dateStr){
-  // Shard by month: txn_2025_07
+function txnKey(outletId,dateStr){
+  // Shard by outlet+month: txn_o1_2026_07 — keeps each doc small
   const d=dateStr||getToday();
-  return `txn_${d.slice(0,4)}_${d.slice(5,7)}`;
-}
-function currentMonthKey(){
-  return txnMonthKey(getToday());
+  return `txn_${outletId}_${d.slice(0,4)}_${d.slice(5,7)}`;
 }
 
 async function appendTxn(txn){
-  const key=txnMonthKey(txn.day||getToday());
+  const key=txnKey(txn.outletId,txn.day);
   const ref=doc(db,"kasu",key);
   try{
     const snap=await getDoc(ref);
@@ -188,25 +185,28 @@ async function updateBmoOrder(orderId,updater){
   }
 }
 
+const OUTLET_IDS=["o1","o2","o3","o4"];
 async function getAllTxns(){
   const today=getToday();
-  const yr=parseInt(today.slice(0,4)),mo=parseInt(today.slice(5,7));
-  const prevMo=mo===1?12:mo-1;
-  const prevYr=mo===1?yr-1:yr;
-  const currKey=`txn_${yr}_${String(mo).padStart(2,"0")}`;
-  const prevKey=`txn_${prevYr}_${String(prevMo).padStart(2,"0")}`;
-  // Also include any weekly-sharded docs that may exist from a previous bug
-  const weeklyKeys=[];
+  const yr=today.slice(0,4),mo=today.slice(5,7);
+  const prevMo=mo==="01"?"12":String(parseInt(mo)-1).padStart(2,"0");
+  const prevYr=mo==="01"?String(parseInt(yr)-1):yr;
+  // Per-outlet-per-month keys for current and previous month
+  const outletKeys=OUTLET_IDS.flatMap(id=>[
+    `txn_${id}_${yr}_${mo}`,
+    `txn_${id}_${prevYr}_${prevMo}`
+  ]);
+  // Legacy keys (old shared monthly, old weekly, original transactions doc)
+  const legacyKeys=["transactions",`txn_${yr}_${mo}`,`txn_${prevYr}_${prevMo}`];
   for(let i=0;i<6;i++){
     const d=new Date(today+"T12:00:00Z");
     d.setUTCDate(d.getUTCDate()-(i*7));
-    const ds=d.toISOString().split("T")[0];
     const jan4=new Date(Date.UTC(d.getUTCFullYear(),0,4));
     const s1=new Date(jan4);s1.setUTCDate(jan4.getUTCDate()-((jan4.getUTCDay()+6)%7));
     const wn=Math.floor((d-s1)/(7*24*3600*1000))+1;
-    weeklyKeys.push(`txn_${d.getUTCFullYear()}_W${String(wn).padStart(2,"0")}`);
+    legacyKeys.push(`txn_${d.getUTCFullYear()}_W${String(wn).padStart(2,"0")}`);
   }
-  const allKeys=[...new Set(["transactions",currKey,prevKey,...weeklyKeys])];
+  const allKeys=[...new Set([...outletKeys,...legacyKeys])];
   const results=await Promise.all(allKeys.map(async k=>{
     try{
       const snap=await getDoc(doc(db,"kasu",k));
@@ -222,15 +222,17 @@ async function getAllTxns(){
 }
 
 async function updateOneTxn(updated){
-  // Try current month key first, then previous, then legacy
   const today=getToday();
-  const parts=today.split("-");
-  const yr=parseInt(parts[0]),mo=parseInt(parts[1]);
-  const prevMo=mo===1?12:mo-1;
-  const prevYr=mo===1?yr-1:yr;
-  const keysToTry=[currentMonthKey(),`txn_${prevYr}_${String(prevMo).padStart(2,"0")}`,txnMonthKey(updated.day),"transactions"];
-  const uniqueKeys=[...new Set(keysToTry)];
-  for(const key of uniqueKeys){
+  const yr=today.slice(0,4),mo=today.slice(5,7);
+  const prevMo=mo==="01"?"12":String(parseInt(mo)-1).padStart(2,"0");
+  const prevYr=mo==="01"?String(parseInt(yr)-1):yr;
+  const outletId=updated.outletId;
+  const keysToTry=[
+    ...(outletId?[`txn_${outletId}_${yr}_${mo}`,`txn_${outletId}_${prevYr}_${prevMo}`]:[]),
+    ...OUTLET_IDS.flatMap(id=>[`txn_${id}_${yr}_${mo}`,`txn_${id}_${prevYr}_${prevMo}`]),
+    `txn_${yr}_${mo}`,`txn_${prevYr}_${prevMo}`,"transactions"
+  ];
+  for(const key of [...new Set(keysToTry)]){
     try{
       const snap=await getDoc(doc(db,"kasu",key));
       if(!snap.exists())continue;
@@ -244,13 +246,14 @@ async function updateOneTxn(updated){
 
 async function deleteOneTxn(id){
   const today=getToday();
-  const parts=today.split("-");
-  const yr=parseInt(parts[0]),mo=parseInt(parts[1]);
-  const prevMo=mo===1?12:mo-1;
-  const prevYr=mo===1?yr-1:yr;
-  const keysToTry=[currentMonthKey(),`txn_${prevYr}_${String(prevMo).padStart(2,"0")}`,"transactions"];
-  const uniqueKeys=[...new Set(keysToTry)];
-  for(const key of uniqueKeys){
+  const yr=today.slice(0,4),mo=today.slice(5,7);
+  const prevMo=mo==="01"?"12":String(parseInt(mo)-1).padStart(2,"0");
+  const prevYr=mo==="01"?String(parseInt(yr)-1):yr;
+  const keysToTry=[
+    ...OUTLET_IDS.flatMap(oid=>[`txn_${oid}_${yr}_${mo}`,`txn_${oid}_${prevYr}_${prevMo}`]),
+    `txn_${yr}_${mo}`,`txn_${prevYr}_${prevMo}`,"transactions"
+  ];
+  for(const key of [...new Set(keysToTry)]){
     try{
       const snap=await getDoc(doc(db,"kasu",key));
       if(!snap.exists())continue;
