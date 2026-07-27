@@ -150,6 +150,14 @@ async function appendTxn(txn){
     await setDoc(ref,{value:[...arr,txn]});
   }catch(e){
     console.error("appendTxn error",e);
+    // Log error to Firestore so Cloud Function can alert immediately
+    try{
+      const errRef=doc(db,"kasu","errors");
+      const errSnap=await getDoc(errRef);
+      const errs=(errSnap.exists()&&errSnap.data().value)||[];
+      errs.push({error:e.message,outletId:txn.outletId,outletName:txn.outletName,userId:txn.createdBy,ts:new Date().toISOString()});
+      await setDoc(errRef,{value:errs.slice(-20)});
+    }catch(_){}
     throw e;
   }
 }
@@ -2622,7 +2630,28 @@ function BMOReports({user}){
   const generate=async()=>{
     if(from>to)return;
     setLoading(true);
-    const all=await sget("bmoOrders")||[];
+    // Read all months in the date range from sharded docs
+    const allOrders=[];
+    const seen=new Set();
+    // Collect all month keys between from and to
+    const monthKeys=new Set(["bmoOrders"]);
+    let cur=new Date(from+"T12:00:00Z");
+    const end=new Date(to+"T12:00:00Z");
+    while(cur<=end){
+      const yr=cur.getUTCFullYear();
+      const mo=String(cur.getUTCMonth()+1).padStart(2,"0");
+      monthKeys.add(`bmoOrders_${yr}_${mo}`);
+      cur.setUTCMonth(cur.getUTCMonth()+1);
+    }
+    for(const key of monthKeys){
+      try{
+        const snap=await getDoc(doc(db,"kasu",key));
+        if(!snap.exists())continue;
+        const arr=snap.data().value||[];
+        arr.forEach(o=>{if(o&&o.id&&!seen.has(o.id)){seen.add(o.id);allOrders.push(o);}});
+      }catch(e){console.error("BMOReports read",key,e);}
+    }
+    const all=allOrders;
     let orders=all.filter(o=>o.businessDay>=from&&o.businessDay<=to);
     // outlet filter
     const isOutlet=user.role==="outlet";
@@ -2654,7 +2683,7 @@ function BMOReports({user}){
         byItem[l.itemName].total+=l.lineTotal;byItem[l.itemName].qty+=l.quantity;
       });
     });
-    setRep({grossSales,cancelledAmt,netSales,totalOrders,completedOrders,pendingOrders,cancelledCount:cancelled.length,byMode,byCat,byCounter,byItem,byOutlet});
+    setRep({grossSales,cancelledAmt,netSales,totalOrders,completedOrders,pendingOrders,cancelledCount:cancelled.length,byMode,byCat,byCounter,byItem,byOutlet,allOrders:orders.slice().sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))});
     setLoading(false);
   };
 
@@ -2669,9 +2698,26 @@ function BMOReports({user}){
 
   const exportCSV=()=>{
     if(!rep)return;
-    const rows=[["BMO Report",`${fmtD(from)} to ${fmtD(to)}`],[],["Gross Sales",rep.grossSales],["Cancelled",rep.cancelledAmt],["Net Sales",rep.netSales],["Total Orders",rep.totalOrders],["Completed",rep.completedOrders],["Pending",rep.pendingOrders],[],["Payment Mode","Amount","Orders"],...PAYMENT_MODES.map(m=>[m,rep.byMode[m].amount,rep.byMode[m].count]),[],["Outlet","Total","Orders"],...Object.values(rep.byOutlet).map(o=>[o.name,o.total,o.orders]),[],["Category","Total","Qty"],...Object.entries(rep.byCat).map(([k,v])=>[k,v.total,v.qty]),[],["Counter","Total","Qty"],...Object.entries(rep.byCounter).map(([k,v])=>[k,v.total,v.qty]),[],["Item","Total","Qty","Category"],...Object.entries(rep.byItem).sort((a,b)=>b[1].total-a[1].total).map(([k,v])=>[k,v.total,v.qty,v.category])];
+    const q=v=>typeof v==="string"&&v.includes(",")?'"'+v+'"':v;
+    const rows=[
+      ["BMO Report",`${fmtD(from)} to ${fmtD(to)}`],[],
+      ["Gross Sales",rep.grossSales],["Cancelled",rep.cancelledAmt],["Net Sales",rep.netSales],
+      ["Total Orders",rep.totalOrders],["Completed",rep.completedOrders],["Pending",rep.pendingOrders],[],
+      ["Payment Mode","Amount","Orders"],
+      ...PAYMENT_MODES.map(m=>[m,rep.byMode[m].amount,rep.byMode[m].count]),[],
+      ["Outlet","Total","Orders"],...Object.values(rep.byOutlet).map(o=>[o.name,o.total,o.orders]),[],
+      ["--- ORDER DETAIL ---"],[],
+      ["Order#","Date","Time","Outlet","Items","Payment Mode","Dine Type","Status","Items Amount","Takeaway Charge","Total"],
+      ...(rep.allOrders||[]).map(o=>{
+        const dt=o.createdAt?new Date(o.createdAt):null;
+        const dateStr=dt?dt.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}):"-";
+        const timeStr=dt?dt.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}):"-";
+        const items=(o.items||[]).map(l=>`${l.itemName}${l.quantity>1?` x${l.quantity}`:""}`).join("; ");
+        return [o.bmoOrderNo,dateStr,timeStr,q(o.outletName||o.outletId),q(items),o.paymentMode,o.dineType==="takeaway"?"Takeaway":"Dine-in",o.cancelled?"Cancelled":o.status,o.itemsAmount||0,o.takeawayCharge||0,o.totalAmount];
+      })
+    ];
     const blob=new Blob([rows.map(r=>r.join(",")).join("\n")],{type:"text/csv"});
-    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`bmo_report_${from}_${to}.csv`;a.click();
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`bmo_orders_${from}_${to}.csv`;a.click();
   };
 
   const thS={padding:"9px 14px",textAlign:"left",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",background:C.bg,borderBottom:`1px solid ${C.border}`};
@@ -2705,6 +2751,39 @@ function BMOReports({user}){
             <StatCard label="Completed" value={rep.completedOrders} color={C.success}/>
             <StatCard label="Pending" value={rep.pendingOrders} color={C.warn}/>
             {rep.cancelledCount>0&&<StatCard label="Cancelled Orders" value={rep.cancelledCount} color={C.danger}/>}
+          </div>
+
+          {/* Order detail for accounts */}
+          <div style={{...Cd,padding:0,overflowX:"auto",marginBottom:20}}>
+            <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{fontWeight:700,fontSize:14,color:C.text}}>Order Detail ({rep.allOrders?.length||0} orders)</div>
+            </div>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+              <thead><tr>
+                <th style={thS}>#</th>
+                <th style={thS}>Time</th>
+                <th style={thS}>Outlet</th>
+                <th style={thS}>Items</th>
+                <th style={thS}>Mode</th>
+                <th style={thS}>Type</th>
+                <th style={thS}>Status</th>
+                <th style={{...thS,textAlign:"right"}}>Total</th>
+              </tr></thead>
+              <tbody>
+                {(rep.allOrders||[]).map(o=>(
+                  <tr key={o.id} style={{background:o.cancelled?C.dangerLight:"transparent"}}>
+                    <td style={tdS}><b>{o.bmoOrderNo}</b></td>
+                    <td style={tdS}>{o.createdAt?new Date(o.createdAt).toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):"-"}</td>
+                    <td style={tdS}>{o.outletName||o.outletId}</td>
+                    <td style={{...tdS,maxWidth:200}}>{(o.items||[]).map(l=>`${l.itemName}${l.quantity>1?` ×${l.quantity}`:""}`).join(", ")}</td>
+                    <td style={tdS}>{o.paymentMode}</td>
+                    <td style={tdS}>{o.dineType==="takeaway"?"Takeaway":"Dine-in"}</td>
+                    <td style={tdS}><span style={{color:o.cancelled?C.danger:o.status==="completed"?C.success:C.warn,fontWeight:600}}>{o.cancelled?"Cancelled":o.status==="completed"?"Done":"Open"}</span></td>
+                    <td style={{...tdS,textAlign:"right",fontWeight:700}}>{inr(o.totalAmount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {/* Tables */}
