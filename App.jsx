@@ -145,12 +145,18 @@ async function appendTxn(txn){
   const key=txnKey(txn.outletId,txn.day);
   const ref=doc(db,"kasu",key);
   try{
-    const snap=await getDoc(ref);
-    const arr=snap.exists()&&snap.data().value?snap.data().value:[];
-    await setDoc(ref,{value:[...arr,txn]});
+    // runTransaction ensures concurrent saves never overwrite each other
+    await runTransaction(db,async t=>{
+      const snap=await t.get(ref);
+      const arr=snap.exists()&&snap.data().value?snap.data().value:[];
+      // Check size — each txn ~500 bytes, stop at 900KB
+      if(arr.length>1800)throw new Error("DOC_FULL");
+      t.set(ref,{value:[...arr,txn]});
+    });
+    invalidateTxnCache(); // force fresh read on next load
   }catch(e){
     console.error("appendTxn error",e);
-    // Log error to Firestore so Cloud Function can alert immediately
+    // Log error to Firestore so Cloud Function can alert
     try{
       const errRef=doc(db,"kasu","errors");
       const errSnap=await getDoc(errRef);
@@ -194,40 +200,51 @@ async function updateBmoOrder(orderId,updater){
 }
 
 const OUTLET_IDS=["o1","o2","o3","o4"];
-async function getAllTxns(){
+
+// In-memory txn cache — refreshed on each poll cycle
+let txnCache=null;
+let txnCacheTime=0;
+const TXN_CACHE_MS=12000; // 12s cache — matches poll interval
+
+async function getAllTxns(force=false){
+  const now=Date.now();
+  if(!force && txnCache && (now-txnCacheTime)<TXN_CACHE_MS) return txnCache;
+
   const today=getToday();
   const yr=today.slice(0,4),mo=today.slice(5,7);
   const prevMo=mo==="01"?"12":String(parseInt(mo)-1).padStart(2,"0");
   const prevYr=mo==="01"?String(parseInt(yr)-1):yr;
-  // Per-outlet-per-month keys for current and previous month
-  const outletKeys=OUTLET_IDS.flatMap(id=>[
-    `txn_${id}_${yr}_${mo}`,
-    `txn_${id}_${prevYr}_${prevMo}`
-  ]);
-  // Legacy keys (old shared monthly, old weekly, original transactions doc)
-  const legacyKeys=["transactions",`txn_${yr}_${mo}`,`txn_${prevYr}_${prevMo}`];
-  for(let i=0;i<6;i++){
-    const d=new Date(today+"T12:00:00Z");
-    d.setUTCDate(d.getUTCDate()-(i*7));
-    const jan4=new Date(Date.UTC(d.getUTCFullYear(),0,4));
-    const s1=new Date(jan4);s1.setUTCDate(jan4.getUTCDate()-((jan4.getUTCDay()+6)%7));
-    const wn=Math.floor((d-s1)/(7*24*3600*1000))+1;
-    legacyKeys.push(`txn_${d.getUTCFullYear()}_W${String(wn).padStart(2,"0")}`);
-  }
-  const allKeys=[...new Set([...outletKeys,...legacyKeys])];
-  const results=await Promise.all(allKeys.map(async k=>{
+
+  // Only current + previous month per-outlet keys + legacy docs
+  // No more 6 weekly keys — those are already merged into legacy
+  const keys=[...new Set([
+    ...OUTLET_IDS.map(id=>`txn_${id}_${yr}_${mo}`),
+    ...OUTLET_IDS.map(id=>`txn_${id}_${prevYr}_${prevMo}`),
+    `txn_${yr}_${mo}`,
+    `txn_${prevYr}_${prevMo}`,
+    "transactions",
+  ])];
+
+  const results=await Promise.all(keys.map(async k=>{
     try{
       const snap=await getDoc(doc(db,"kasu",k));
       if(!snap.exists())return[];
       let val=snap.data().value||[];
       if(k==="transactions")val=migrateTxns(val);
       return val;
-    }catch(e){console.error("getAllTxns",k,e);return[];}
+    }catch(e){return[];}
   }));
-  const all=results.flat().filter(t=>t&&t.id);
+
   const seen=new Set();
-  return all.filter(t=>{if(seen.has(t.id))return false;seen.add(t.id);return true;});
+  txnCache=results.flat().filter(t=>{
+    if(!t||!t.id||seen.has(t.id))return false;
+    seen.add(t.id);return true;
+  });
+  txnCacheTime=now;
+  return txnCache;
 }
+
+function invalidateTxnCache(){txnCache=null;txnCacheTime=0;}
 
 async function updateOneTxn(updated){
   const today=getToday();
@@ -741,6 +758,7 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
     }
     await addLog("ADD_TXN",user.id,"Order "+orderNo.trim()+(hasComp?` [Comp: ${compReason.trim()}]`:""));
     setOrderNo("");setPays([{mode:"Cash",amount:""}]);setCompReason("");setErrors({});setDupWarn(false);
+    invalidateTxnCache();
     setBusy(false);showToast("Order #"+orderNo.trim()+" saved!","success");onSaved();
     setTimeout(()=>orderRef.current&&orderRef.current.focus(),100);
   };
