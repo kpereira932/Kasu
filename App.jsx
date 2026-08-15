@@ -145,25 +145,14 @@ async function appendTxn(txn){
   const key=txnKey(txn.outletId,txn.day);
   const ref=doc(db,"kasu",key);
   try{
-    // runTransaction ensures concurrent saves never overwrite each other
     await runTransaction(db,async t=>{
       const snap=await t.get(ref);
       const arr=snap.exists()&&snap.data().value?snap.data().value:[];
-      // Check size — each txn ~500 bytes, stop at 900KB
-      if(arr.length>1800)throw new Error("DOC_FULL");
       t.set(ref,{value:[...arr,txn]});
     });
-    invalidateTxnCache(); // force fresh read on next load
+    invalidateTxnCache();
   }catch(e){
-    console.error("appendTxn error",e);
-    // Log error to Firestore so Cloud Function can alert
-    try{
-      const errRef=doc(db,"kasu","errors");
-      const errSnap=await getDoc(errRef);
-      const errs=(errSnap.exists()&&errSnap.data().value)||[];
-      errs.push({error:e.message,outletId:txn.outletId,outletName:txn.outletName,userId:txn.createdBy,ts:new Date().toISOString()});
-      await setDoc(errRef,{value:errs.slice(-20)});
-    }catch(_){}
+    console.error("appendTxn error",e.code, e.message);
     throw e;
   }
 }
