@@ -195,37 +195,64 @@ let txnCache=null;
 let txnCacheTime=0;
 const TXN_CACHE_MS=12000; // 12s cache — matches poll interval
 
+// Legacy doc is read once and cached permanently — it never changes
+let legacyTxnCache=null;
+async function getLegacyTxns(){
+  if(legacyTxnCache) return legacyTxnCache;
+  try{
+    const snap=await getDoc(doc(db,"kasu","transactions"));
+    legacyTxnCache=snap.exists()?migrateTxns(snap.data().value||[]):[];
+  }catch(e){legacyTxnCache=[];}
+  return legacyTxnCache;
+}
+
+// Outlet live view — only reads current month (4 reads max)
+async function getTodayTxns(force=false){
+  const now=Date.now();
+  if(!force && txnCache && (now-txnCacheTime)<TXN_CACHE_MS) return txnCache;
+  const today=getToday();
+  const yr=today.slice(0,4),mo=today.slice(5,7);
+  const keys=OUTLET_IDS.map(id=>`txn_${id}_${yr}_${mo}`);
+  // Also read shared monthly key in case it exists
+  keys.push(`txn_${yr}_${mo}`);
+  const results=await Promise.all([...new Set(keys)].map(async k=>{
+    try{
+      const snap=await getDoc(doc(db,"kasu",k));
+      return snap.exists()?snap.data().value||[]:[];
+    }catch(e){return[];}
+  }));
+  const legacy=await getLegacyTxns();
+  const seen=new Set();
+  txnCache=[...legacy,...results.flat()].filter(t=>{
+    if(!t||!t.id||seen.has(t.id))return false;
+    seen.add(t.id);return true;
+  });
+  txnCacheTime=now;
+  return txnCache;
+}
+
+// Admin reports — reads current + previous month (full history)
 async function getAllTxns(force=false){
   const now=Date.now();
   if(!force && txnCache && (now-txnCacheTime)<TXN_CACHE_MS) return txnCache;
-
   const today=getToday();
   const yr=today.slice(0,4),mo=today.slice(5,7);
   const prevMo=mo==="01"?"12":String(parseInt(mo)-1).padStart(2,"0");
   const prevYr=mo==="01"?String(parseInt(yr)-1):yr;
-
-  // Only current + previous month per-outlet keys + legacy docs
-  // No more 6 weekly keys — those are already merged into legacy
   const keys=[...new Set([
     ...OUTLET_IDS.map(id=>`txn_${id}_${yr}_${mo}`),
     ...OUTLET_IDS.map(id=>`txn_${id}_${prevYr}_${prevMo}`),
-    `txn_${yr}_${mo}`,
-    `txn_${prevYr}_${prevMo}`,
-    "transactions",
+    `txn_${yr}_${mo}`,`txn_${prevYr}_${prevMo}`,
   ])];
-
   const results=await Promise.all(keys.map(async k=>{
     try{
       const snap=await getDoc(doc(db,"kasu",k));
-      if(!snap.exists())return[];
-      let val=snap.data().value||[];
-      if(k==="transactions")val=migrateTxns(val);
-      return val;
+      return snap.exists()?snap.data().value||[]:[];
     }catch(e){return[];}
   }));
-
+  const legacy=await getLegacyTxns();
   const seen=new Set();
-  txnCache=results.flat().filter(t=>{
+  txnCache=[...legacy,...results.flat()].filter(t=>{
     if(!t||!t.id||seen.has(t.id))return false;
     seen.add(t.id);return true;
   });
@@ -589,14 +616,14 @@ function OutletApp({user,onLogout,showToast,onBMO}){
   const outletId=user.outlets[0];
 
   const load=useCallback(async()=>{
-    const [all,allR,allB,ds]=await Promise.all([getAllTxns(),sget("refunds"),sget("boxCharges"),sget("dayStatus")]);
+    const [all,allR,allB,ds]=await Promise.all([getTodayTxns(),sget("refunds"),sget("boxCharges"),sget("dayStatus")]);
     setTxns((all||[]).filter(t=>t&&t.outletId===outletId&&t.day===getToday()));
     setRefs((allR||[]).filter(r=>r&&r.outletId===outletId&&r.day===getToday()));
     setBoxCharges((allB||[]).filter(b=>b&&b.outletId===outletId&&b.day===getToday()));
     if((ds||{})[outletId]===getToday())setDayDone(true);
   },[outletId]);
 
-  useEffect(()=>{load();const t=setInterval(load,15000);return()=>clearInterval(t);},[load]);
+  useEffect(()=>{load();const t=setInterval(load,30000);return()=>clearInterval(t);},[load]);
   useEffect(()=>{const chk=()=>{const n=new Date();if(n.getHours()===2&&n.getMinutes()>=30)setDayDone(true);};chk();const t=setInterval(chk,60000);return()=>clearInterval(t);},[]);
 
   const totals={};PAYMENT_MODES.forEach(m=>{totals[m]=0;});
@@ -2456,7 +2483,7 @@ function BMOViewOrders({user}){
     setLoading(false);
   },[selOutlet,user]);
 
-  useEffect(()=>{load();const t=setInterval(load,15000);return()=>clearInterval(t);},[load]);
+  useEffect(()=>{load();const t=setInterval(load,30000);return()=>clearInterval(t);},[load]);
 
   const updateOrderItems=(orderId,updater)=>{
     // Update local state instantly
