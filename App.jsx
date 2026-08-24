@@ -135,10 +135,19 @@ function clearCache(k){delete cache[k];}
 // ─── Transaction sharding by month ───────────────────────────────────────────
 // Transactions sharded by week: txn_YYYY_WNN
 // Max ~4 outlets × 300 orders/day × 7 days = ~8400 entries/week — well under 1MB
+function isoWeek(dateStr){
+  const d=new Date((dateStr||getToday())+"T12:00:00Z");
+  const jan4=new Date(Date.UTC(d.getUTCFullYear(),0,4));
+  const s1=new Date(jan4);
+  s1.setUTCDate(jan4.getUTCDate()-((jan4.getUTCDay()+6)%7));
+  const wn=Math.floor((d-s1)/(7*24*3600*1000))+1;
+  return `W${String(wn).padStart(2,"0")}`;
+}
 function txnKey(outletId,dateStr){
-  // Shard by outlet+month: txn_o1_2026_07 — keeps each doc small
+  // Shard by outlet+year+week: txn_o1_2026_W34
+  // Max ~500 orders/week per outlet = ~250KB, well under 1MB
   const d=dateStr||getToday();
-  return `txn_${outletId}_${d.slice(0,4)}_${d.slice(5,7)}`;
+  return `txn_${outletId}_${d.slice(0,4)}_${isoWeek(d)}`;
 }
 
 async function appendTxn(txn){
@@ -206,20 +215,36 @@ async function getLegacyTxns(){
   return legacyTxnCache;
 }
 
-// Outlet live view — only reads current month (4 reads max)
+// Generate week keys for a date range
+function weekKeysForRange(startDate,endDate){
+  const keys=new Set();
+  const cur=new Date(startDate+"T12:00:00Z");
+  const end=new Date(endDate+"T12:00:00Z");
+  while(cur<=end){
+    const ds=cur.toISOString().split("T")[0];
+    OUTLET_IDS.forEach(id=>keys.add(txnKey(id,ds)));
+    // Also add old monthly keys for backwards compat
+    keys.add(`txn_${ds.slice(0,4)}_${ds.slice(5,7)}`);
+    OUTLET_IDS.forEach(id=>keys.add(`txn_${id}_${ds.slice(0,4)}_${ds.slice(5,7)}`));
+    cur.setUTCDate(cur.getUTCDate()+7);
+  }
+  return [...keys];
+}
+
+// Outlet live view — current week + last week (covers week boundary)
 async function getTodayTxns(force=false){
   const now=Date.now();
   if(!force && txnCache && (now-txnCacheTime)<TXN_CACHE_MS) return txnCache;
   const today=getToday();
-  const yr=today.slice(0,4),mo=today.slice(5,7);
-  const keys=OUTLET_IDS.map(id=>`txn_${id}_${yr}_${mo}`);
-  // Also read shared monthly key in case it exists
-  keys.push(`txn_${yr}_${mo}`);
-  const results=await Promise.all([...new Set(keys)].map(async k=>{
-    try{
-      const snap=await getDoc(doc(db,"kasu",k));
-      return snap.exists()?snap.data().value||[]:[];
-    }catch(e){return[];}
+  const lastWeek=new Date(today+"T12:00:00Z");
+  lastWeek.setUTCDate(lastWeek.getUTCDate()-7);
+  const lastWeekStr=lastWeek.toISOString().split("T")[0];
+  const keys=[...new Set([
+    ...OUTLET_IDS.map(id=>txnKey(id,today)),
+    ...OUTLET_IDS.map(id=>txnKey(id,lastWeekStr)),
+  ])];
+  const results=await Promise.all(keys.map(async k=>{
+    try{const snap=await getDoc(doc(db,"kasu",k));return snap.exists()?snap.data().value||[]:[]}catch(e){return[];}
   }));
   const legacy=await getLegacyTxns();
   const seen=new Set();
@@ -231,24 +256,17 @@ async function getTodayTxns(force=false){
   return txnCache;
 }
 
-// Admin reports — reads current + previous month (full history)
+// Admin — reads last 8 weeks of data
 async function getAllTxns(force=false){
   const now=Date.now();
   if(!force && txnCache && (now-txnCacheTime)<TXN_CACHE_MS) return txnCache;
   const today=getToday();
-  const yr=today.slice(0,4),mo=today.slice(5,7);
-  const prevMo=mo==="01"?"12":String(parseInt(mo)-1).padStart(2,"0");
-  const prevYr=mo==="01"?String(parseInt(yr)-1):yr;
-  const keys=[...new Set([
-    ...OUTLET_IDS.map(id=>`txn_${id}_${yr}_${mo}`),
-    ...OUTLET_IDS.map(id=>`txn_${id}_${prevYr}_${prevMo}`),
-    `txn_${yr}_${mo}`,`txn_${prevYr}_${prevMo}`,
-  ])];
+  const eightWeeksAgo=new Date(today+"T12:00:00Z");
+  eightWeeksAgo.setUTCDate(eightWeeksAgo.getUTCDate()-56);
+  const startStr=eightWeeksAgo.toISOString().split("T")[0];
+  const keys=weekKeysForRange(startStr,today);
   const results=await Promise.all(keys.map(async k=>{
-    try{
-      const snap=await getDoc(doc(db,"kasu",k));
-      return snap.exists()?snap.data().value||[]:[];
-    }catch(e){return[];}
+    try{const snap=await getDoc(doc(db,"kasu",k));return snap.exists()?snap.data().value||[]:[]}catch(e){return[];}
   }));
   const legacy=await getLegacyTxns();
   const seen=new Set();
@@ -264,16 +282,17 @@ function invalidateTxnCache(){txnCache=null;txnCacheTime=0;}
 
 async function updateOneTxn(updated){
   const today=getToday();
-  const yr=today.slice(0,4),mo=today.slice(5,7);
-  const prevMo=mo==="01"?"12":String(parseInt(mo)-1).padStart(2,"0");
-  const prevYr=mo==="01"?String(parseInt(yr)-1):yr;
+  const lastWeek=new Date(today+"T12:00:00Z");
+  lastWeek.setUTCDate(lastWeek.getUTCDate()-7);
+  const lastWeekStr=lastWeek.toISOString().split("T")[0];
   const outletId=updated.outletId;
-  const keysToTry=[
-    ...(outletId?[`txn_${outletId}_${yr}_${mo}`,`txn_${outletId}_${prevYr}_${prevMo}`]:[]),
-    ...OUTLET_IDS.flatMap(id=>[`txn_${id}_${yr}_${mo}`,`txn_${id}_${prevYr}_${prevMo}`]),
-    `txn_${yr}_${mo}`,`txn_${prevYr}_${prevMo}`,"transactions"
-  ];
-  for(const key of [...new Set(keysToTry)]){
+  const dayStr=updated.day||today;
+  const keysToTry=[...new Set([
+    ...(outletId?[txnKey(outletId,dayStr),txnKey(outletId,today),txnKey(outletId,lastWeekStr)]:[]),
+    ...OUTLET_IDS.flatMap(id=>[txnKey(id,today),txnKey(id,lastWeekStr)]),
+    "transactions"
+  ])];
+  for(const key of keysToTry){
     try{
       const snap=await getDoc(doc(db,"kasu",key));
       if(!snap.exists())continue;
@@ -287,14 +306,14 @@ async function updateOneTxn(updated){
 
 async function deleteOneTxn(id){
   const today=getToday();
-  const yr=today.slice(0,4),mo=today.slice(5,7);
-  const prevMo=mo==="01"?"12":String(parseInt(mo)-1).padStart(2,"0");
-  const prevYr=mo==="01"?String(parseInt(yr)-1):yr;
-  const keysToTry=[
-    ...OUTLET_IDS.flatMap(oid=>[`txn_${oid}_${yr}_${mo}`,`txn_${oid}_${prevYr}_${prevMo}`]),
-    `txn_${yr}_${mo}`,`txn_${prevYr}_${prevMo}`,"transactions"
-  ];
-  for(const key of [...new Set(keysToTry)]){
+  const lastWeek=new Date(today+"T12:00:00Z");
+  lastWeek.setUTCDate(lastWeek.getUTCDate()-7);
+  const lastWeekStr=lastWeek.toISOString().split("T")[0];
+  const keysToTry=[...new Set([
+    ...OUTLET_IDS.flatMap(oid=>[txnKey(oid,today),txnKey(oid,lastWeekStr)]),
+    "transactions"
+  ])];
+  for(const key of keysToTry){
     try{
       const snap=await getDoc(doc(db,"kasu",key));
       if(!snap.exists())continue;
@@ -2193,40 +2212,39 @@ function BMOOrderTaker({user,showToast}){
       const ctrRef=doc(db,"kasu","bmoOrderCounter");
       const bmoRef=doc(db,"kasu",bmoKey);
 
-      // Atomically increment counter so two cashiers never get the same number
+      // Single transaction: increment counter AND append order atomically
+      // Both cashiers cannot get the same number — Firestore retries on conflict
       let dayCount=1;
       await runTransaction(db,async t=>{
-        const snap=await t.get(ctrRef);
-        const counter=snap.exists()&&snap.data().value?snap.data().value:{};
+        const ctrSnap=await t.get(ctrRef);
+        const bmoSnap=await t.get(bmoRef);
+        const counter=ctrSnap.exists()&&ctrSnap.data().value?ctrSnap.data().value:{};
         dayCount=(counter[counterKey]||0)+1;
         if(dayCount>2000)throw new Error("limit");
         counter[counterKey]=dayCount;
+        const arr=bmoSnap.exists()&&bmoSnap.data().value?bmoSnap.data().value:[];
+        const order={
+          id:`bmo${Date.now()}`,
+          bmoOrderNo:dayCount,
+          outletId,outletName,
+          businessDay:today,
+          createdBy:user.id,createdByName:user.name,
+          createdAt:new Date().toISOString(),
+          paymentMode:payMode,
+          dineType,
+          takeawayCharge:takeawayTotal,
+          itemsAmount:cartTotal,
+          totalAmount:grandTotal,
+          status:"open",
+          cancelled:false,
+          items:cart.map(l=>({...l}))
+        };
         t.set(ctrRef,{value:counter});
+        t.set(bmoRef,{value:[...arr,order]});
       }).catch(e=>{
         if(e.message==="limit"){showToast("BMO order limit reached for today.","error");setBusy(false);}
         throw e;
       });
-
-      // Read bmoOrders and write new order
-      const bmoSnap=await getDoc(bmoRef);
-      const arr=bmoSnap.exists()&&bmoSnap.data().value?bmoSnap.data().value:[];
-      const order={
-        id:`bmo${Date.now()}`,
-        bmoOrderNo:dayCount,
-        outletId,outletName,
-        businessDay:today,
-        createdBy:user.id,createdByName:user.name,
-        createdAt:new Date().toISOString(),
-        paymentMode:payMode,
-        dineType,
-        takeawayCharge:takeawayTotal,
-        itemsAmount:cartTotal,
-        totalAmount:grandTotal,
-        status:"open",
-        cancelled:false,
-        items:cart.map(l=>({...l}))
-      };
-      await setDoc(bmoRef,{value:[...arr,order]});
       addLog("BMO_ORDER",user.id,`BMO #${dayCount} — ${outletName} — ${inr(grandTotal)} — ${payMode}${dineType==="takeaway"?" — Takeaway":""}`);
       setLastOrder(order);setCart([]);setPayMode("Cash");setDineType("dinein");setStage("done");
       showToast(`BMO Order #${dayCount} saved!`,"success");
