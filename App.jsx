@@ -3114,7 +3114,6 @@ function CashClosingScreen({user,showToast,txns,refs}){
   });
   const [denomCounts,setDenomCounts]=useState({500:"",200:"",100:"",50:"",20:"",10:"",5:"",coins:""});
   const [posReportedCash,setPosReportedCash]=useState("");
-  const [handedToBank,setHandedToBank]=useState("");
   const [varianceReason,setVarianceReason]=useState("");
   const [notes,setNotes]=useState("");
   const [openingFloat,setOpeningFloat]=useState(0);
@@ -3152,7 +3151,7 @@ function CashClosingScreen({user,showToast,txns,refs}){
   const actualCash=totalInTill-openingFloat-shiftRefunds;
   const pos=Number(posReportedCash)||0;
   const variance=actualCash-pos;
-  const handedNum=Number(handedToBank)||0;
+  const handedNum=(Number(denomCounts[500])||0)*500;
   const balanceInBox=totalInTill-handedNum;
 
   const save=async()=>{
@@ -3272,10 +3271,14 @@ function CashClosingScreen({user,showToast,txns,refs}){
           {/* Bank handover + Balance in Box */}
           <div style={{...Cd,marginBottom:12}}>
             <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:12}}>Handover</div>
-            <Field label="₹500 Notes Handed to Bank (₹)">
-              <Inp type="number" value={handedToBank} onChange={setHandedToBank} placeholder="0"/>
-            </Field>
-            <div style={{marginTop:8,padding:"10px 14px",background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:6,padding:12,marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",fontSize:13}}>
+                <span style={{color:C.sub}}>₹500 Notes Handed to Bank</span>
+                <span style={{fontWeight:700,fontSize:15,color:C.text}}>{inr(handedNum)}</span>
+              </div>
+              <div style={{fontSize:11,color:C.muted,marginTop:2}}>Auto-calculated from ₹500 count above ({Number(denomCounts[500])||0} notes × ₹500)</div>
+            </div>
+            <div style={{padding:"10px 14px",background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{fontWeight:700,fontSize:14,color:C.accentDark}}>Balance in Box (next shift float)</span>
               <span style={{fontWeight:800,fontSize:18,color:C.accent}}>{inr(balanceInBox)}</span>
             </div>
