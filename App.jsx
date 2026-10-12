@@ -6,77 +6,77 @@ import { getFirestore, doc, getDoc, setDoc, runTransaction } from "firebase/fire
 const PAYMENT_MODES = ["Cash","PhonePe QR Fail","Pine QR Fail","Pine Card Fail","Stag QR","Comp"];
 const BMO_PAYMENT_MODES = ["Cash","Stag QR","Pine Card Fail"];
 const MODE_COLORS = {"Cash":"#16a34a","PhonePe QR Fail":"#ea580c","Pine QR Fail":"#dc2626","Pine Card Fail":"#b91c1c","Stag QR":"#7c3aed","Comp":"#64748b"};
-const MODE_BG = {"Cash":"#f0fdf4","PhonePe QR Fail":"#fff7ed","Pine QR Fail":"#fef2f2","Pine Card Fail":"#fef2f2","Stag QR":"#f5f3ff","Comp":"#f8fafc"};
+const MODE_BG    = {"Cash":"#f0fdf4","PhonePe QR Fail":"#fff7ed","Pine QR Fail":"#fef2f2","Pine Card Fail":"#fef2f2","Stag QR":"#f5f3ff","Comp":"#f8fafc"};
 const C = {
-bg:"#f8f6f3",surface:"#FFFFFF",surface2:"#f0ede8",border:"#ddd8d0",borderStrong:"#c8c2b8",
-text:"#1a1a1a",sub:"#888888",muted:"#999999",
-accent:"#C8873A",accentDark:"#A06828",accentLight:"rgba(200,135,58,0.10)",accentBorder:"rgba(200,135,58,0.30)",
-success:"#166534",successLight:"#dcfce7",successBorder:"#16a34a",
-warn:"#A06828",warnLight:"rgba(200,135,58,0.10)",warnBorder:"rgba(200,135,58,0.30)",
-danger:"#C0392B",dangerLight:"#FDECEA",dangerBorder:"#dc2626",
-bmo:"#0F766E",bmoLight:"#F0FDFA",bmoBorder:"#99F6E4",
+  bg:"#f8f6f3",surface:"#FFFFFF",surface2:"#f0ede8",border:"#ddd8d0",borderStrong:"#c8c2b8",
+  text:"#1a1a1a",sub:"#888888",muted:"#999999",
+  accent:"#C8873A",accentDark:"#A06828",accentLight:"rgba(200,135,58,0.10)",accentBorder:"rgba(200,135,58,0.30)",
+  success:"#166534",successLight:"#dcfce7",successBorder:"#16a34a",
+  warn:"#A06828",warnLight:"rgba(200,135,58,0.10)",warnBorder:"rgba(200,135,58,0.30)",
+  danger:"#C0392B",dangerLight:"#FDECEA",dangerBorder:"#dc2626",
+  bmo:"#0F766E",bmoLight:"#F0FDFA",bmoBorder:"#99F6E4",
 };
 
 const BMO_CATEGORIES = ["Dosa","Idli Vada","Bangalore Specials","Beverages","Desserts"];
-const BMO_COUNTERS = ["Dosa Counter","IV Counter","Bevs Bar"];
-const COUNTER_CATS = {"Dosa Counter":["Dosa"],"IV Counter":["Idli Vada","Bangalore Specials"],"Bevs Bar":["Beverages","Desserts"]};
+const BMO_COUNTERS   = ["Dosa Counter","IV Counter","Bevs Bar"];
+const COUNTER_CATS   = {"Dosa Counter":["Dosa"],"IV Counter":["Idli Vada","Bangalore Specials"],"Bevs Bar":["Beverages","Desserts"]};
 
 const DEFAULT_MENU = [
-// Dosa — Style (mandatory) + Optional incl. Jain [+ MOTS for masala items]
-{id:"m1",name:"Benne Plain Dosa",category:"Dosa",counter:"Dosa Counter",price:180,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain"],required:false}]},
-{id:"m2",name:"Benne Masala Dosa",category:"Dosa",counter:"Dosa Counter",price:200,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain","MOTS"],required:false}]},
-{id:"m3",name:"Benne Pudi Plain Dosa",category:"Dosa",counter:"Dosa Counter",price:200,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain"],required:false}]},
-{id:"m4",name:"Benne Pudi Masala Dosa",category:"Dosa",counter:"Dosa Counter",price:210,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain","MOTS"],required:false}]},
-{id:"m5",name:"Benne Garlic Roast",category:"Dosa",counter:"Dosa Counter",price:190,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain"],required:false}]},
-// Idli Vada — Style (mandatory) + Optional COTS; Idly Vada has special style options with extras
-{id:"m6",name:"Vada",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
-{id:"m7",name:"Idly Vada",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:[{label:"Classic",extra:0},{label:"Jain",extra:0},{label:"Ghee Podi (+₹20)",extra:20},{label:"Jain Ghee Podi (+₹20)",extra:20}],required:true}]},
-{id:"m8",name:"Idly",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
-{id:"m9",name:"Ghee Idly",category:"Idli Vada",counter:"IV Counter",price:120,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
-{id:"m10",name:"Ghee Pudi Idli",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
-{id:"m11",name:"Thatte Idly",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
-{id:"m12",name:"Ghee Thatte Idly",category:"Idli Vada",counter:"IV Counter",price:120,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
-{id:"m13",name:"Ghee Pudi Thatte Idli",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
-// Bangalore Specials
-{id:"m14",name:"Shavige Bath",category:"Bangalore Specials",counter:"IV Counter",price:140,active:true,customGroups:[]},
-{id:"m15",name:"Mangalore Buns",category:"Bangalore Specials",counter:"IV Counter",price:90,active:true,customGroups:[{name:"Size",options:[{label:"1 Piece",extra:0},{label:"2 Pieces",extra:90}],required:true}]},
-{id:"m17",name:"Donne Pulao",category:"Bangalore Specials",counter:"IV Counter",price:180,active:true,customGroups:[]},
-// Beverages
-{id:"m18",name:"Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true},{name:"Sugar",options:["With Sugar","Without Sugar"],required:true}]},
-{id:"m19",name:"Iced Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:100,active:true,customGroups:[{name:"Size",options:["Regular (₹100)","Large (₹150)"],required:true},{name:"Sugar",options:["With Sugar","Without Sugar"],required:true}]},
-{id:"m20",name:"Vegan Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true},{name:"Milk",options:["Black","Oat Milk"],required:true}]},
-{id:"m21",name:"Horlicks",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true}]},
-{id:"m22",name:"Iced Horlicks",category:"Beverages",counter:"Bevs Bar",price:100,active:true,customGroups:[{name:"Size",options:["Regular (₹100)","Large (₹150)"],required:true}]},
-{id:"m23",name:"Bournvita",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true}]},
-{id:"m24",name:"Iced Bournvita",category:"Beverages",counter:"Bevs Bar",price:100,active:true,customGroups:[{name:"Size",options:["Regular (₹100)","Large (₹150)"],required:true}]},
-// Desserts
-{id:"m25",name:"Badam Halwa",category:"Desserts",counter:"Bevs Bar",price:120,active:true,customGroups:[]},
-{id:"m26",name:"Mysore Pak",category:"Desserts",counter:"Bevs Bar",price:110,active:true,customGroups:[]},
-{id:"m27",name:"Filter Coffee Praline Cookie",category:"Desserts",counter:"Bevs Bar",price:200,active:true,customGroups:[]},
-{id:"m28",name:"Ice Cream Scoop",category:"Desserts",counter:"Bevs Bar",price:120,active:true,customGroups:[{name:"Flavour",options:["Vanilla","Filter Coffee"],required:true}]},
-{id:"m29",name:"Filter Coffee Soft Serve",category:"Desserts",counter:"Bevs Bar",price:120,active:true,customGroups:[]},
-{id:"m30",name:"Hot Chocolate Fudge",category:"Desserts",counter:"Bevs Bar",price:190,active:true,customGroups:[{name:"Flavour",options:["Chocolate","Vanilla","Filter Coffee"],required:true}]},
-{id:"m31",name:"Benne Fudge",category:"Desserts",counter:"Bevs Bar",price:240,active:true,customGroups:[]},
-{id:"m32",name:"Indu Fudge",category:"Desserts",counter:"Bevs Bar",price:240,active:true,customGroups:[]},
-{id:"m33",name:"Soft Serve",category:"Desserts",counter:"Bevs Bar",price:160,active:true,customGroups:[{name:"Add-on",options:[{label:"Kaju Praline (+₹10)",extra:10}],required:false}]},
-{id:"m34",name:"Kaju Praline (extra)",category:"Desserts",counter:"Bevs Bar",price:10,active:true,customGroups:[]},
+  // Dosa — Style (mandatory) + Optional incl. Jain [+ MOTS for masala items]
+  {id:"m1",name:"Benne Plain Dosa",category:"Dosa",counter:"Dosa Counter",price:180,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain"],required:false}]},
+  {id:"m2",name:"Benne Masala Dosa",category:"Dosa",counter:"Dosa Counter",price:200,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain","MOTS"],required:false}]},
+  {id:"m3",name:"Benne Pudi Plain Dosa",category:"Dosa",counter:"Dosa Counter",price:200,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain"],required:false}]},
+  {id:"m4",name:"Benne Pudi Masala Dosa",category:"Dosa",counter:"Dosa Counter",price:210,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain","MOTS"],required:false}]},
+  {id:"m5",name:"Benne Garlic Roast",category:"Dosa",counter:"Dosa Counter",price:190,active:true,customGroups:[{name:"Style",options:["Classic","Less Butter & Less Ghee","Vegan"],required:true},{name:"Optional",options:["Jain"],required:false}]},
+  // Idli Vada — Style (mandatory) + Optional COTS; Idly Vada has special style options with extras
+  {id:"m6",name:"Vada",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
+  {id:"m7",name:"Idly Vada",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:[{label:"Classic",extra:0},{label:"Jain",extra:0},{label:"Ghee Podi (+₹20)",extra:20},{label:"Jain Ghee Podi (+₹20)",extra:20}],required:true}]},
+  {id:"m8",name:"Idly",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
+  {id:"m9",name:"Ghee Idly",category:"Idli Vada",counter:"IV Counter",price:120,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
+  {id:"m10",name:"Ghee Pudi Idli",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
+  {id:"m11",name:"Thatte Idly",category:"Idli Vada",counter:"IV Counter",price:100,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
+  {id:"m12",name:"Ghee Thatte Idly",category:"Idli Vada",counter:"IV Counter",price:120,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
+  {id:"m13",name:"Ghee Pudi Thatte Idli",category:"Idli Vada",counter:"IV Counter",price:130,active:true,customGroups:[{name:"Style",options:["Classic","Jain"],required:true},{name:"Optional",options:["COTS"],required:false}]},
+  // Bangalore Specials
+  {id:"m14",name:"Shavige Bath",category:"Bangalore Specials",counter:"IV Counter",price:140,active:true,customGroups:[]},
+  {id:"m15",name:"Mangalore Buns",category:"Bangalore Specials",counter:"IV Counter",price:90,active:true,customGroups:[{name:"Size",options:[{label:"1 Piece",extra:0},{label:"2 Pieces",extra:90}],required:true}]},
+  {id:"m17",name:"Donne Pulao",category:"Bangalore Specials",counter:"IV Counter",price:180,active:true,customGroups:[]},
+  // Beverages
+  {id:"m18",name:"Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true},{name:"Sugar",options:["With Sugar","Without Sugar"],required:true}]},
+  {id:"m19",name:"Iced Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:100,active:true,customGroups:[{name:"Size",options:["Regular (₹100)","Large (₹150)"],required:true},{name:"Sugar",options:["With Sugar","Without Sugar"],required:true}]},
+  {id:"m20",name:"Vegan Filter Coffee",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true},{name:"Milk",options:["Black","Oat Milk"],required:true}]},
+  {id:"m21",name:"Horlicks",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true}]},
+  {id:"m22",name:"Iced Horlicks",category:"Beverages",counter:"Bevs Bar",price:100,active:true,customGroups:[{name:"Size",options:["Regular (₹100)","Large (₹150)"],required:true}]},
+  {id:"m23",name:"Bournvita",category:"Beverages",counter:"Bevs Bar",price:70,active:true,customGroups:[{name:"Size",options:["Regular (₹70)","Large (₹120)"],required:true}]},
+  {id:"m24",name:"Iced Bournvita",category:"Beverages",counter:"Bevs Bar",price:100,active:true,customGroups:[{name:"Size",options:["Regular (₹100)","Large (₹150)"],required:true}]},
+  // Desserts
+  {id:"m25",name:"Badam Halwa",category:"Desserts",counter:"Bevs Bar",price:120,active:true,customGroups:[]},
+  {id:"m26",name:"Mysore Pak",category:"Desserts",counter:"Bevs Bar",price:110,active:true,customGroups:[]},
+  {id:"m27",name:"Filter Coffee Praline Cookie",category:"Desserts",counter:"Bevs Bar",price:200,active:true,customGroups:[]},
+  {id:"m28",name:"Ice Cream Scoop",category:"Desserts",counter:"Bevs Bar",price:120,active:true,customGroups:[{name:"Flavour",options:["Vanilla","Filter Coffee"],required:true}]},
+  {id:"m29",name:"Filter Coffee Soft Serve",category:"Desserts",counter:"Bevs Bar",price:120,active:true,customGroups:[]},
+  {id:"m30",name:"Hot Chocolate Fudge",category:"Desserts",counter:"Bevs Bar",price:190,active:true,customGroups:[{name:"Flavour",options:["Chocolate","Vanilla","Filter Coffee"],required:true}]},
+  {id:"m31",name:"Benne Fudge",category:"Desserts",counter:"Bevs Bar",price:240,active:true,customGroups:[]},
+  {id:"m32",name:"Indu Fudge",category:"Desserts",counter:"Bevs Bar",price:240,active:true,customGroups:[]},
+  {id:"m33",name:"Soft Serve",category:"Desserts",counter:"Bevs Bar",price:160,active:true,customGroups:[{name:"Add-on",options:[{label:"Kaju Praline (+₹10)",extra:10}],required:false}]},
+  {id:"m34",name:"Kaju Praline (extra)",category:"Desserts",counter:"Bevs Bar",price:10,active:true,customGroups:[]},
 ];
 
 // ─── Responsive ───────────────────────────────────────────────────────────────
 function useIsMobile() {
-const [m,setM] = useState(()=>window.innerWidth<768);
-useEffect(()=>{const fn=()=>setM(window.innerWidth<768);window.addEventListener("resize",fn);return()=>window.removeEventListener("resize",fn);},[]);
-return m;
+  const [m,setM] = useState(()=>window.innerWidth<768);
+  useEffect(()=>{const fn=()=>setM(window.innerWidth<768);window.addEventListener("resize",fn);return()=>window.removeEventListener("resize",fn);},[]);
+  return m;
 }
 
 // ─── Firebase ─────────────────────────────────────────────────────────────────
 const firebaseConfig = {
-apiKey: "AIzaSyDUMHypOLBcDxkepXAn2w7JNvDUZb5IE4w",
-authDomain: "kasu-benne.firebaseapp.com",
-projectId: "kasu-benne",
-storageBucket: "kasu-benne.firebasestorage.app",
-messagingSenderId: "672551297311",
-appId: "1:672551297311:web:ae99e74ac531ce5606d02a"
+  apiKey: "AIzaSyDUMHypOLBcDxkepXAn2w7JNvDUZb5IE4w",
+  authDomain: "kasu-benne.firebaseapp.com",
+  projectId: "kasu-benne",
+  storageBucket: "kasu-benne.firebasestorage.app",
+  messagingSenderId: "672551297311",
+  appId: "1:672551297311:web:ae99e74ac531ce5606d02a"
 };
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
@@ -85,49 +85,49 @@ const db = getFirestore(fbApp);
 const LEGACY_MODE_MAP = {"Pine Labs QR Fail":"Pine QR Fail","Pine Labs Card Fail":"Pine Card Fail"};
 function fixMode(m){return LEGACY_MODE_MAP[m]||m;}
 function migrateTxns(arr){
-if(!Array.isArray(arr))return arr;
-return arr.map(t=>({
-...t,
-payments:Array.isArray(t.payments)?t.payments.map(p=>({...p,mode:fixMode(p.mode)})):t.payments,
-boxMode:t.boxMode?fixMode(t.boxMode):t.boxMode
-}));
+  if(!Array.isArray(arr))return arr;
+  return arr.map(t=>({
+    ...t,
+    payments:Array.isArray(t.payments)?t.payments.map(p=>({...p,mode:fixMode(p.mode)})):t.payments,
+    boxMode:t.boxMode?fixMode(t.boxMode):t.boxMode
+  }));
 }
 const cache = {};
 // Keys that must always be read fresh (multi-user writes)
-const NO_CACHE_KEYS=new Set(["transactions","bmoOrders","bmoOrderCounter","refunds","boxCharges","dayStatus","bmoMenu","users"]);
-function isNoCacheKey(key){return NO_CACHE_KEYS.has(key)||key.startsWith("bmoOrders_")||key.startsWith("txn_")||key==="transactions";}
+const NO_CACHE_KEYS=new Set(["transactions","bmoOrders","bmoOrderCounter","refunds","boxCharges","dayStatus","bmoMenu","users","cashClosings"]);
+function isNoCacheKey(key){return NO_CACHE_KEYS.has(key)||key.startsWith("bmoOrders_")||key.startsWith("txn_")||key==="transactions"||key.startsWith("cashClosings_");}
 async function sget(key) {
-if(key==="transactions"){
-try {
-const snap = await getDoc(doc(db,"kasu",key));
-if(!snap.exists()) return null;
-const data = snap.data();
-let val = "value" in data ? data.value : null;
-if(Array.isArray(val)) val=migrateTxns(val);
-return val;
-} catch(e){console.error("sget",key,e);return null;}
-}
-if(isNoCacheKey(key)){
-try{
-const snap=await getDoc(doc(db,"kasu",key));
-if(!snap.exists())return null;
-return snap.data().value??null;
-}catch(e){console.error("sget",key,e);return null;}
-}
-if (cache[key]!==undefined) return cache[key];
-try {
-const snap = await getDoc(doc(db,"kasu",key));
-if(!snap.exists()){cache[key]=null;return null;}
-const data = snap.data();
-const val = "value" in data ? data.value : null;
-cache[key]=val;
-return val;
-} catch(e){console.error("sget",key,e);return null;}
+  if(key==="transactions"){
+    try {
+      const snap = await getDoc(doc(db,"kasu",key));
+      if(!snap.exists()) return null;
+      const data = snap.data();
+      let val = "value" in data ? data.value : null;
+      if(Array.isArray(val)) val=migrateTxns(val);
+      return val;
+    } catch(e){console.error("sget",key,e);return null;}
+  }
+  if(isNoCacheKey(key)){
+    try{
+      const snap=await getDoc(doc(db,"kasu",key));
+      if(!snap.exists())return null;
+      return snap.data().value??null;
+    }catch(e){console.error("sget",key,e);return null;}
+  }
+  if (cache[key]!==undefined) return cache[key];
+  try {
+    const snap = await getDoc(doc(db,"kasu",key));
+    if(!snap.exists()){cache[key]=null;return null;}
+    const data = snap.data();
+    const val = "value" in data ? data.value : null;
+    cache[key]=val;
+    return val;
+  } catch(e){console.error("sget",key,e);return null;}
 }
 async function sset(key,val){
-if(!isNoCacheKey(key)) cache[key]=val;
-try { await setDoc(doc(db,"kasu",key),{value:val}); }
-catch(e){console.error("sset",key,e);}
+  if(!isNoCacheKey(key)) cache[key]=val;
+  try { await setDoc(doc(db,"kasu",key),{value:val}); }
+  catch(e){console.error("sset",key,e);}
 }
 function clearCache(k){delete cache[k];}
 
@@ -136,65 +136,65 @@ function clearCache(k){delete cache[k];}
 // Transactions sharded by week: txn_YYYY_WNN
 // Max ~4 outlets × 300 orders/day × 7 days = ~8400 entries/week — well under 1MB
 function isoWeek(dateStr){
-const d=new Date((dateStr||getToday())+"T12:00:00Z");
-const jan4=new Date(Date.UTC(d.getUTCFullYear(),0,4));
-const s1=new Date(jan4);
-s1.setUTCDate(jan4.getUTCDate()-((jan4.getUTCDay()+6)%7));
-const wn=Math.floor((d-s1)/(7*24*3600*1000))+1;
-return `W${String(wn).padStart(2,"0")}`;
+  const d=new Date((dateStr||getToday())+"T12:00:00Z");
+  const jan4=new Date(Date.UTC(d.getUTCFullYear(),0,4));
+  const s1=new Date(jan4);
+  s1.setUTCDate(jan4.getUTCDate()-((jan4.getUTCDay()+6)%7));
+  const wn=Math.floor((d-s1)/(7*24*3600*1000))+1;
+  return `W${String(wn).padStart(2,"0")}`;
 }
 function txnKey(outletId,dateStr){
-// Shard by outlet+year+week: txn_o1_2026_W34
-// Max ~500 orders/week per outlet = ~250KB, well under 1MB
-const d=dateStr||getToday();
-return `txn_${outletId}_${d.slice(0,4)}_${isoWeek(d)}`;
+  // Shard by outlet+year+week: txn_o1_2026_W34
+  // Max ~500 orders/week per outlet = ~250KB, well under 1MB
+  const d=dateStr||getToday();
+  return `txn_${outletId}_${d.slice(0,4)}_${isoWeek(d)}`;
 }
 
 async function appendTxn(txn){
-const key=txnKey(txn.outletId,txn.day);
-const ref=doc(db,"kasu",key);
-try{
-await runTransaction(db,async t=>{
-const snap=await t.get(ref);
-const arr=snap.exists()&&snap.data().value?snap.data().value:[];
-t.set(ref,{value:[...arr,txn]});
-});
-invalidateTxnCache();
-}catch(e){
-console.error("appendTxn error",e.code, e.message);
-throw e;
-}
+  const key=txnKey(txn.outletId,txn.day);
+  const ref=doc(db,"kasu",key);
+  try{
+    await runTransaction(db,async t=>{
+      const snap=await t.get(ref);
+      const arr=snap.exists()&&snap.data().value?snap.data().value:[];
+      t.set(ref,{value:[...arr,txn]});
+    });
+    invalidateTxnCache();
+  }catch(e){
+    console.error("appendTxn error",e.code, e.message);
+    throw e;
+  }
 }
 
 function bmoMonthKey(dateStr){
-const d=(dateStr||getToday()).slice(0,7).replace("-","_");
-return `bmoOrders_${d}`;
+  const d=(dateStr||getToday()).slice(0,7).replace("-","_");
+  return `bmoOrders_${d}`;
 }
 async function getAllBmoOrders(businessDay){
-// Read current month shard + legacy bmoOrders doc
-const today=businessDay||getToday();
-const key=bmoMonthKey(today);
-const [curr,legacy]=await Promise.all([
-getDoc(doc(db,"kasu",key)).then(s=>s.exists()?s.data().value||[]:[]).catch(()=>[]),
-getDoc(doc(db,"kasu","bmoOrders")).then(s=>s.exists()?s.data().value||[]:[]).catch(()=>[]),
-]);
-const all=[...legacy,...curr].filter(o=>o&&o.id);
-const seen=new Set();
-return all.filter(o=>{if(seen.has(o.id))return false;seen.add(o.id);return true;});
+  // Read current month shard + legacy bmoOrders doc
+  const today=businessDay||getToday();
+  const key=bmoMonthKey(today);
+  const [curr,legacy]=await Promise.all([
+    getDoc(doc(db,"kasu",key)).then(s=>s.exists()?s.data().value||[]:[]).catch(()=>[]),
+    getDoc(doc(db,"kasu","bmoOrders")).then(s=>s.exists()?s.data().value||[]:[]).catch(()=>[]),
+  ]);
+  const all=[...legacy,...curr].filter(o=>o&&o.id);
+  const seen=new Set();
+  return all.filter(o=>{if(seen.has(o.id))return false;seen.add(o.id);return true;});
 }
 async function updateBmoOrder(orderId,updater){
-const today=getToday();
-const keys=[bmoMonthKey(today),"bmoOrders"];
-for(const key of keys){
-try{
-const snap=await getDoc(doc(db,"kasu",key));
-if(!snap.exists())continue;
-const arr=snap.data().value||[];
-if(!arr.some(o=>o.id===orderId))continue;
-await setDoc(doc(db,"kasu",key),{value:arr.map(o=>o.id===orderId?updater(o):o)});
-return;
-}catch(e){console.error("updateBmoOrder",key,e);}
-}
+  const today=getToday();
+  const keys=[bmoMonthKey(today),"bmoOrders"];
+  for(const key of keys){
+    try{
+      const snap=await getDoc(doc(db,"kasu",key));
+      if(!snap.exists())continue;
+      const arr=snap.data().value||[];
+      if(!arr.some(o=>o.id===orderId))continue;
+      await setDoc(doc(db,"kasu",key),{value:arr.map(o=>o.id===orderId?updater(o):o)});
+      return;
+    }catch(e){console.error("updateBmoOrder",key,e);}
+  }
 }
 
 const OUTLET_IDS=["o1","o2","o3","o4"];
@@ -207,231 +207,231 @@ const TXN_CACHE_MS=12000; // 12s cache — matches poll interval
 // Legacy doc is read once and cached permanently — it never changes
 let legacyTxnCache=null;
 async function getLegacyTxns(){
-if(legacyTxnCache) return legacyTxnCache;
-try{
-const snap=await getDoc(doc(db,"kasu","transactions"));
-legacyTxnCache=snap.exists()?migrateTxns(snap.data().value||[]):[];
-}catch(e){legacyTxnCache=[];}
-return legacyTxnCache;
+  if(legacyTxnCache) return legacyTxnCache;
+  try{
+    const snap=await getDoc(doc(db,"kasu","transactions"));
+    legacyTxnCache=snap.exists()?migrateTxns(snap.data().value||[]):[];
+  }catch(e){legacyTxnCache=[];}
+  return legacyTxnCache;
 }
 
 // Generate week keys for a date range
 function weekKeysForRange(startDate,endDate){
-const keys=new Set();
-const cur=new Date(startDate+"T12:00:00Z");
-const end=new Date(endDate+"T12:00:00Z");
-while(cur<=end){
-const ds=cur.toISOString().split("T")[0];
-OUTLET_IDS.forEach(id=>keys.add(txnKey(id,ds)));
-// Also add old monthly keys for backwards compat
-keys.add(`txn_${ds.slice(0,4)}_${ds.slice(5,7)}`);
-OUTLET_IDS.forEach(id=>keys.add(`txn_${id}_${ds.slice(0,4)}_${ds.slice(5,7)}`));
-cur.setUTCDate(cur.getUTCDate()+7);
-}
-return [...keys];
+  const keys=new Set();
+  const cur=new Date(startDate+"T12:00:00Z");
+  const end=new Date(endDate+"T12:00:00Z");
+  while(cur<=end){
+    const ds=cur.toISOString().split("T")[0];
+    OUTLET_IDS.forEach(id=>keys.add(txnKey(id,ds)));
+    // Also add old monthly keys for backwards compat
+    keys.add(`txn_${ds.slice(0,4)}_${ds.slice(5,7)}`);
+    OUTLET_IDS.forEach(id=>keys.add(`txn_${id}_${ds.slice(0,4)}_${ds.slice(5,7)}`));
+    cur.setUTCDate(cur.getUTCDate()+7);
+  }
+  return [...keys];
 }
 
 // Outlet live view — current week + last week (covers week boundary)
 async function getTodayTxns(force=false){
-const now=Date.now();
-if(!force && txnCache && (now-txnCacheTime)<TXN_CACHE_MS) return txnCache;
-const today=getToday();
-const lastWeek=new Date(today+"T12:00:00Z");
-lastWeek.setUTCDate(lastWeek.getUTCDate()-7);
-const lastWeekStr=lastWeek.toISOString().split("T")[0];
-const keys=[...new Set([
-...OUTLET_IDS.map(id=>txnKey(id,today)),
-...OUTLET_IDS.map(id=>txnKey(id,lastWeekStr)),
-])];
-const results=await Promise.all(keys.map(async k=>{
-try{const snap=await getDoc(doc(db,"kasu",k));return snap.exists()?snap.data().value||[]:[]}catch(e){return[];}
-}));
-const legacy=await getLegacyTxns();
-const seen=new Set();
-txnCache=[...legacy,...results.flat()].filter(t=>{
-if(!t||!t.id||seen.has(t.id))return false;
-seen.add(t.id);return true;
-});
-txnCacheTime=now;
-return txnCache;
+  const now=Date.now();
+  if(!force && txnCache && (now-txnCacheTime)<TXN_CACHE_MS) return txnCache;
+  const today=getToday();
+  const lastWeek=new Date(today+"T12:00:00Z");
+  lastWeek.setUTCDate(lastWeek.getUTCDate()-7);
+  const lastWeekStr=lastWeek.toISOString().split("T")[0];
+  const keys=[...new Set([
+    ...OUTLET_IDS.map(id=>txnKey(id,today)),
+    ...OUTLET_IDS.map(id=>txnKey(id,lastWeekStr)),
+  ])];
+  const results=await Promise.all(keys.map(async k=>{
+    try{const snap=await getDoc(doc(db,"kasu",k));return snap.exists()?snap.data().value||[]:[]}catch(e){return[];}
+  }));
+  const legacy=await getLegacyTxns();
+  const seen=new Set();
+  txnCache=[...legacy,...results.flat()].filter(t=>{
+    if(!t||!t.id||seen.has(t.id))return false;
+    seen.add(t.id);return true;
+  });
+  txnCacheTime=now;
+  return txnCache;
 }
 
 // Admin — reads last 8 weeks of data
 async function getAllTxns(force=false){
-const now=Date.now();
-if(!force && txnCache && (now-txnCacheTime)<TXN_CACHE_MS) return txnCache;
-const today=getToday();
-const eightWeeksAgo=new Date(today+"T12:00:00Z");
-eightWeeksAgo.setUTCDate(eightWeeksAgo.getUTCDate()-56);
-const startStr=eightWeeksAgo.toISOString().split("T")[0];
-const keys=weekKeysForRange(startStr,today);
-const results=await Promise.all(keys.map(async k=>{
-try{const snap=await getDoc(doc(db,"kasu",k));return snap.exists()?snap.data().value||[]:[]}catch(e){return[];}
-}));
-const legacy=await getLegacyTxns();
-const seen=new Set();
-txnCache=[...legacy,...results.flat()].filter(t=>{
-if(!t||!t.id||seen.has(t.id))return false;
-seen.add(t.id);return true;
-});
-txnCacheTime=now;
-return txnCache;
+  const now=Date.now();
+  if(!force && txnCache && (now-txnCacheTime)<TXN_CACHE_MS) return txnCache;
+  const today=getToday();
+  const eightWeeksAgo=new Date(today+"T12:00:00Z");
+  eightWeeksAgo.setUTCDate(eightWeeksAgo.getUTCDate()-56);
+  const startStr=eightWeeksAgo.toISOString().split("T")[0];
+  const keys=weekKeysForRange(startStr,today);
+  const results=await Promise.all(keys.map(async k=>{
+    try{const snap=await getDoc(doc(db,"kasu",k));return snap.exists()?snap.data().value||[]:[]}catch(e){return[];}
+  }));
+  const legacy=await getLegacyTxns();
+  const seen=new Set();
+  txnCache=[...legacy,...results.flat()].filter(t=>{
+    if(!t||!t.id||seen.has(t.id))return false;
+    seen.add(t.id);return true;
+  });
+  txnCacheTime=now;
+  return txnCache;
 }
 
 function invalidateTxnCache(){txnCache=null;txnCacheTime=0;}
 
 async function updateOneTxn(updated){
-const today=getToday();
-const lastWeek=new Date(today+"T12:00:00Z");
-lastWeek.setUTCDate(lastWeek.getUTCDate()-7);
-const lastWeekStr=lastWeek.toISOString().split("T")[0];
-const outletId=updated.outletId;
-const dayStr=updated.day||today;
-const keysToTry=[...new Set([
-...(outletId?[txnKey(outletId,dayStr),txnKey(outletId,today),txnKey(outletId,lastWeekStr)]:[]),
-...OUTLET_IDS.flatMap(id=>[txnKey(id,today),txnKey(id,lastWeekStr)]),
-"transactions"
-])];
-for(const key of keysToTry){
-try{
-const snap=await getDoc(doc(db,"kasu",key));
-if(!snap.exists())continue;
-const arr=snap.data().value||[];
-if(!arr.some(t=>t.id===updated.id))continue;
-await setDoc(doc(db,"kasu",key),{value:arr.map(t=>t.id===updated.id?updated:t)});
-return;
-}catch(e){console.error("updateOneTxn",key,e);}
-}
+  const today=getToday();
+  const lastWeek=new Date(today+"T12:00:00Z");
+  lastWeek.setUTCDate(lastWeek.getUTCDate()-7);
+  const lastWeekStr=lastWeek.toISOString().split("T")[0];
+  const outletId=updated.outletId;
+  const dayStr=updated.day||today;
+  const keysToTry=[...new Set([
+    ...(outletId?[txnKey(outletId,dayStr),txnKey(outletId,today),txnKey(outletId,lastWeekStr)]:[]),
+    ...OUTLET_IDS.flatMap(id=>[txnKey(id,today),txnKey(id,lastWeekStr)]),
+    "transactions"
+  ])];
+  for(const key of keysToTry){
+    try{
+      const snap=await getDoc(doc(db,"kasu",key));
+      if(!snap.exists())continue;
+      const arr=snap.data().value||[];
+      if(!arr.some(t=>t.id===updated.id))continue;
+      await setDoc(doc(db,"kasu",key),{value:arr.map(t=>t.id===updated.id?updated:t)});
+      return;
+    }catch(e){console.error("updateOneTxn",key,e);}
+  }
 }
 
 async function deleteOneTxn(id){
-const today=getToday();
-const lastWeek=new Date(today+"T12:00:00Z");
-lastWeek.setUTCDate(lastWeek.getUTCDate()-7);
-const lastWeekStr=lastWeek.toISOString().split("T")[0];
-const keysToTry=[...new Set([
-...OUTLET_IDS.flatMap(oid=>[txnKey(oid,today),txnKey(oid,lastWeekStr)]),
-"transactions"
-])];
-for(const key of keysToTry){
-try{
-const snap=await getDoc(doc(db,"kasu",key));
-if(!snap.exists())continue;
-const arr=snap.data().value||[];
-if(!arr.some(t=>t.id===id))continue;
-await setDoc(doc(db,"kasu",key),{value:arr.filter(t=>t.id!==id)});
-return;
-}catch(e){console.error("deleteOneTxn",key,e);}
-}
+  const today=getToday();
+  const lastWeek=new Date(today+"T12:00:00Z");
+  lastWeek.setUTCDate(lastWeek.getUTCDate()-7);
+  const lastWeekStr=lastWeek.toISOString().split("T")[0];
+  const keysToTry=[...new Set([
+    ...OUTLET_IDS.flatMap(oid=>[txnKey(oid,today),txnKey(oid,lastWeekStr)]),
+    "transactions"
+  ])];
+  for(const key of keysToTry){
+    try{
+      const snap=await getDoc(doc(db,"kasu",key));
+      if(!snap.exists())continue;
+      const arr=snap.data().value||[];
+      if(!arr.some(t=>t.id===id))continue;
+      await setDoc(doc(db,"kasu",key),{value:arr.filter(t=>t.id!==id)});
+      return;
+    }catch(e){console.error("deleteOneTxn",key,e);}
+  }
 }
 
 // ─── Benne Logo ───────────────────────────────────────────────────────────────
 const BENNE_LOGO = "data:image/png;base64,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";
 function BenneLogo({size=48, style={}}){
-return <img src={BENNE_LOGO} alt="benne" style={{width:size,height:size,objectFit:"contain",flexShrink:0,display:"block",...style}}/>;
+  return <img src={BENNE_LOGO} alt="benne" style={{width:size,height:size,objectFit:"contain",flexShrink:0,display:"block",...style}}/>;
 }
 
 
 // ─── Seed ─────────────────────────────────────────────────────────────────────
 let seeded=false;
 async function seed(){
-if(seeded)return;seeded=true;
+  if(seeded)return;seeded=true;
 
-const DEFAULT_OUTLETS=[
-{id:"o1",name:"Benne Juhu",emails:[],active:true},
-{id:"o2",name:"Benne Bandra",emails:[],active:true},
-{id:"o3",name:"Benne Chowpatty",emails:[],active:true},
-{id:"o4",name:"Benne GK2",emails:[],active:true},
-];
-const DEFAULT_USERS=[
-{id:"u1",username:"superadmin",password:"superadmin@123",role:"superadmin",name:"Super Admin",outlets:[],active:true},
-{id:"u2",username:"admin",password:"admin@123",role:"admin",name:"Admin User",outlets:[],active:true},
-{id:"u3",username:"manager1",password:"manager@123",role:"manager",name:"Manager One",outlets:["o1"],active:true},
-{id:"u4",username:"accounts1",password:"accounts@123",role:"accounts",name:"Accounts Team",outlets:[],active:true},
-{id:"u5",username:"juhu",password:"juhu@123",role:"outlet",name:"Benne Juhu",outlets:["o1"],active:true},
-{id:"u6",username:"bandra",password:"bandra@123",role:"outlet",name:"Benne Bandra",outlets:["o2"],active:true},
-{id:"u7",username:"chowpatty",password:"chowpatty@123",role:"outlet",name:"Benne Chowpatty",outlets:["o3"],active:true},
-{id:"u8",username:"gk2",password:"gk2@123",role:"outlet",name:"Benne GK2",outlets:["o4"],active:true},
-];
+  const DEFAULT_OUTLETS=[
+    {id:"o1",name:"Benne Juhu",emails:[],active:true},
+    {id:"o2",name:"Benne Bandra",emails:[],active:true},
+    {id:"o3",name:"Benne Chowpatty",emails:[],active:true},
+    {id:"o4",name:"Benne GK2",emails:[],active:true},
+  ];
+  const DEFAULT_USERS=[
+    {id:"u1",username:"superadmin",password:"superadmin@123",role:"superadmin",name:"Super Admin",outlets:[],active:true},
+    {id:"u2",username:"admin",password:"admin@123",role:"admin",name:"Admin User",outlets:[],active:true},
+    {id:"u3",username:"manager1",password:"manager@123",role:"manager",name:"Manager One",outlets:["o1"],active:true},
+    {id:"u4",username:"accounts1",password:"accounts@123",role:"accounts",name:"Accounts Team",outlets:[],active:true},
+    {id:"u5",username:"juhu",password:"juhu@123",role:"outlet",name:"Benne Juhu",outlets:["o1"],active:true},
+    {id:"u6",username:"bandra",password:"bandra@123",role:"outlet",name:"Benne Bandra",outlets:["o2"],active:true},
+    {id:"u7",username:"chowpatty",password:"chowpatty@123",role:"outlet",name:"Benne Chowpatty",outlets:["o3"],active:true},
+    {id:"u8",username:"gk2",password:"gk2@123",role:"outlet",name:"Benne GK2",outlets:["o4"],active:true},
+  ];
 
-// Run all seed reads in parallel
-const [exO,exU,exRefunds,exLogs,exDayStatus,exBmoOrders,exBmoCounter]=await Promise.all([
-sget("outlets"),sget("users"),sget("refunds"),sget("logs"),
-sget("dayStatus"),sget("bmoOrders"),sget("bmoOrderCounter")
-]);
+  // Run all seed reads in parallel
+  const [exO,exU,exRefunds,exLogs,exDayStatus,exBmoOrders,exBmoCounter]=await Promise.all([
+    sget("outlets"),sget("users"),sget("refunds"),sget("logs"),
+    sget("dayStatus"),sget("bmoOrders"),sget("bmoOrderCounter")
+  ]);
 
-// Migrate outlets
-if(!exO){
-await sset("outlets",DEFAULT_OUTLETS);
-} else {
-let ch=false,o2=exO.map(o=>{if(o.id==="o1"&&o.name==="Main Branch"){ch=true;return{...o,name:"Benne Juhu"};}return o;});
-for(const d of DEFAULT_OUTLETS){if(!o2.find(o=>o.id===d.id)){o2.push(d);ch=true;}}
-if(ch)await sset("outlets",o2);
-}
+  // Migrate outlets
+  if(!exO){
+    await sset("outlets",DEFAULT_OUTLETS);
+  } else {
+    let ch=false,o2=exO.map(o=>{if(o.id==="o1"&&o.name==="Main Branch"){ch=true;return{...o,name:"Benne Juhu"};}return o;});
+    for(const d of DEFAULT_OUTLETS){if(!o2.find(o=>o.id===d.id)){o2.push(d);ch=true;}}
+    if(ch)await sset("outlets",o2);
+  }
 
-// Migrate users — add ALL missing default users
-if(!exU){
-await sset("users",DEFAULT_USERS);
-} else {
-let ch=false,u2=exU.map(u=>{if(u.id==="u5"&&u.username==="outlet1"){ch=true;return{...u,username:"juhu",name:"Benne Juhu",outlets:["o1"]};}return u;});
-for(const d of DEFAULT_USERS){if(!u2.find(u=>u.id===d.id)){u2.push(d);ch=true;}}
-if(ch)await sset("users",u2);
-}
+  // Migrate users — add ALL missing default users
+  if(!exU){
+    await sset("users",DEFAULT_USERS);
+  } else {
+    let ch=false,u2=exU.map(u=>{if(u.id==="u5"&&u.username==="outlet1"){ch=true;return{...u,username:"juhu",name:"Benne Juhu",outlets:["o1"]};}return u;});
+    for(const d of DEFAULT_USERS){if(!u2.find(u=>u.id===d.id)){u2.push(d);ch=true;}}
+    if(ch)await sset("users",u2);
+  }
 
-if(!await sget("bmoMenu")) await sset("bmoMenu",DEFAULT_MENU);
-const writes=[];
-if(!exRefunds) writes.push(sset("refunds",[]));
-if(!exLogs) writes.push(sset("logs",[]));
-if(!exDayStatus) writes.push(sset("dayStatus",{}));
-if(!exBmoOrders) writes.push(sset("bmoOrders",[]));
-if(!exBmoCounter) writes.push(sset("bmoOrderCounter",{}));
-if(writes.length>0) await Promise.all(writes);
+  if(!await sget("bmoMenu")) await sset("bmoMenu",DEFAULT_MENU);
+  const writes=[];
+  if(!exRefunds)      writes.push(sset("refunds",[]));
+  if(!exLogs)         writes.push(sset("logs",[]));
+  if(!exDayStatus)    writes.push(sset("dayStatus",{}));
+  if(!exBmoOrders)    writes.push(sset("bmoOrders",[]));
+  if(!exBmoCounter)   writes.push(sset("bmoOrderCounter",{}));
+  if(writes.length>0) await Promise.all(writes);
 }
 function addLog(action,userId,detail,reason="",extra={}){
-// Fire and forget — never block user actions for logging
-(async()=>{
-try{
-const logs=await sget("logs")||[];
-logs.unshift({id:`l${Date.now()}`,action,userId,detail,reason,extra,ts:new Date().toISOString()});
-await sset("logs",logs.slice(0,500));
-}catch(e){console.error("addLog",e);}
-})();
+  // Fire and forget — never block user actions for logging
+  (async()=>{
+    try{
+      const logs=await sget("logs")||[];
+      logs.unshift({id:`l${Date.now()}`,action,userId,detail,reason,extra,ts:new Date().toISOString()});
+      await sset("logs",logs.slice(0,500));
+    }catch(e){console.error("addLog",e);}
+  })();
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function bizDay(d=new Date()){
-// Use IST (UTC+5:30) for date calculation
-const ist=new Date(d.getTime()+5.5*60*60*1000);
-if(ist.getUTCHours()<3||(ist.getUTCHours()===2&&ist.getUTCMinutes()<30))ist.setUTCDate(ist.getUTCDate()-1);
-return ist.toISOString().split("T")[0];
+  // Use IST (UTC+5:30) for date calculation
+  const ist=new Date(d.getTime()+5.5*60*60*1000);
+  if(ist.getUTCHours()<3||(ist.getUTCHours()===2&&ist.getUTCMinutes()<30))ist.setUTCDate(ist.getUTCDate()-1);
+  return ist.toISOString().split("T")[0];
 }
 function getToday(){return bizDay();}
-const fmt =ts=>new Date(ts).toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+const fmt  =ts=>new Date(ts).toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
 const fmtT =ts=>new Date(ts).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
 const fmtD =d =>new Date(d+"T00:00:00").toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
-const inr =n =>"₹"+Number(n).toLocaleString("en-IN");
+const inr  =n =>"₹"+Number(n).toLocaleString("en-IN");
 
 // ─── Print helpers ────────────────────────────────────────────────────────────
 function printHTML(html,title="Kāsu"){
-const w=window.open("","_blank","width=860,height=650");
-w.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>
-*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:#0f172a;background:#fff;padding:24px;}
-h1{font-size:20px;font-weight:800;margin-bottom:4px;}.sub{color:#64748b;font-size:12px;margin-bottom:18px;}
-table{width:100%;border-collapse:collapse;margin-bottom:18px;}th{background:#f8fafc;padding:8px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e2e8f0;color:#64748b;}
-td{padding:8px 12px;border-bottom:1px solid #e2e8f0;}.right{text-align:right;}.bold{font-weight:700;}.green{color:#16a34a;}.red{color:#dc2626;}.teal{color:#0f766e;}
-.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
-.kpi{border:1px solid #e2e8f0;border-radius:8px;padding:12px;}.kpi-label{font-size:10px;text-transform:uppercase;color:#64748b;margin-bottom:4px;}.kpi-val{font-size:18px;font-weight:800;}
-.section{font-size:13px;font-weight:700;margin:16px 0 8px;border-bottom:2px solid #e2e8f0;padding-bottom:5px;}
-.footer{margin-top:24px;color:#94a3b8;font-size:11px;text-align:center;border-top:1px solid #e2e8f0;padding-top:10px;}
-@media print{body{padding:12px;}}
-</style></head><body>${html}<div class="footer">Generated by Kāsu · Benne &nbsp;·&nbsp; ${new Date().toLocaleString("en-IN")}</div></body></html>`);
-w.document.close();
-setTimeout(()=>{w.focus();w.print();},400);
+  const w=window.open("","_blank","width=860,height=650");
+  w.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>
+    *{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:#0f172a;background:#fff;padding:24px;}
+    h1{font-size:20px;font-weight:800;margin-bottom:4px;}.sub{color:#64748b;font-size:12px;margin-bottom:18px;}
+    table{width:100%;border-collapse:collapse;margin-bottom:18px;}th{background:#f8fafc;padding:8px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e2e8f0;color:#64748b;}
+    td{padding:8px 12px;border-bottom:1px solid #e2e8f0;}.right{text-align:right;}.bold{font-weight:700;}.green{color:#16a34a;}.red{color:#dc2626;}.teal{color:#0f766e;}
+    .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+    .kpi{border:1px solid #e2e8f0;border-radius:8px;padding:12px;}.kpi-label{font-size:10px;text-transform:uppercase;color:#64748b;margin-bottom:4px;}.kpi-val{font-size:18px;font-weight:800;}
+    .section{font-size:13px;font-weight:700;margin:16px 0 8px;border-bottom:2px solid #e2e8f0;padding-bottom:5px;}
+    .footer{margin-top:24px;color:#94a3b8;font-size:11px;text-align:center;border-top:1px solid #e2e8f0;padding-top:10px;}
+    @media print{body{padding:12px;}}
+  </style></head><body>${html}<div class="footer">Generated by Kāsu · Benne &nbsp;·&nbsp; ${new Date().toLocaleString("en-IN")}</div></body></html>`);
+  w.document.close();
+  setTimeout(()=>{w.focus();w.print();},400);
 }
 
 function copyText(t){
-if(navigator.clipboard)navigator.clipboard.writeText(t).catch(()=>{});
-else{const x=document.createElement("textarea");x.value=t;document.body.appendChild(x);x.select();document.execCommand("copy");document.body.removeChild(x);}
+  if(navigator.clipboard)navigator.clipboard.writeText(t).catch(()=>{});
+  else{const x=document.createElement("textarea");x.value=t;document.body.appendChild(x);x.select();document.execCommand("copy");document.body.removeChild(x);}
 }
 
 // ─── Shared Styles ────────────────────────────────────────────────────────────
@@ -445,2549 +445,2968 @@ const Cd ={background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,pa
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 function Inp({value,onChange,placeholder,type="text",onEnter,large,style:sx={},readOnly}){
-const [show,setShow]=useState(false);
-const isPw=type==="password";
-const inputEl=<input readOnly={readOnly} type={isPw&&show?"text":type} value={value} onChange={e=>onChange&&onChange(e.target.value)} placeholder={placeholder}
-onKeyDown={e=>e.key==="Enter"&&onEnter&&onEnter()}
-style={{...IS,fontSize:large?20:14,padding:large?"13px 16px":"10px 12px",paddingRight:isPw?40:undefined,...sx}}/>;
-if(!isPw)return inputEl;
-return(
-<div style={{position:"relative"}}>
-{inputEl}
-<button type="button" onClick={()=>setShow(s=>!s)} tabIndex={-1}
-style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:C.sub,fontSize:13,fontWeight:600,padding:"2px 4px",userSelect:"none"}}>
-{show?"Hide":"Show"}
-</button>
-</div>
-);
+  const [show,setShow]=useState(false);
+  const isPw=type==="password";
+  const inputEl=<input readOnly={readOnly} type={isPw&&show?"text":type} value={value} onChange={e=>onChange&&onChange(e.target.value)} placeholder={placeholder}
+    onKeyDown={e=>e.key==="Enter"&&onEnter&&onEnter()}
+    style={{...IS,fontSize:large?20:14,padding:large?"13px 16px":"10px 12px",paddingRight:isPw?40:undefined,...sx}}/>;
+  if(!isPw)return inputEl;
+  return(
+    <div style={{position:"relative"}}>
+      {inputEl}
+      <button type="button" onClick={()=>setShow(s=>!s)} tabIndex={-1}
+        style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:C.sub,fontSize:13,fontWeight:600,padding:"2px 4px",userSelect:"none"}}>
+        {show?"Hide":"Show"}
+      </button>
+    </div>
+  );
 }
 function Sel({value,onChange,options,labels}){
-return <select value={value} onChange={e=>onChange(e.target.value)} style={IS}>
-{options.map((o,i)=><option key={o} value={o}>{labels?labels[i]:o}</option>)}
-</select>;
+  return <select value={value} onChange={e=>onChange(e.target.value)} style={IS}>
+    {options.map((o,i)=><option key={o} value={o}>{labels?labels[i]:o}</option>)}
+  </select>;
 }
 function Field({label,children,hint,error}){
-return <div style={{marginBottom:error?10:14}}>
-<label style={LS}>{label}{hint&&<span style={{color:C.muted,fontWeight:400,textTransform:"none",marginLeft:4}}>{hint}</span>}</label>
-{children}
-{error&&<div style={{color:C.danger,fontSize:11,marginTop:4,fontWeight:500}}>⚠ {error}</div>}
-</div>;
+  return <div style={{marginBottom:error?10:14}}>
+    <label style={LS}>{label}{hint&&<span style={{color:C.muted,fontWeight:400,textTransform:"none",marginLeft:4}}>{hint}</span>}</label>
+    {children}
+    {error&&<div style={{color:C.danger,fontSize:11,marginTop:4,fontWeight:500}}>⚠ {error}</div>}
+  </div>;
 }
 function Msg({type,children}){
-const ok=type==="ok",wn=type==="warn";
-return <div style={{background:ok?C.successLight:wn?C.warnLight:C.dangerLight,border:`1px solid ${ok?C.successBorder:wn?C.warnBorder:C.dangerBorder}`,borderRadius:4,padding:"9px 12px",fontSize:13,color:ok?C.success:wn?C.warn:C.danger,margin:"10px 0"}}>{children}</div>;
+  const ok=type==="ok",wn=type==="warn";
+  return <div style={{background:ok?C.successLight:wn?C.warnLight:C.dangerLight,border:`1px solid ${ok?C.successBorder:wn?C.warnBorder:C.dangerBorder}`,borderRadius:4,padding:"9px 12px",fontSize:13,color:ok?C.success:wn?C.warn:C.danger,margin:"10px 0"}}>{children}</div>;
 }
 function EmptyState({icon,title,desc}){
-return <div style={{textAlign:"center",padding:"36px 20px"}}>
-<div style={{fontSize:36,marginBottom:10}}>{icon}</div>
-<div style={{fontWeight:600,color:C.text,marginBottom:4}}>{title}</div>
-{desc&&<div style={{color:C.sub,fontSize:13}}>{desc}</div>}
-</div>;
+  return <div style={{textAlign:"center",padding:"36px 20px"}}>
+    <div style={{fontSize:36,marginBottom:10}}>{icon}</div>
+    <div style={{fontWeight:600,color:C.text,marginBottom:4}}>{title}</div>
+    {desc&&<div style={{color:C.sub,fontSize:13}}>{desc}</div>}
+  </div>;
 }
 function Badge({label,color,bg,border:bd}){
-return <span style={{display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:700,letterSpacing:.4,textTransform:"uppercase",background:bg||C.accentLight,color:color||C.accent,border:`1px solid ${bd||C.accentBorder}`,borderRadius:4,padding:"2px 7px",whiteSpace:"nowrap"}}>{label}</span>;
+  return <span style={{display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:700,letterSpacing:.4,textTransform:"uppercase",background:bg||C.accentLight,color:color||C.accent,border:`1px solid ${bd||C.accentBorder}`,borderRadius:4,padding:"2px 7px",whiteSpace:"nowrap"}}>{label}</span>;
 }
 function StatCard({label,value,color,icon,sub}){
-return <div style={{...Cd,padding:"14px 16px"}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-<span style={{fontSize:10,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:.4}}>{label}</span>
-{icon&&<span style={{fontSize:18}}>{icon}</span>}
-</div>
-<div style={{fontSize:20,fontWeight:800,color:color||C.text,letterSpacing:"-0.5px"}}>{value}</div>
-{sub&&<div style={{fontSize:11,color:C.sub,marginTop:3}}>{sub}</div>}
-</div>;
+  return <div style={{...Cd,padding:"14px 16px"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+      <span style={{fontSize:10,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:.4}}>{label}</span>
+      {icon&&<span style={{fontSize:18}}>{icon}</span>}
+    </div>
+    <div style={{fontSize:20,fontWeight:800,color:color||C.text,letterSpacing:"-0.5px"}}>{value}</div>
+    {sub&&<div style={{fontSize:11,color:C.sub,marginTop:3}}>{sub}</div>}
+  </div>;
 }
 function SectionHeader({title,action}){
-return <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-<div style={{fontWeight:700,fontSize:14,color:C.text}}>{title}</div>
-{action}
-</div>;
+  return <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+    <div style={{fontWeight:700,fontSize:14,color:C.text}}>{title}</div>
+    {action}
+  </div>;
 }
 function Divider(){return <div style={{height:1,background:C.border,margin:"14px 0"}}/>;}
 function Spinner(){return <div style={{width:20,height:20,border:`2px solid ${C.border}`,borderTopColor:C.accent,borderRadius:"50%",animation:"spin .7s linear infinite",display:"inline-block"}}/>;}
 function ModeChip({mode,selected,onClick}){
-return <button onClick={onClick} style={{background:selected?MODE_COLORS[mode]:C.surface,color:selected?"#fff":C.sub,border:`1.5px solid ${selected?MODE_COLORS[mode]:C.border}`,borderRadius:4,padding:"7px 11px",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>
-{mode}
-</button>;
+  return <button onClick={onClick} style={{background:selected?MODE_COLORS[mode]:C.surface,color:selected?"#fff":C.sub,border:`1.5px solid ${selected?MODE_COLORS[mode]:C.border}`,borderRadius:4,padding:"7px 11px",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>
+    {mode}
+  </button>;
 }
 function CopyWABtn({getText,label="📲 Copy Summary"}){
-const [done,setDone]=useState(false);
-const go=()=>{copyText(getText());setDone(true);setTimeout(()=>setDone(false),2200);};
-return <button onClick={go} style={{background:done?C.successLight:C.surface,color:done?C.success:C.sub,border:`1px solid ${done?C.successBorder:C.border}`,borderRadius:4,padding:"9px 14px",fontWeight:600,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-{done?"✓ Copied!":label}
-</button>;
+  const [done,setDone]=useState(false);
+  const go=()=>{copyText(getText());setDone(true);setTimeout(()=>setDone(false),2200);};
+  return <button onClick={go} style={{background:done?C.successLight:C.surface,color:done?C.success:C.sub,border:`1px solid ${done?C.successBorder:C.border}`,borderRadius:4,padding:"9px 14px",fontWeight:600,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+    {done?"✓ Copied!":label}
+  </button>;
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 function Modal({open,onClose,title,children,width=440}){
-if(!open)return null;
-return(
-<div style={{position:"fixed",inset:0,background:"rgba(15,23,42,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-<div style={{background:C.surface,borderRadius:4,width:"100%",maxWidth:width,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 64px rgba(0,0,0,.22)",animation:"slideUp .2s ease"}}>
-<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"18px 20px",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,background:C.surface,zIndex:1}}>
-<div style={{fontWeight:700,fontSize:16,color:C.text}}>{title}</div>
-<button onClick={onClose} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,width:30,height:30,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.sub,fontSize:16,flexShrink:0}}>✕</button>
-</div>
-<div style={{padding:20}}>{children}</div>
-</div>
-</div>
-);
+  if(!open)return null;
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{background:C.surface,borderRadius:4,width:"100%",maxWidth:width,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 64px rgba(0,0,0,.22)",animation:"slideUp .2s ease"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"18px 20px",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,background:C.surface,zIndex:1}}>
+          <div style={{fontWeight:700,fontSize:16,color:C.text}}>{title}</div>
+          <button onClick={onClose} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,width:30,height:30,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.sub,fontSize:16,flexShrink:0}}>✕</button>
+        </div>
+        <div style={{padding:20}}>{children}</div>
+      </div>
+    </div>
+  );
 }
 function ConfirmDialog({open,onClose,onConfirm,title,message,confirmLabel="Confirm",danger=false,warn=false}){
-if(!open)return null;
-return(
-<Modal open={open} onClose={onClose} title={title} width={380}>
-<p style={{color:C.sub,fontSize:14,lineHeight:1.6,marginBottom:20}}>{message}</p>
-<div style={{display:"flex",gap:8}}>
-<button onClick={onClose} style={{...BSc,flex:1}}>Cancel</button>
-<button onClick={onConfirm} style={{flex:1,background:danger?C.danger:warn?C.warn:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"10px 16px",fontWeight:600,fontSize:13,cursor:"pointer"}}>{confirmLabel}</button>
-</div>
-</Modal>
-);
+  if(!open)return null;
+  return(
+    <Modal open={open} onClose={onClose} title={title} width={380}>
+      <p style={{color:C.sub,fontSize:14,lineHeight:1.6,marginBottom:20}}>{message}</p>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={onClose} style={{...BSc,flex:1}}>Cancel</button>
+        <button onClick={onConfirm} style={{flex:1,background:danger?C.danger:warn?C.warn:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"10px 16px",fontWeight:600,fontSize:13,cursor:"pointer"}}>{confirmLabel}</button>
+      </div>
+    </Modal>
+  );
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 function Toast({toast}){
-const st={success:{bg:C.successLight,bd:C.successBorder,cl:C.success,ic:"✓"},error:{bg:C.dangerLight,bd:C.dangerBorder,cl:C.danger,ic:"✕"},warn:{bg:C.warnLight,bd:C.warnBorder,cl:C.warn,ic:"⚠"}};
-const s=st[toast.type]||st.success;
-return <div style={{position:"fixed",top:16,right:16,zIndex:9999,animation:"toastIn .25s ease",display:"flex",alignItems:"center",gap:10,background:s.bg,border:`1px solid ${s.bd}`,borderRadius:4,padding:"11px 16px",boxShadow:"0 4px 20px rgba(0,0,0,.12)",maxWidth:320,minWidth:220}}>
-<span style={{width:22,height:22,borderRadius:"50%",background:s.cl,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>{s.ic}</span>
-<span style={{fontSize:13,fontWeight:500,color:C.text,flex:1}}>{toast.msg}</span>
-</div>;
+  const st={success:{bg:C.successLight,bd:C.successBorder,cl:C.success,ic:"✓"},error:{bg:C.dangerLight,bd:C.dangerBorder,cl:C.danger,ic:"✕"},warn:{bg:C.warnLight,bd:C.warnBorder,cl:C.warn,ic:"⚠"}};
+  const s=st[toast.type]||st.success;
+  return <div style={{position:"fixed",top:16,right:16,zIndex:9999,animation:"toastIn .25s ease",display:"flex",alignItems:"center",gap:10,background:s.bg,border:`1px solid ${s.bd}`,borderRadius:4,padding:"11px 16px",boxShadow:"0 4px 20px rgba(0,0,0,.12)",maxWidth:320,minWidth:220}}>
+    <span style={{width:22,height:22,borderRadius:"50%",background:s.cl,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>{s.ic}</span>
+    <span style={{fontSize:13,fontWeight:500,color:C.text,flex:1}}>{toast.msg}</span>
+  </div>;
 }
 
 // ─── Root App ─────────────────────────────────────────────────────────────────
 export default function App(){
-const [user,setUser]=useState(()=>{try{const u=sessionStorage.getItem("kasu_user");return u?JSON.parse(u):null;}catch{return null;}});
-const [ready,setReady]=useState(false);
-const [toast,setToast]=useState(null);
-const [bmoOpen,setBmoOpen]=useState(false);
-const showToast=useCallback((msg,type="success")=>{setToast({msg,type,id:Date.now()});setTimeout(()=>setToast(null),3200);},[]);
-const handleLogin=useCallback((u)=>{sessionStorage.setItem("kasu_user",JSON.stringify(u));addLog("LOGIN",u.id,u.name+" logged in");setUser(u);},[]);
-const handleLogout=useCallback(()=>{sessionStorage.removeItem("kasu_user");setUser(null);},[]);
+  const [user,setUser]=useState(()=>{try{const u=sessionStorage.getItem("kasu_user");return u?JSON.parse(u):null;}catch{return null;}});
+  const [ready,setReady]=useState(false);
+  const [toast,setToast]=useState(null);
+  const [bmoOpen,setBmoOpen]=useState(false);
+  const showToast=useCallback((msg,type="success")=>{setToast({msg,type,id:Date.now()});setTimeout(()=>setToast(null),3200);},[]);
+  const handleLogin=useCallback((u)=>{sessionStorage.setItem("kasu_user",JSON.stringify(u));addLog("LOGIN",u.id,u.name+" logged in");setUser(u);},[]);
+  const handleLogout=useCallback(()=>{sessionStorage.removeItem("kasu_user");setUser(null);},[]);
 
-useEffect(()=>{
-seed().finally(()=>setReady(true));
-const s=document.createElement("style");
-s.textContent=`*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Lato',-apple-system,BlinkMacSystemFont,sans-serif;background:${C.bg};color:${C.text};}
-.font-serif{font-family:'Lora',serif;}
-@keyframes spin{to{transform:rotate(360deg)}}@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-@keyframes toastIn{from{opacity:0;transform:translateX(110%)}to{opacity:1;transform:translateX(0)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-input:focus,select:focus,textarea:focus{outline:none;border-color:${C.accent}!important;box-shadow:0 0 0 2px ${C.accentLight};}
-button{font-family:inherit;}input,select,textarea{font-family:inherit;}
-::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${C.borderStrong};border-radius:2px}
-@media print{.no-print{display:none!important}}`;
-document.head.appendChild(s);
-},[]);
+  useEffect(()=>{
+    seed().finally(()=>setReady(true));
+    const s=document.createElement("style");
+    s.textContent=`*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Lato',-apple-system,BlinkMacSystemFont,sans-serif;background:${C.bg};color:${C.text};}
+    .font-serif{font-family:'Lora',serif;}
+    @keyframes spin{to{transform:rotate(360deg)}}@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes toastIn{from{opacity:0;transform:translateX(110%)}to{opacity:1;transform:translateX(0)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:${C.accent}!important;box-shadow:0 0 0 2px ${C.accentLight};}
+    button{font-family:inherit;}input,select,textarea{font-family:inherit;}
+    ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${C.borderStrong};border-radius:2px}
+    @media print{.no-print{display:none!important}}`;
+    document.head.appendChild(s);
+  },[]);
 
-if(!ready)return(
-<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:C.bg,flexDirection:"column",gap:12}}>
-<div style={{width:36,height:36,border:`3px solid ${C.border}`,borderTopColor:C.accent,borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
-<div style={{color:C.sub,fontSize:13,fontWeight:500}}>Loading ಕಾಸು…</div>
-</div>
-);
+  if(!ready)return(
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:C.bg,flexDirection:"column",gap:12}}>
+      <div style={{width:36,height:36,border:`3px solid ${C.border}`,borderTopColor:C.accent,borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+      <div style={{color:C.sub,fontSize:13,fontWeight:500}}>Loading ಕಾಸು…</div>
+    </div>
+  );
 
-return(
-<div style={{minHeight:"100vh",background:C.bg}}>
-{toast&&<Toast toast={toast}/>}
-{bmoOpen&&user&&<BMOApp user={user} onClose={()=>setBmoOpen(false)} showToast={showToast}/>}
-{!bmoOpen&&(
-!user?<Login onLogin={handleLogin} showToast={showToast}/>
-:user.role==="outlet"?<OutletApp user={user} onLogout={handleLogout} showToast={showToast} onBMO={()=>setBmoOpen(true)}/>
-:<AdminApp user={user} onLogout={handleLogout} showToast={showToast} onBMO={()=>setBmoOpen(true)}/>
-)}
-</div>
-);
+  return(
+    <div style={{minHeight:"100vh",background:C.bg}}>
+      {toast&&<Toast toast={toast}/>}
+      {bmoOpen&&user&&<BMOApp user={user} onClose={()=>setBmoOpen(false)} showToast={showToast}/>}
+      {!bmoOpen&&(
+        !user?<Login onLogin={handleLogin} showToast={showToast}/>
+        :user.role==="outlet"?<OutletApp user={user} onLogout={handleLogout} showToast={showToast} onBMO={()=>setBmoOpen(true)}/>
+        :<AdminApp user={user} onLogout={handleLogout} showToast={showToast} onBMO={()=>setBmoOpen(true)}/>
+      )}
+    </div>
+  );
 }
 
 // ─── Login ────────────────────────────────────────────────────────────────────
 function Login({onLogin,showToast}){
-const [un,setUn]=useState("");const [pw,setPw]=useState("");const [busy,setBusy]=useState(false);const [err,setErr]=useState("");
-const go=async()=>{
-if(!un.trim()||!pw.trim()){setErr("Enter username and password.");return;}
-setBusy(true);setErr("");
-const users=await sget("users")||[];
-const u=users.find(u=>u.username===un&&u.password===pw&&u.active!==false);
-if(u)onLogin(u);else{setErr("Invalid credentials or account inactive.");setBusy(false);}
-};
-return(
-<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,padding:20}}>
-<div style={{...Cd,width:"100%",maxWidth:380,padding:32}}>
-<div style={{textAlign:"center",marginBottom:32}}>
-<div style={{display:"flex",justifyContent:"center",marginBottom:10}}><BenneLogo size={110}/></div>
-<div className="font-serif" style={{fontSize:26,fontWeight:600,color:C.text}}>ಕಾಸು</div>
-<div style={{color:C.sub,fontSize:13,marginTop:3}}>Benne Operations Platform</div>
-</div>
-<Field label="Username"><Inp value={un} onChange={setUn} placeholder="Enter username" onEnter={go}/></Field>
-<Field label="Password"><Inp type="password" value={pw} onChange={setPw} placeholder="Enter password" onEnter={go}/></Field>
-{err&&<Msg type="error">{err}</Msg>}
-<button onClick={go} disabled={busy} style={{...BPr,marginTop:4,opacity:busy?.7:1}}>{busy?"Signing in…":"Sign In"}</button>
-</div>
-</div>
-);
+  const [un,setUn]=useState("");const [pw,setPw]=useState("");const [busy,setBusy]=useState(false);const [err,setErr]=useState("");
+  const go=async()=>{
+    if(!un.trim()||!pw.trim()){setErr("Enter username and password.");return;}
+    setBusy(true);setErr("");
+    const users=await sget("users")||[];
+    const u=users.find(u=>u.username===un&&u.password===pw&&u.active!==false);
+    if(u)onLogin(u);else{setErr("Invalid credentials or account inactive.");setBusy(false);}
+  };
+  return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,padding:20}}>
+      <div style={{...Cd,width:"100%",maxWidth:380,padding:32}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{display:"flex",justifyContent:"center",marginBottom:10}}><BenneLogo size={110}/></div>
+          <div className="font-serif" style={{fontSize:26,fontWeight:600,color:C.text}}>ಕಾಸು</div>
+          <div style={{color:C.sub,fontSize:13,marginTop:3}}>Benne Operations Platform</div>
+        </div>
+        <Field label="Username"><Inp value={un} onChange={setUn} placeholder="Enter username" onEnter={go}/></Field>
+        <Field label="Password"><Inp type="password" value={pw} onChange={setPw} placeholder="Enter password" onEnter={go}/></Field>
+        {err&&<Msg type="error">{err}</Msg>}
+        <button onClick={go} disabled={busy} style={{...BPr,marginTop:4,opacity:busy?.7:1}}>{busy?"Signing in…":"Sign In"}</button>
+      </div>
+    </div>
+  );
 }
 
 // ─── Outlet App ───────────────────────────────────────────────────────────────
 function OutletApp({user,onLogout,showToast,onBMO}){
-const [screen,setScreen]=useState("entry");
-const [txns,setTxns]=useState([]);const [refs,setRefs]=useState([]);const [boxCharges,setBoxCharges]=useState([]);
-const [dayDone,setDayDone]=useState(false);const [dayModal,setDayModal]=useState(false);
-const outletId=user.outlets[0];
+  const [screen,setScreen]=useState("entry");
+  const [txns,setTxns]=useState([]);const [refs,setRefs]=useState([]);const [boxCharges,setBoxCharges]=useState([]);
+  const [dayDone,setDayDone]=useState(false);const [dayModal,setDayModal]=useState(false);
+  const outletId=user.outlets[0];
 
-const load=useCallback(async()=>{
-const [all,allR,allB,ds]=await Promise.all([getTodayTxns(),sget("refunds"),sget("boxCharges"),sget("dayStatus")]);
-setTxns((all||[]).filter(t=>t&&t.outletId===outletId&&t.day===getToday()));
-setRefs((allR||[]).filter(r=>r&&r.outletId===outletId&&r.day===getToday()));
-setBoxCharges((allB||[]).filter(b=>b&&b.outletId===outletId&&b.day===getToday()));
-if((ds||{})[outletId]===getToday())setDayDone(true);
-},[outletId]);
+  const load=useCallback(async()=>{
+    const [all,allR,allB,ds]=await Promise.all([getTodayTxns(),sget("refunds"),sget("boxCharges"),sget("dayStatus")]);
+    setTxns((all||[]).filter(t=>t&&t.outletId===outletId&&t.day===getToday()));
+    setRefs((allR||[]).filter(r=>r&&r.outletId===outletId&&r.day===getToday()));
+    setBoxCharges((allB||[]).filter(b=>b&&b.outletId===outletId&&b.day===getToday()));
+    if((ds||{})[outletId]===getToday())setDayDone(true);
+  },[outletId]);
 
-useEffect(()=>{load();const t=setInterval(load,30000);return()=>clearInterval(t);},[load]);
-useEffect(()=>{const chk=()=>{const n=new Date();if(n.getHours()===2&&n.getMinutes()>=30)setDayDone(true);};chk();const t=setInterval(chk,60000);return()=>clearInterval(t);},[]);
+  useEffect(()=>{load();const t=setInterval(load,30000);return()=>clearInterval(t);},[load]);
+  useEffect(()=>{const chk=()=>{const n=new Date();if(n.getHours()===2&&n.getMinutes()>=30)setDayDone(true);};chk();const t=setInterval(chk,60000);return()=>clearInterval(t);},[]);
 
-const totals={};PAYMENT_MODES.forEach(m=>{totals[m]=0;});
-txns.forEach(t=>{t.payments.forEach(p=>{totals[p.mode]=(totals[p.mode]||0)+Number(p.amount);});if(t.boxAmount)totals[t.boxMode||"Cash"]=(totals[t.boxMode||"Cash"]||0)+Number(t.boxAmount);});
-boxCharges.forEach(b=>{totals[b.mode]=(totals[b.mode]||0)+Number(b.amount);});
-const totalRef=refs.reduce((s,r)=>s+Number(r.amount),0);
-const grand=Object.values(totals).reduce((a,b)=>a+b,0);
-const cashInHand=(totals["Cash"]||0)-totalRef;
+  const totals={};PAYMENT_MODES.forEach(m=>{totals[m]=0;});
+  txns.forEach(t=>{t.payments.forEach(p=>{totals[p.mode]=(totals[p.mode]||0)+Number(p.amount);});if(t.boxAmount)totals[t.boxMode||"Cash"]=(totals[t.boxMode||"Cash"]||0)+Number(t.boxAmount);});
+  boxCharges.forEach(b=>{totals[b.mode]=(totals[b.mode]||0)+Number(b.amount);});
+  const totalRef=refs.reduce((s,r)=>s+Number(r.amount),0);
+  const grand=Object.values(totals).reduce((a,b)=>a+b,0);
+  const cashInHand=(totals["Cash"]||0)-totalRef;
 
-const confirmDayEnd=async()=>{
-const ds=await sget("dayStatus")||{};ds[outletId]=getToday();
-await sset("dayStatus",ds);setDayDone(true);setDayModal(false);
-await addLog("DAY_END",user.id,"Day end — "+outletId);
-showToast("Day closed successfully!","success");
-};
+  const confirmDayEnd=async()=>{
+    const ds=await sget("dayStatus")||{};ds[outletId]=getToday();
+    await sset("dayStatus",ds);setDayDone(true);setDayModal(false);
+    await addLog("DAY_END",user.id,"Day end — "+outletId);
+    showToast("Day closed successfully!","success");
+  };
 
-const canEdit=t=>t.day===getToday();
-const doEdit=async(updated,reason,oldVals)=>{
-await updateOneTxn(updated);
-await addLog("EDIT_TXN",user.id,"Edited order "+updated.orderNo,reason,{oldPayments:oldVals.payments,newPayments:updated.payments});
-showToast("Order updated","success");load();
-};
+  const canEdit=t=>t.day===getToday();
+  const doEdit=async(updated,reason,oldVals)=>{
+    await updateOneTxn(updated);
+    await addLog("EDIT_TXN",user.id,"Edited order "+updated.orderNo,reason,{oldPayments:oldVals.payments,newPayments:updated.payments});
+    showToast("Order updated","success");load();
+  };
 
-const navItems=[{id:"entry",icon:"⊕",label:"New Entry"},{id:"orders",icon:"📋",label:"Orders"}];
+  const navItems=[{id:"entry",icon:"⊕",label:"New Entry"},{id:"orders",icon:"📋",label:"Orders"},{id:"cashclose",icon:"💵",label:"Cash Close"}];
 
-return(
-<div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",maxWidth:540,margin:"0 auto"}}>
-<div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:10}}>
-<div style={{display:"flex",alignItems:"center",gap:10}}>
-<BenneLogo size={36}/>
-<div><div className="font-serif" style={{fontWeight:600,fontSize:17,color:C.text}}>ಕಾಸು</div><div style={{color:C.sub,fontSize:11}}>{user.name}</div></div>
-</div>
-<div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-<button onClick={onBMO} title="Emergency manual ordering — use only if POS is down" style={{background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:4,padding:"7px 12px",fontWeight:800,fontSize:12,cursor:"pointer",letterSpacing:".5px",display:"flex",alignItems:"center",gap:5}}>⚠ BMO</button>
-{!dayDone?<button onClick={()=>setDayModal(true)} style={{background:C.accentLight,color:C.accentDark,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>Day End</button>
-:<span style={{display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",background:C.successLight,color:C.success,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:"4px 8px",whiteSpace:"nowrap"}}>Day Closed</span>}
-<button onClick={onLogout} style={{background:"transparent",color:C.sub,border:`1px solid ${C.border}`,borderRadius:4,padding:"7px 10px",fontWeight:600,fontSize:12,cursor:"pointer"}}>Logout</button>
-</div>
-</div>
+  return(
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",maxWidth:540,margin:"0 auto"}}>
+      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <BenneLogo size={36}/>
+          <div><div className="font-serif" style={{fontWeight:600,fontSize:17,color:C.text}}>ಕಾಸು</div><div style={{color:C.sub,fontSize:11}}>{user.name}</div></div>
+        </div>
+        <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+          <button onClick={onBMO} title="Emergency manual ordering — use only if POS is down" style={{background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:4,padding:"7px 12px",fontWeight:800,fontSize:12,cursor:"pointer",letterSpacing:".5px",display:"flex",alignItems:"center",gap:5}}>⚠ BMO</button>
+          {!dayDone?<button onClick={()=>setDayModal(true)} style={{background:C.accentLight,color:C.accentDark,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>Day End</button>
+          :<span style={{display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",background:C.successLight,color:C.success,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:"4px 8px",whiteSpace:"nowrap"}}>Day Closed</span>}
+          <button onClick={onLogout} style={{background:"transparent",color:C.sub,border:`1px solid ${C.border}`,borderRadius:4,padding:"7px 10px",fontWeight:600,fontSize:12,cursor:"pointer"}}>Logout</button>
+        </div>
+      </div>
 
-{/* Summary strip — Total (ex Comp) + Date + Refresh */}
-<div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"8px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-<div>
-<div style={{fontSize:9,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:2}}>Total</div>
-<div style={{fontSize:16,fontWeight:700,color:C.text}}>{inr(Object.entries(totals).filter(([m])=>m!=="Comp").reduce((s,[,v])=>s+v,0))}</div>
-</div>
-<button onClick={load} style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"6px 12px",cursor:"pointer",color:C.accent,fontWeight:700,fontSize:12}}>↻ Refresh</button>
-<div style={{textAlign:"right"}}>
-<div style={{fontSize:9,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:2}}>Date</div>
-<div style={{fontSize:13,fontWeight:600,color:C.text}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</div>
-</div>
-</div>
+      {/* Summary strip — Total (ex Comp) + Date + Refresh */}
+      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"8px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+        <div>
+          <div style={{fontSize:9,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:2}}>Total</div>
+          <div style={{fontSize:16,fontWeight:700,color:C.text}}>{inr(Object.entries(totals).filter(([m])=>m!=="Comp").reduce((s,[,v])=>s+v,0))}</div>
+        </div>
+        <button onClick={load} style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"6px 12px",cursor:"pointer",color:C.accent,fontWeight:700,fontSize:12}}>↻ Refresh</button>
+        <div style={{textAlign:"right"}}>
+          <div style={{fontSize:9,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:2}}>Date</div>
+          <div style={{fontSize:13,fontWeight:600,color:C.text}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</div>
+        </div>
+      </div>
 
-<div style={{flex:1,overflowY:"auto",paddingBottom:72}}>
-{screen==="entry"&&<EntryScreen user={user} dayDone={dayDone} onSaved={load} showToast={showToast} txns={txns}/>}
-{screen==="orders"&&<OrdersScreen txns={txns} editable canEdit={canEdit} onEdit={doEdit} user={user}/>}
-</div>
+      <div style={{flex:1,overflowY:"auto",paddingBottom:72}}>
+        {screen==="entry"&&<EntryScreen user={user} dayDone={dayDone} onSaved={load} showToast={showToast} txns={txns}/>}
+        {screen==="orders"&&<OrdersScreen txns={txns} editable canEdit={canEdit} onEdit={doEdit} user={user}/>}
+        {screen==="cashclose"&&<CashClosingScreen user={user} showToast={showToast} txns={txns} refs={refs}/>}
+      </div>
 
-<div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:540,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",zIndex:10}}>
-{navItems.map(n=>(
-<button key={n.id} onClick={()=>setScreen(n.id)} style={{flex:1,background:"transparent",border:"none",borderTop:screen===n.id?`2px solid ${C.accent}`:"2px solid transparent",color:screen===n.id?C.accent:C.sub,padding:"10px 4px 8px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,position:"relative"}}>
-<span style={{fontSize:18,lineHeight:1}}>{n.icon}</span>
-<span style={{fontSize:10,fontWeight:screen===n.id?700:500}}>{n.label}</span>
-{n.id==="orders"&&txns.length>0&&<span style={{position:"absolute",top:4,right:"calc(50% - 18px)",background:C.accent,color:"#fff",borderRadius:4,fontSize:9,padding:"1px 5px",fontWeight:700}}>{txns.length}</span>}
-</button>
-))}
-</div>
+      <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:540,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",zIndex:10}}>
+        {navItems.map(n=>(
+          <button key={n.id} onClick={()=>setScreen(n.id)} style={{flex:1,background:"transparent",border:"none",borderTop:screen===n.id?`2px solid ${C.accent}`:"2px solid transparent",color:screen===n.id?C.accent:C.sub,padding:"10px 4px 8px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,position:"relative"}}>
+            <span style={{fontSize:18,lineHeight:1}}>{n.icon}</span>
+            <span style={{fontSize:10,fontWeight:screen===n.id?700:500}}>{n.label}</span>
+            {n.id==="orders"&&txns.length>0&&<span style={{position:"absolute",top:4,right:"calc(50% - 18px)",background:C.accent,color:"#fff",borderRadius:4,fontSize:9,padding:"1px 5px",fontWeight:700}}>{txns.length}</span>}
+          </button>
+        ))}
+      </div>
 
-<DayEndModal open={dayModal} onClose={()=>setDayModal(false)} onConfirm={confirmDayEnd}
-totals={totals} totalRef={totalRef} grand={grand} txnCount={txns.length} outletName={user.name} alreadyClosed={dayDone}/>
-</div>
-);
+      <DayEndModal open={dayModal} onClose={()=>setDayModal(false)} onConfirm={confirmDayEnd}
+        totals={totals} totalRef={totalRef} grand={grand} txnCount={txns.length} outletName={user.name} alreadyClosed={dayDone}/>
+    </div>
+  );
 }
 
 // ─── Standalone Refund Modal ──────────────────────────────────────────────────
 function RefundModal({open,onClose,user,showToast,onSaved}){
-const [orderNo,setOrderNo]=useState("");const [amt,setAmt]=useState("");const [note,setNote]=useState("");
-const [busy,setBusy]=useState(false);const [errors,setErrors]=useState({});
-const reset=()=>{setOrderNo("");setAmt("");setNote("");setErrors({});};
-const validate=()=>{const e={};if(!orderNo.trim())e.orderNo="Order number required.";if(!amt||isNaN(amt)||Number(amt)<=0)e.amt="Enter a valid amount.";if(!note.trim())e.note="Reason is required.";return e;};
-const save=async()=>{
-const e=validate();setErrors(e);if(Object.keys(e).length>0)return;
-setBusy(true);
-const all=await sget("refunds")||[];
-all.push({id:`r${Date.now()}`,orderNo:orderNo.trim(),amount:Number(amt),note,outletId:user.outlets[0],outletName:user.name,day:getToday(),ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
-await sset("refunds",all);await addLog("ADD_REFUND",user.id,"Refund order "+orderNo.trim()+" "+inr(amt));
-showToast("Refund recorded for Order #"+orderNo.trim(),"success");
-reset();onClose();onSaved&&onSaved();setBusy(false);
-};
-return(
-<Modal open={open} onClose={()=>{reset();onClose();}} title="Add Refund" width={380}>
-<Field label="Order Number" error={errors.orderNo}><Inp value={orderNo} onChange={v=>{setOrderNo(v);setErrors(e=>({...e,orderNo:""}));}} placeholder="e.g. 1042" large/></Field>
-<Field label="Refund Amount (₹)" error={errors.amt}><Inp type="number" value={amt} onChange={v=>{setAmt(v);setErrors(e=>({...e,amt:""}));}} placeholder="0" large/></Field>
-<Field label="Reason" error={errors.note} hint="(required)"><Inp value={note} onChange={v=>{setNote(v);setErrors(e=>({...e,note:""}));}} placeholder="Reason for refund"/></Field>
-<div style={{display:"flex",gap:8,marginTop:4}}>
-<button onClick={save} disabled={busy} style={{...BPr,background:C.danger,flex:1,opacity:busy?.7:1}}>{busy?"Saving…":"Record Refund"}</button>
-<button onClick={()=>{reset();onClose();}} style={{...BSc,flex:1}}>Cancel</button>
-</div>
-</Modal>
-);
+  const [orderNo,setOrderNo]=useState("");const [amt,setAmt]=useState("");const [note,setNote]=useState("");
+  const [busy,setBusy]=useState(false);const [errors,setErrors]=useState({});
+  const reset=()=>{setOrderNo("");setAmt("");setNote("");setErrors({});};
+  const validate=()=>{const e={};if(!orderNo.trim())e.orderNo="Order number required.";if(!amt||isNaN(amt)||Number(amt)<=0)e.amt="Enter a valid amount.";if(!note.trim())e.note="Reason is required.";return e;};
+  const save=async()=>{
+    const e=validate();setErrors(e);if(Object.keys(e).length>0)return;
+    setBusy(true);
+    const all=await sget("refunds")||[];
+    all.push({id:`r${Date.now()}`,orderNo:orderNo.trim(),amount:Number(amt),note,outletId:user.outlets[0],outletName:user.name,day:getToday(),ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
+    await sset("refunds",all);await addLog("ADD_REFUND",user.id,"Refund order "+orderNo.trim()+" "+inr(amt));
+    showToast("Refund recorded for Order #"+orderNo.trim(),"success");
+    reset();onClose();onSaved&&onSaved();setBusy(false);
+  };
+  return(
+    <Modal open={open} onClose={()=>{reset();onClose();}} title="Add Refund" width={380}>
+      <Field label="Order Number" error={errors.orderNo}><Inp value={orderNo} onChange={v=>{setOrderNo(v);setErrors(e=>({...e,orderNo:""}));}} placeholder="e.g. 1042" large/></Field>
+      <Field label="Refund Amount (₹)" error={errors.amt}><Inp type="number" value={amt} onChange={v=>{setAmt(v);setErrors(e=>({...e,amt:""}));}} placeholder="0" large/></Field>
+      <Field label="Reason" error={errors.note} hint="(required)"><Inp value={note} onChange={v=>{setNote(v);setErrors(e=>({...e,note:""}));}} placeholder="Reason for refund"/></Field>
+      <div style={{display:"flex",gap:8,marginTop:4}}>
+        <button onClick={save} disabled={busy} style={{...BPr,background:C.danger,flex:1,opacity:busy?.7:1}}>{busy?"Saving…":"Record Refund"}</button>
+        <button onClick={()=>{reset();onClose();}} style={{...BSc,flex:1}}>Cancel</button>
+      </div>
+    </Modal>
+  );
 }
 
 // ─── Entry Screen ─────────────────────────────────────────────────────────────
 const BOX_ITEMS = [
-{key:"food",label:"Food Box",icon:"📦",rate:20},
-{key:"cup",label:"Takeaway Cup",icon:"🥤",rate:10},
+  {key:"food",label:"Food Box",icon:"📦",rate:20},
+  {key:"cup",label:"Takeaway Cup",icon:"🥤",rate:10},
 ];
 
 function EntryScreen({user,dayDone,onSaved,showToast,txns}){
-const [orderNo,setOrderNo]=useState("");
-const [pays,setPays]=useState([{mode:"Cash",amount:""}]);
-const [busy,setBusy]=useState(false);
-const [errors,setErrors]=useState({});
-const [dupWarn,setDupWarn]=useState(false);
-const [dupConfirm,setDupConfirm]=useState(false);
-const [showGuide,setShowGuide]=useState(false);
-const [boxModalOpen,setBoxModalOpen]=useState(false);
-const [refundModalOpen,setRefundModalOpen]=useState(false);
-const [compReason,setCompReason]=useState("");
-const orderRef=useRef(null);
-const amt0Ref=useRef(null);
-const amt1Ref=useRef(null);
-const saveRef=useRef(null);
+  const [orderNo,setOrderNo]=useState("");
+  const [pays,setPays]=useState([{mode:"Cash",amount:""}]);
+  const [busy,setBusy]=useState(false);
+  const [errors,setErrors]=useState({});
+  const [dupWarn,setDupWarn]=useState(false);
+  const [dupConfirm,setDupConfirm]=useState(false);
+  const [showGuide,setShowGuide]=useState(false);
+  const [boxModalOpen,setBoxModalOpen]=useState(false);
+  const [refundModalOpen,setRefundModalOpen]=useState(false);
+  const [compReason,setCompReason]=useState("");
+  const orderRef=useRef(null);
+  const amt0Ref=useRef(null);
+  const amt1Ref=useRef(null);
+  const saveRef=useRef(null);
 
-const hasComp=pays.some(p=>p.mode==="Comp");
-const checkDup=useCallback((val)=>{if(!val.trim()){setDupWarn(false);return;}setDupWarn(txns.some(t=>t.orderNo===val.trim()));},[txns]);
+  const hasComp=pays.some(p=>p.mode==="Comp");
+  const checkDup=useCallback((val)=>{if(!val.trim()){setDupWarn(false);return;}setDupWarn(txns.some(t=>t.orderNo===val.trim()));},[txns]);
 
-const validate=()=>{
-const e={};
-if(!orderNo.trim())e.orderNo="Order number is required.";
-pays.forEach((p,i)=>{if(!p.amount||isNaN(p.amount)||Number(p.amount)<=0)e[`amt${i}`]="Enter a valid amount (>0).";else if(Number(p.amount)>999999)e[`amt${i}`]="Amount seems too large.";});
-if(hasComp&&!compReason.trim())e.compReason="Reason is required for Comp orders.";
-return e;
-};
+  const validate=()=>{
+    const e={};
+    if(!orderNo.trim())e.orderNo="Order number is required.";
+    pays.forEach((p,i)=>{if(!p.amount||isNaN(p.amount)||Number(p.amount)<=0)e[`amt${i}`]="Enter a valid amount (>0).";else if(Number(p.amount)>999999)e[`amt${i}`]="Amount seems too large.";});
+    if(hasComp&&!compReason.trim())e.compReason="Reason is required for Comp orders.";
+    return e;
+  };
 
-const trySave=()=>{const e=validate();setErrors(e);if(Object.keys(e).length>0)return;if(dupWarn){setDupConfirm(true);return;}doSave();};
+  const trySave=()=>{const e=validate();setErrors(e);if(Object.keys(e).length>0)return;if(dupWarn){setDupConfirm(true);return;}doSave();};
 
-const doSave=async()=>{
-setDupConfirm(false);setBusy(true);
-const outletId=user.outlets[0];
-const txn={id:`t${Date.now()}`,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)})),
-boxAmount:0,boxMode:"Cash",boxItems:null,compReason:hasComp?compReason.trim():"",
-outletId,outletName:user.name,day:getToday(),ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name};
-try{
-await appendTxn(txn);
-}catch(e){
-setBusy(false);showToast("Save failed — check connection","error");return;
-}
-await addLog("ADD_TXN",user.id,"Order "+orderNo.trim()+(hasComp?` [Comp: ${compReason.trim()}]`:""));
-setOrderNo("");setPays([{mode:"Cash",amount:""}]);setCompReason("");setErrors({});setDupWarn(false);
-invalidateTxnCache();
-setBusy(false);showToast("Order #"+orderNo.trim()+" saved!","success");onSaved();
-setTimeout(()=>orderRef.current&&orderRef.current.focus(),100);
-};
+  const doSave=async()=>{
+    setDupConfirm(false);setBusy(true);
+    const outletId=user.outlets[0];
+    const txn={id:`t${Date.now()}`,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)})),
+      boxAmount:0,boxMode:"Cash",boxItems:null,compReason:hasComp?compReason.trim():"",
+      outletId,outletName:user.name,day:getToday(),ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name};
+    try{
+      await appendTxn(txn);
+    }catch(e){
+      setBusy(false);showToast("Save failed — check connection","error");return;
+    }
+    await addLog("ADD_TXN",user.id,"Order "+orderNo.trim()+(hasComp?` [Comp: ${compReason.trim()}]`:""));
+    setOrderNo("");setPays([{mode:"Cash",amount:""}]);setCompReason("");setErrors({});setDupWarn(false);
+    invalidateTxnCache();
+    setBusy(false);showToast("Order #"+orderNo.trim()+" saved!","success");onSaved();
+    setTimeout(()=>orderRef.current&&orderRef.current.focus(),100);
+  };
 
-// Keyboard: Enter on order number → jump to amount
-const onOrderKeyDown=e=>{
-if(e.key==="Enter"){e.preventDefault();amt0Ref.current&&amt0Ref.current.focus();}
-};
-const onAmt0KeyDown=e=>{
-if(e.key==="Enter"){e.preventDefault();trySave();}
-};
-const onAmt1KeyDown=e=>{
-if(e.key==="Enter"){e.preventDefault();trySave();}
-};
+  // Keyboard: Enter on order number → jump to amount
+  const onOrderKeyDown=e=>{
+    if(e.key==="Enter"){e.preventDefault();amt0Ref.current&&amt0Ref.current.focus();}
+  };
+  const onAmt0KeyDown=e=>{
+    if(e.key==="Enter"){e.preventDefault();trySave();}
+  };
+  const onAmt1KeyDown=e=>{
+    if(e.key==="Enter"){e.preventDefault();trySave();}
+  };
 
-if(dayDone)return <div style={{padding:20}}><div style={{...Cd,textAlign:"center",padding:32}}><div style={{fontSize:36,marginBottom:12}}>🌙</div><div style={{fontWeight:700,fontSize:16,color:C.text,marginBottom:6}}>Day is Closed</div><div style={{color:C.sub,fontSize:13}}>No new entries after day end.</div></div></div>;
+  if(dayDone)return <div style={{padding:20}}><div style={{...Cd,textAlign:"center",padding:32}}><div style={{fontSize:36,marginBottom:12}}>🌙</div><div style={{fontWeight:700,fontSize:16,color:C.text,marginBottom:6}}>Day is Closed</div><div style={{color:C.sub,fontSize:13}}>No new entries after day end.</div></div></div>;
 
-return(
-<div style={{padding:16}}>
-<div style={Cd}>
+  return(
+    <div style={{padding:16}}>
+      <div style={Cd}>
 
-{/* ── Order Number ── */}
-<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-<label style={{fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:.4}}>Order Number</label>
-<button onClick={()=>setShowGuide(g=>!g)} style={{background:"none",border:"none",color:C.accent,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:3}}>
-{showGuide?"Hide guide":"? How this works"}
-</button>
-</div>
-{showGuide&&(
-<div style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"10px 12px",fontSize:12,color:C.text,marginBottom:10,lineHeight:1.6}}>
-1. Type the order number, press <strong>Enter</strong> → jumps to Amount.<br/>
-2. Enter amount, pick payment mode, press <strong>Enter</strong> → saves order.<br/>
-3. Need a split payment? Tap <strong>+ Split Payment</strong>.<br/>
-4. Selling a takeaway box or cup? Use the <strong>📦 Box / Cup Charges</strong> button below — it's separate from order entry.
-</div>
-)}
-<Field error={errors.orderNo}>
-<input ref={orderRef} type="text" value={orderNo}
-onChange={e=>{setOrderNo(e.target.value);checkDup(e.target.value);setErrors(ev=>({...ev,orderNo:""}));}}
-onKeyDown={onOrderKeyDown}
-placeholder="e.g. 1042"
-style={{...IS,fontSize:24,fontWeight:800,padding:"13px 16px",letterSpacing:1,borderColor:errors.orderNo?C.danger:dupWarn?C.warn:C.border}}/>
-</Field>
-{dupWarn&&<Msg type="warn">⚠ Order #{orderNo} already exists today.</Msg>}
+        {/* ── Order Number ── */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+          <label style={{fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:.4}}>Order Number</label>
+          <button onClick={()=>setShowGuide(g=>!g)} style={{background:"none",border:"none",color:C.accent,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:3}}>
+            {showGuide?"Hide guide":"? How this works"}
+          </button>
+        </div>
+        {showGuide&&(
+          <div style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"10px 12px",fontSize:12,color:C.text,marginBottom:10,lineHeight:1.6}}>
+            1. Type the order number, press <strong>Enter</strong> → jumps to Amount.<br/>
+            2. Enter amount, pick payment mode, press <strong>Enter</strong> → saves order.<br/>
+            3. Need a split payment? Tap <strong>+ Split Payment</strong>.<br/>
+            4. Selling a takeaway box or cup? Use the <strong>📦 Box / Cup Charges</strong> button below — it's separate from order entry.
+          </div>
+        )}
+        <Field error={errors.orderNo}>
+          <input ref={orderRef} type="text" value={orderNo}
+            onChange={e=>{setOrderNo(e.target.value);checkDup(e.target.value);setErrors(ev=>({...ev,orderNo:""}));}}
+            onKeyDown={onOrderKeyDown}
+            placeholder="e.g. 1042"
+            style={{...IS,fontSize:24,fontWeight:800,padding:"13px 16px",letterSpacing:1,borderColor:errors.orderNo?C.danger:dupWarn?C.warn:C.border}}/>
+        </Field>
+        {dupWarn&&<Msg type="warn">⚠ Order #{orderNo} already exists today.</Msg>}
 
-{/* ── Payment ── */}
-<div style={{height:1,background:C.border,margin:"14px 0"}}/>
-{pays.map((p,i)=>(
-<div key={i} style={{marginBottom:14}}>
-<label style={{display:"block",fontSize:11,color:C.sub,marginBottom:8,fontWeight:700,textTransform:"uppercase",letterSpacing:.4}}>
-{i===0?"Payment":"Split Payment"}
-{i>0&&<button onClick={()=>setPays(pays.filter((_,j)=>j!==i))} style={{marginLeft:10,background:"none",border:"none",color:C.danger,cursor:"pointer",fontSize:12,fontWeight:700}}>✕ Remove</button>}
-</label>
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-{/* Amount */}
-<div>
-<label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Amount (₹)</label>
-<input ref={i===0?amt0Ref:amt1Ref} type="number" value={p.amount}
-onChange={e=>{setPays(pays.map((x,j)=>j===i?{...x,amount:e.target.value}:x));setErrors(ev=>({...ev,[`amt${i}`]:""}));}}
-onKeyDown={i===0?onAmt0KeyDown:onAmt1KeyDown}
-placeholder="0"
-style={{...IS,fontSize:22,fontWeight:800,padding:"10px 14px",borderColor:errors[`amt${i}`]?C.danger:C.border}}/>
-{errors[`amt${i}`]&&<div style={{color:C.danger,fontSize:11,marginTop:3}}>⚠ {errors[`amt${i}`]}</div>}
-</div>
-{/* Dropdown */}
-<div>
-<label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Mode</label>
-<select value={p.mode}
-onChange={e=>setPays(pays.map((x,j)=>j===i?{...x,mode:e.target.value}:x))}
-style={{...IS,fontSize:14,fontWeight:600,color:MODE_COLORS[p.mode],background:MODE_BG[p.mode],border:`1.5px solid ${MODE_COLORS[p.mode]}55`,padding:"10px 12px"}}>
-{PAYMENT_MODES.map(m=><option key={m} value={m}>{m}</option>)}
-</select>
-</div>
-</div>
-</div>
-))}
+        {/* ── Payment ── */}
+        <div style={{height:1,background:C.border,margin:"14px 0"}}/>
+        {pays.map((p,i)=>(
+          <div key={i} style={{marginBottom:14}}>
+            <label style={{display:"block",fontSize:11,color:C.sub,marginBottom:8,fontWeight:700,textTransform:"uppercase",letterSpacing:.4}}>
+              {i===0?"Payment":"Split Payment"}
+              {i>0&&<button onClick={()=>setPays(pays.filter((_,j)=>j!==i))} style={{marginLeft:10,background:"none",border:"none",color:C.danger,cursor:"pointer",fontSize:12,fontWeight:700}}>✕ Remove</button>}
+            </label>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {/* Amount */}
+              <div>
+                <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Amount (₹)</label>
+                <input ref={i===0?amt0Ref:amt1Ref} type="number" value={p.amount}
+                  onChange={e=>{setPays(pays.map((x,j)=>j===i?{...x,amount:e.target.value}:x));setErrors(ev=>({...ev,[`amt${i}`]:""}));}}
+                  onKeyDown={i===0?onAmt0KeyDown:onAmt1KeyDown}
+                  placeholder="0"
+                  style={{...IS,fontSize:22,fontWeight:800,padding:"10px 14px",borderColor:errors[`amt${i}`]?C.danger:C.border}}/>
+                {errors[`amt${i}`]&&<div style={{color:C.danger,fontSize:11,marginTop:3}}>⚠ {errors[`amt${i}`]}</div>}
+              </div>
+              {/* Dropdown */}
+              <div>
+                <label style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.3,display:"block",marginBottom:4}}>Mode</label>
+                <select value={p.mode}
+                  onChange={e=>setPays(pays.map((x,j)=>j===i?{...x,mode:e.target.value}:x))}
+                  style={{...IS,fontSize:14,fontWeight:600,color:MODE_COLORS[p.mode],background:MODE_BG[p.mode],border:`1.5px solid ${MODE_COLORS[p.mode]}55`,padding:"10px 12px"}}>
+                  {PAYMENT_MODES.map(m=><option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+        ))}
 
-{pays.length<2&&(
-<button onClick={()=>setPays([...pays,{mode:"Cash",amount:""}])}
-style={{background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:600,marginBottom:14}}>
-+ Split Payment
-</button>
-)}
+        {pays.length<2&&(
+          <button onClick={()=>setPays([...pays,{mode:"Cash",amount:""}])}
+            style={{background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:600,marginBottom:14}}>
+            + Split Payment
+          </button>
+        )}
 
-{/* Comp reason — shown only when Comp mode is selected */}
-{hasComp&&(
-<div style={{background:C.surface2,border:`1px solid ${C.border}`,borderRadius:4,padding:"12px 14px",marginBottom:14}}>
-<label style={{...LS,marginBottom:6}}>Reason for Comp <span style={{color:C.danger}}>*</span></label>
-<textarea value={compReason} onChange={e=>{setCompReason(e.target.value);setErrors(ev=>({...ev,compReason:""}));}}
-rows={2} placeholder="e.g. Staff meal, Guest complaint, Owner authorised…"
-style={{...IS,resize:"none"}}/>
-{errors.compReason&&<div style={{color:C.danger,fontSize:11,marginTop:4}}>⚠ {errors.compReason}</div>}
-</div>
-)}
+        {/* Comp reason — shown only when Comp mode is selected */}
+        {hasComp&&(
+          <div style={{background:C.surface2,border:`1px solid ${C.border}`,borderRadius:4,padding:"12px 14px",marginBottom:14}}>
+            <label style={{...LS,marginBottom:6}}>Reason for Comp <span style={{color:C.danger}}>*</span></label>
+            <textarea value={compReason} onChange={e=>{setCompReason(e.target.value);setErrors(ev=>({...ev,compReason:""}));}}
+              rows={2} placeholder="e.g. Staff meal, Guest complaint, Owner authorised…"
+              style={{...IS,resize:"none"}}/>
+            {errors.compReason&&<div style={{color:C.danger,fontSize:11,marginTop:4}}>⚠ {errors.compReason}</div>}
+          </div>
+        )}
 
-{/* ── Save ── */}
-<div style={{height:1,background:C.border,margin:"16px 0"}}/>
-<button ref={saveRef} onClick={trySave} disabled={busy}
-style={{...BPr,padding:"15px",fontSize:17,fontWeight:800,opacity:busy?.7:1,letterSpacing:.3}}>
-{busy?"Saving…":"Save Order ↵"}
-</button>
-<div style={{textAlign:"center",fontSize:11,color:C.muted,marginTop:8}}>
-Tab between fields · Enter to save
-</div>
-</div>
+        {/* ── Save ── */}
+        <div style={{height:1,background:C.border,margin:"16px 0"}}/>
+        <button ref={saveRef} onClick={trySave} disabled={busy}
+          style={{...BPr,padding:"15px",fontSize:17,fontWeight:800,opacity:busy?.7:1,letterSpacing:.3}}>
+          {busy?"Saving…":"Save Order  ↵"}
+        </button>
+        <div style={{textAlign:"center",fontSize:11,color:C.muted,marginTop:8}}>
+          Tab between fields · Enter to save
+        </div>
+      </div>
 
-{/* ── Standalone Box Charges (not tied to an order) ── */}
-<button onClick={()=>setBoxModalOpen(true)}
-style={{width:"100%",marginTop:14,background:"#fff",border:`1.5px dashed ${C.border}`,borderRadius:4,padding:"14px",display:"flex",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",color:C.text,fontWeight:700,fontSize:14}}>
-📦 Add Box / Cup Charges
-</button>
+      {/* ── Standalone Box Charges (not tied to an order) ── */}
+      <button onClick={()=>setBoxModalOpen(true)}
+        style={{width:"100%",marginTop:14,background:"#fff",border:`1.5px dashed ${C.border}`,borderRadius:4,padding:"14px",display:"flex",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",color:C.text,fontWeight:700,fontSize:14}}>
+        📦 Add Box / Cup Charges
+      </button>
 
-<BoxChargeModal open={boxModalOpen} onClose={()=>setBoxModalOpen(false)} user={user} showToast={showToast} onSaved={onSaved}/>
+      <BoxChargeModal open={boxModalOpen} onClose={()=>setBoxModalOpen(false)} user={user} showToast={showToast} onSaved={onSaved}/>
 
-{/* ── Standalone Refund Button ── */}
-{!dayDone&&<button onClick={()=>setRefundModalOpen(true)}
-style={{width:"100%",marginTop:10,background:"#fff",border:`1.5px dashed ${C.dangerBorder}`,borderRadius:4,padding:"14px",display:"flex",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",color:C.danger,fontWeight:700,fontSize:14}}>
-↩ Add Refund
-</button>}
+      {/* ── Standalone Refund Button ── */}
+      {!dayDone&&<button onClick={()=>setRefundModalOpen(true)}
+        style={{width:"100%",marginTop:10,background:"#fff",border:`1.5px dashed ${C.dangerBorder}`,borderRadius:4,padding:"14px",display:"flex",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",color:C.danger,fontWeight:700,fontSize:14}}>
+        ↩ Add Refund
+      </button>}
 
-<RefundModal open={refundModalOpen} onClose={()=>setRefundModalOpen(false)} user={user} showToast={showToast} onSaved={onSaved}/>
+      <RefundModal open={refundModalOpen} onClose={()=>setRefundModalOpen(false)} user={user} showToast={showToast} onSaved={onSaved}/>
 
-<ConfirmDialog open={dupConfirm} onClose={()=>setDupConfirm(false)} onConfirm={doSave} title="Duplicate Order Number" warn
-message={`Order #${orderNo} already exists today. Save another entry anyway?`} confirmLabel="Yes, Save Anyway"/>
-</div>
-);
+      <ConfirmDialog open={dupConfirm} onClose={()=>setDupConfirm(false)} onConfirm={doSave} title="Duplicate Order Number" warn
+        message={`Order #${orderNo} already exists today. Save another entry anyway?`} confirmLabel="Yes, Save Anyway"/>
+    </div>
+  );
 }
 
 // ─── Standalone Box Charge Modal ──────────────────────────────────────────────
 function BoxChargeModal({open,onClose,user,showToast,onSaved}){
-const [qty,setQty]=useState({food:0,cup:0});
-const [extras,setExtras]=useState([]);
-const [mode,setMode]=useState("Cash");
-const [busy,setBusy]=useState(false);
+  const [qty,setQty]=useState({food:0,cup:0});
+  const [extras,setExtras]=useState([]);
+  const [mode,setMode]=useState("Cash");
+  const [busy,setBusy]=useState(false);
 
-const fixedTotal = qty.food*BOX_ITEMS[0].rate + qty.cup*BOX_ITEMS[1].rate;
-const extrasTotal = extras.reduce((s,e)=>s+(Number(e.amt)||0),0);
-const total = fixedTotal + extrasTotal;
+  const fixedTotal = qty.food*BOX_ITEMS[0].rate + qty.cup*BOX_ITEMS[1].rate;
+  const extrasTotal = extras.reduce((s,e)=>s+(Number(e.amt)||0),0);
+  const total = fixedTotal + extrasTotal;
 
-const reset=()=>{setQty({food:0,cup:0});setExtras([]);setMode("Cash");};
+  const reset=()=>{setQty({food:0,cup:0});setExtras([]);setMode("Cash");};
 
-const addExtra=()=>setExtras(ex=>[...ex,{id:Date.now(),name:"",amt:""}]);
-const removeExtra=(id)=>setExtras(ex=>ex.filter(e=>e.id!==id));
-const updateExtra=(id,field,val)=>setExtras(ex=>ex.map(e=>e.id===id?{...e,[field]:val}:e));
+  const addExtra=()=>setExtras(ex=>[...ex,{id:Date.now(),name:"",amt:""}]);
+  const removeExtra=(id)=>setExtras(ex=>ex.filter(e=>e.id!==id));
+  const updateExtra=(id,field,val)=>setExtras(ex=>ex.map(e=>e.id===id?{...e,[field]:val}:e));
 
-const save=async()=>{
-if(total<=0)return;
-// Validate extras — each must have a name if amount is entered
-const invalid=extras.some(e=>Number(e.amt)>0&&!e.name.trim());
-if(invalid){showToast("Please add a name for each extra charge","error");return;}
-setBusy(true);
-const all=await sget("boxCharges")||[];
-all.push({id:`b${Date.now()}`,amount:total,mode,
-items:{food:qty.food,cup:qty.cup},
-extras:extras.filter(e=>Number(e.amt)>0).map(e=>({name:e.name.trim(),amt:Number(e.amt)})),
-outletId:user.outlets[0],outletName:user.name,day:getToday(),ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
-await sset("boxCharges",all);await addLog("ADD_BOX",user.id,"Box/Cup charge "+inr(total));
-setBusy(false);reset();onClose();showToast("Charge of "+inr(total)+" recorded","success");onSaved&&onSaved();
-};
+  const save=async()=>{
+    if(total<=0)return;
+    // Validate extras — each must have a name if amount is entered
+    const invalid=extras.some(e=>Number(e.amt)>0&&!e.name.trim());
+    if(invalid){showToast("Please add a name for each extra charge","error");return;}
+    setBusy(true);
+    const all=await sget("boxCharges")||[];
+    all.push({id:`b${Date.now()}`,amount:total,mode,
+      items:{food:qty.food,cup:qty.cup},
+      extras:extras.filter(e=>Number(e.amt)>0).map(e=>({name:e.name.trim(),amt:Number(e.amt)})),
+      outletId:user.outlets[0],outletName:user.name,day:getToday(),ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
+    await sset("boxCharges",all);await addLog("ADD_BOX",user.id,"Box/Cup charge "+inr(total));
+    setBusy(false);reset();onClose();showToast("Charge of "+inr(total)+" recorded","success");onSaved&&onSaved();
+  };
 
-return(
-<Modal open={open} onClose={()=>{reset();onClose();}} title="Box / Cup Charges" width={420}>
-{/* Fixed items */}
-{BOX_ITEMS.map(bi=>(
-<div key={bi.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,gap:10}}>
-<div style={{flex:1}}>
-<div style={{fontWeight:700,fontSize:14,color:C.text}}>{bi.icon} {bi.label}</div>
-<div style={{fontSize:11,color:C.muted}}>₹{bi.rate} each</div>
-</div>
-<div style={{display:"flex",alignItems:"center",gap:10}}>
-<button onClick={()=>setQty(q=>({...q,[bi.key]:Math.max(0,q[bi.key]-1)}))}
-style={{width:34,height:34,borderRadius:4,border:`1.5px solid ${C.border}`,background:"#fff",fontSize:18,fontWeight:700,cursor:"pointer",color:C.sub}}>−</button>
-<span style={{minWidth:24,textAlign:"center",fontWeight:800,fontSize:16,color:C.text}}>{qty[bi.key]}</span>
-<button onClick={()=>setQty(q=>({...q,[bi.key]:q[bi.key]+1}))}
-style={{width:34,height:34,borderRadius:4,border:`1.5px solid ${C.accent}`,background:C.accentLight,fontSize:18,fontWeight:700,cursor:"pointer",color:C.accent}}>+</button>
-</div>
-</div>
-))}
+  return(
+    <Modal open={open} onClose={()=>{reset();onClose();}} title="Box / Cup Charges" width={420}>
+      {/* Fixed items */}
+      {BOX_ITEMS.map(bi=>(
+        <div key={bi.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,gap:10}}>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:700,fontSize:14,color:C.text}}>{bi.icon} {bi.label}</div>
+            <div style={{fontSize:11,color:C.muted}}>₹{bi.rate} each</div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <button onClick={()=>setQty(q=>({...q,[bi.key]:Math.max(0,q[bi.key]-1)}))}
+              style={{width:34,height:34,borderRadius:4,border:`1.5px solid ${C.border}`,background:"#fff",fontSize:18,fontWeight:700,cursor:"pointer",color:C.sub}}>−</button>
+            <span style={{minWidth:24,textAlign:"center",fontWeight:800,fontSize:16,color:C.text}}>{qty[bi.key]}</span>
+            <button onClick={()=>setQty(q=>({...q,[bi.key]:q[bi.key]+1}))}
+              style={{width:34,height:34,borderRadius:4,border:`1.5px solid ${C.accent}`,background:C.accentLight,fontSize:18,fontWeight:700,cursor:"pointer",color:C.accent}}>+</button>
+          </div>
+        </div>
+      ))}
 
-<Divider/>
+      <Divider/>
 
-{/* Manual extras */}
-<div style={{marginBottom:12}}>
-<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:extras.length>0?10:0}}>
-<label style={LS}>Extra Charges</label>
-<button onClick={addExtra}
-style={{background:"none",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 10px",fontSize:12,fontWeight:600,color:C.accent,cursor:"pointer"}}>
-+ Add
-</button>
-</div>
-{extras.map(e=>(
-<div key={e.id} style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
-<input value={e.name} onChange={ev=>updateExtra(e.id,"name",ev.target.value)}
-placeholder="Name (e.g. Carry bag)"
-style={{...IS,flex:2,fontSize:13,padding:"8px 10px"}}/>
-<input type="number" value={e.amt} onChange={ev=>updateExtra(e.id,"amt",ev.target.value)}
-placeholder="₹"
-style={{...IS,flex:1,fontSize:13,padding:"8px 10px"}}/>
-<button onClick={()=>removeExtra(e.id)}
-style={{background:"none",border:"none",color:C.danger,fontSize:18,cursor:"pointer",padding:"0 4px",flexShrink:0,lineHeight:1}}>✕</button>
-</div>
-))}
-</div>
+      {/* Manual extras */}
+      <div style={{marginBottom:12}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:extras.length>0?10:0}}>
+          <label style={LS}>Extra Charges</label>
+          <button onClick={addExtra}
+            style={{background:"none",border:`1px solid ${C.border}`,borderRadius:4,padding:"3px 10px",fontSize:12,fontWeight:600,color:C.accent,cursor:"pointer"}}>
+            + Add
+          </button>
+        </div>
+        {extras.map(e=>(
+          <div key={e.id} style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+            <input value={e.name} onChange={ev=>updateExtra(e.id,"name",ev.target.value)}
+              placeholder="Name (e.g. Carry bag)"
+              style={{...IS,flex:2,fontSize:13,padding:"8px 10px"}}/>
+            <input type="number" value={e.amt} onChange={ev=>updateExtra(e.id,"amt",ev.target.value)}
+              placeholder="₹"
+              style={{...IS,flex:1,fontSize:13,padding:"8px 10px"}}/>
+            <button onClick={()=>removeExtra(e.id)}
+              style={{background:"none",border:"none",color:C.danger,fontSize:18,cursor:"pointer",padding:"0 4px",flexShrink:0,lineHeight:1}}>✕</button>
+          </div>
+        ))}
+      </div>
 
-<Divider/>
+      <Divider/>
 
-<Field label="Payment Mode">
-<div style={{display:"flex",flexWrap:"wrap",gap:6}}>{BMO_PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={mode===m} onClick={()=>setMode(m)}/>)}</div>
-</Field>
-<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:"10px 14px",marginBottom:16}}>
-<span style={{fontSize:12,color:C.sub,fontWeight:600,textTransform:"uppercase"}}>Total</span>
-<span style={{fontSize:22,fontWeight:800,color:C.text}}>{inr(total)}</span>
-</div>
-<div style={{display:"flex",gap:8}}>
-<button onClick={save} disabled={busy||total<=0} style={{...BPr,flex:1,opacity:(busy||total<=0)?.6:1}}>{busy?"Saving…":"Save Charge"}</button>
-<button onClick={()=>{reset();onClose();}} style={{...BSc,flex:1}}>Cancel</button>
-</div>
-</Modal>
-);
+      <Field label="Payment Mode">
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{BMO_PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={mode===m} onClick={()=>setMode(m)}/>)}</div>
+      </Field>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:"10px 14px",marginBottom:16}}>
+        <span style={{fontSize:12,color:C.sub,fontWeight:600,textTransform:"uppercase"}}>Total</span>
+        <span style={{fontSize:22,fontWeight:800,color:C.text}}>{inr(total)}</span>
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={save} disabled={busy||total<=0} style={{...BPr,flex:1,opacity:(busy||total<=0)?.6:1}}>{busy?"Saving…":"Save Charge"}</button>
+        <button onClick={()=>{reset();onClose();}} style={{...BSc,flex:1}}>Cancel</button>
+      </div>
+    </Modal>
+  );
 }
 
 function OrdersScreen({txns,editable,canEdit,onEdit,user}){
-const [editTxn,setEditTxn]=useState(null);
-const [fMode,setFMode]=useState("all");
-const [fDate,setFDate]=useState(getToday());
-const [fOutlet,setFOutlet]=useState("all");
-const [outlets,setOutlets]=useState([]);
-const [allTxns,setAllTxns]=useState(null); // null = use passed txns (outlet), array = loaded all (admin)
+  const [editTxn,setEditTxn]=useState(null);
+  const [fMode,setFMode]=useState("all");
+  const [fDate,setFDate]=useState(getToday());
+  const [fOutlet,setFOutlet]=useState("all");
+  const [outlets,setOutlets]=useState([]);
+  const [allTxns,setAllTxns]=useState(null); // null = use passed txns (outlet), array = loaded all (admin)
 
-const isAdmin=user&&["superadmin","admin","manager"].includes(user.role);
+  const isAdmin=user&&["superadmin","admin","manager"].includes(user.role);
 
-useEffect(()=>{
-if(isAdmin){
-Promise.all([getAllTxns(),sget("outlets")]).then(([t,o])=>{
-setAllTxns(t||[]);setOutlets(o||[]);
-});
-}
-},[isAdmin]);
+  useEffect(()=>{
+    if(isAdmin){
+      Promise.all([getAllTxns(),sget("outlets")]).then(([t,o])=>{
+        setAllTxns(t||[]);setOutlets(o||[]);
+      });
+    }
+  },[isAdmin]);
 
-// Outlet users: filter today's own txns by mode only
-// Admin/Manager: filter all txns by outlet + date + mode
-const source = isAdmin ? (allTxns||[]) : txns;
-const filtered = source.filter(t=>
-(fMode==="all"||t.payments.some(p=>p.mode===fMode))&&
-(!isAdmin||(fOutlet==="all"||t.outletId===fOutlet))&&
-(!isAdmin||!fDate||t.day===fDate)
-);
+  // Outlet users: filter today's own txns by mode only
+  // Admin/Manager: filter all txns by outlet + date + mode
+  const source = isAdmin ? (allTxns||[]) : txns;
+  const filtered = source.filter(t=>
+    (fMode==="all"||t.payments.some(p=>p.mode===fMode))&&
+    (!isAdmin||(fOutlet==="all"||t.outletId===fOutlet))&&
+    (!isAdmin||!fDate||t.day===fDate)
+  );
 
-return(
-<div style={{padding:16}}>
-{/* Filters */}
-<div style={{...Cd,padding:12,marginBottom:14}}>
-<div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
-{isAdmin&&(
-<div style={{flex:"1 1 120px"}}>
-<label style={LS}>Outlet</label>
-<select value={fOutlet} onChange={e=>setFOutlet(e.target.value)} style={{...IS,fontSize:13,padding:"7px 10px"}}>
-<option value="all">All Outlets</option>
-{outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
-</select>
-</div>
-)}
-{isAdmin&&(
-<div style={{flex:"1 1 130px"}}>
-<label style={LS}>Date</label>
-<input type="date" value={fDate} onChange={e=>setFDate(e.target.value)} style={{...IS,fontSize:13,padding:"7px 10px"}}/>
-</div>
-)}
-<div style={{flex:"1 1 130px"}}>
-<label style={LS}>Payment Mode</label>
-<select value={fMode} onChange={e=>setFMode(e.target.value)} style={{...IS,fontSize:13,padding:"7px 10px"}}>
-<option value="all">All Modes</option>
-{PAYMENT_MODES.map(m=><option key={m}>{m}</option>)}
-</select>
-</div>
-{(fMode!=="all"||fOutlet!=="all"||(isAdmin&&fDate!==getToday()))&&(
-<button onClick={()=>{setFMode("all");setFOutlet("all");setFDate(getToday());}}
-style={{...BSc,padding:"7px 12px",fontSize:12,alignSelf:"flex-end"}}>Clear</button>
-)}
-</div>
-</div>
+  return(
+    <div style={{padding:16}}>
+      {/* Filters */}
+      <div style={{...Cd,padding:12,marginBottom:14}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
+          {isAdmin&&(
+            <div style={{flex:"1 1 120px"}}>
+              <label style={LS}>Outlet</label>
+              <select value={fOutlet} onChange={e=>setFOutlet(e.target.value)} style={{...IS,fontSize:13,padding:"7px 10px"}}>
+                <option value="all">All Outlets</option>
+                {outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
+              </select>
+            </div>
+          )}
+          {isAdmin&&(
+            <div style={{flex:"1 1 130px"}}>
+              <label style={LS}>Date</label>
+              <input type="date" value={fDate} onChange={e=>setFDate(e.target.value)} style={{...IS,fontSize:13,padding:"7px 10px"}}/>
+            </div>
+          )}
+          <div style={{flex:"1 1 130px"}}>
+            <label style={LS}>Payment Mode</label>
+            <select value={fMode} onChange={e=>setFMode(e.target.value)} style={{...IS,fontSize:13,padding:"7px 10px"}}>
+              <option value="all">All Modes</option>
+              {PAYMENT_MODES.map(m=><option key={m}>{m}</option>)}
+            </select>
+          </div>
+          {(fMode!=="all"||fOutlet!=="all"||(isAdmin&&fDate!==getToday()))&&(
+            <button onClick={()=>{setFMode("all");setFOutlet("all");setFDate(getToday());}}
+              style={{...BSc,padding:"7px 12px",fontSize:12,alignSelf:"flex-end"}}>Clear</button>
+          )}
+        </div>
+      </div>
 
-<SectionHeader title={`Orders (${filtered.length})`}/>
-{isAdmin&&allTxns===null
-?<div style={{display:"flex",justifyContent:"center",padding:32}}><Spinner/></div>
-:filtered.length===0
-?<EmptyState icon="📋" title="No orders" desc="Try adjusting the filters"/>
-:filtered.slice().reverse().map(t=>(
-<TxnCard key={t.id} txn={t} editable={editable&&canEdit&&canEdit(t)} onEdit={()=>setEditTxn(t)}/>
-))
-}
-{editTxn&&<EditTxnModal txn={editTxn} onSave={(updated,reason,orig)=>{onEdit(updated,reason,orig);setEditTxn(null);}} onClose={()=>setEditTxn(null)}/>}
-</div>
-);
+      <SectionHeader title={`Orders (${filtered.length})`}/>
+      {isAdmin&&allTxns===null
+        ?<div style={{display:"flex",justifyContent:"center",padding:32}}><Spinner/></div>
+        :filtered.length===0
+          ?<EmptyState icon="📋" title="No orders" desc="Try adjusting the filters"/>
+          :filtered.slice().reverse().map(t=>(
+            <TxnCard key={t.id} txn={t} editable={editable&&canEdit&&canEdit(t)} onEdit={()=>setEditTxn(t)}/>
+          ))
+      }
+      {editTxn&&<EditTxnModal txn={editTxn} onSave={(updated,reason,orig)=>{onEdit(updated,reason,orig);setEditTxn(null);}} onClose={()=>setEditTxn(null)}/>}
+    </div>
+  );
 }
 
 function RefundsScreen({user,dayDone,onSaved,refs,showToast}){
-const [open,setOpen]=useState(false);const [orderNo,setOrderNo]=useState("");const [amt,setAmt]=useState("");const [note,setNote]=useState("");
-const [busy,setBusy]=useState(false);const [errors,setErrors]=useState({});
-const validate=()=>{const e={};if(!orderNo.trim())e.orderNo="Order number is required.";if(!amt||isNaN(amt)||Number(amt)<=0)e.amt="Enter a valid amount (>0).";if(!note.trim())e.note="Reason is required.";return e;};
-const save=async()=>{
-const e=validate();setErrors(e);if(Object.keys(e).length>0)return;
-setBusy(true);
-const all=await sget("refunds")||[];
-all.push({id:`r${Date.now()}`,orderNo:orderNo.trim(),amount:Number(amt),note,outletId:user.outlets[0],outletName:user.name,day:getToday(),ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
-await sset("refunds",all);await addLog("ADD_REFUND",user.id,"Refund order "+orderNo.trim()+" "+inr(amt));
-setOrderNo("");setAmt("");setNote("");setOpen(false);setBusy(false);setErrors({});
-showToast("Refund recorded for Order #"+orderNo.trim(),"success");onSaved();
-};
-return(
-<div style={{padding:16}}>
-{!dayDone&&<button onClick={()=>setOpen(true)} style={{...BPr,background:C.danger,marginBottom:16,padding:14,fontSize:15,fontWeight:700}}>+ Add Refund</button>}
-<Modal open={open} onClose={()=>{setOpen(false);setErrors({});}} title="Add Refund" width={380}>
-<Field label="Order Number" error={errors.orderNo}><Inp value={orderNo} onChange={v=>{setOrderNo(v);setErrors(e=>({...e,orderNo:""}));}} placeholder="e.g. 1042" large/></Field>
-<Field label="Refund Amount (₹)" error={errors.amt}><Inp type="number" value={amt} onChange={v=>{setAmt(v);setErrors(e=>({...e,amt:""}));}} placeholder="0" large/></Field>
-<Field label="Reason" error={errors.note} hint="(required)"><Inp value={note} onChange={v=>{setNote(v);setErrors(e=>({...e,note:""}));}} placeholder="Reason for refund"/></Field>
-<div style={{display:"flex",gap:8,marginTop:4}}>
-<button onClick={save} disabled={busy} style={{...BPr,background:C.danger,flex:1,opacity:busy?.7:1}}>{busy?"Saving…":"Record Refund"}</button>
-<button onClick={()=>{setOpen(false);setErrors({});}} style={{...BSc,flex:1}}>Cancel</button>
-</div>
-</Modal>
-<SectionHeader title={`Refunds (${refs.length})`}/>
-{refs.length===0?<EmptyState icon="↩" title="No refunds today" desc=""/>
-:refs.slice().reverse().map(r=>(
-<div key={r.id} style={{...Cd,marginBottom:10}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-<span style={{fontWeight:700,color:C.text,fontSize:15}}>Order #{r.orderNo}</span>
-<Badge label="Refund" color={C.danger} bg={C.dangerLight} border={C.dangerBorder}/>
-</div>
-<div style={{fontSize:18,fontWeight:800,color:C.danger,marginBottom:4}}>−{inr(r.amount)} <span style={{fontSize:13,fontWeight:600}}>Cash</span></div>
-{r.note&&<div style={{color:C.sub,fontSize:13,marginBottom:4}}>{r.note}</div>}
-<div style={{color:C.muted,fontSize:11}}>{fmt(r.ts)}{r.createdByName?` · ${r.createdByName}`:""}</div>
-</div>
-))
-}
-</div>
-);
+  const [open,setOpen]=useState(false);const [orderNo,setOrderNo]=useState("");const [amt,setAmt]=useState("");const [note,setNote]=useState("");
+  const [busy,setBusy]=useState(false);const [errors,setErrors]=useState({});
+  const validate=()=>{const e={};if(!orderNo.trim())e.orderNo="Order number is required.";if(!amt||isNaN(amt)||Number(amt)<=0)e.amt="Enter a valid amount (>0).";if(!note.trim())e.note="Reason is required.";return e;};
+  const save=async()=>{
+    const e=validate();setErrors(e);if(Object.keys(e).length>0)return;
+    setBusy(true);
+    const all=await sget("refunds")||[];
+    all.push({id:`r${Date.now()}`,orderNo:orderNo.trim(),amount:Number(amt),note,outletId:user.outlets[0],outletName:user.name,day:getToday(),ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name});
+    await sset("refunds",all);await addLog("ADD_REFUND",user.id,"Refund order "+orderNo.trim()+" "+inr(amt));
+    setOrderNo("");setAmt("");setNote("");setOpen(false);setBusy(false);setErrors({});
+    showToast("Refund recorded for Order #"+orderNo.trim(),"success");onSaved();
+  };
+  return(
+    <div style={{padding:16}}>
+      {!dayDone&&<button onClick={()=>setOpen(true)} style={{...BPr,background:C.danger,marginBottom:16,padding:14,fontSize:15,fontWeight:700}}>+ Add Refund</button>}
+      <Modal open={open} onClose={()=>{setOpen(false);setErrors({});}} title="Add Refund" width={380}>
+        <Field label="Order Number" error={errors.orderNo}><Inp value={orderNo} onChange={v=>{setOrderNo(v);setErrors(e=>({...e,orderNo:""}));}} placeholder="e.g. 1042" large/></Field>
+        <Field label="Refund Amount (₹)" error={errors.amt}><Inp type="number" value={amt} onChange={v=>{setAmt(v);setErrors(e=>({...e,amt:""}));}} placeholder="0" large/></Field>
+        <Field label="Reason" error={errors.note} hint="(required)"><Inp value={note} onChange={v=>{setNote(v);setErrors(e=>({...e,note:""}));}} placeholder="Reason for refund"/></Field>
+        <div style={{display:"flex",gap:8,marginTop:4}}>
+          <button onClick={save} disabled={busy} style={{...BPr,background:C.danger,flex:1,opacity:busy?.7:1}}>{busy?"Saving…":"Record Refund"}</button>
+          <button onClick={()=>{setOpen(false);setErrors({});}} style={{...BSc,flex:1}}>Cancel</button>
+        </div>
+      </Modal>
+      <SectionHeader title={`Refunds (${refs.length})`}/>
+      {refs.length===0?<EmptyState icon="↩" title="No refunds today" desc=""/>
+        :refs.slice().reverse().map(r=>(
+          <div key={r.id} style={{...Cd,marginBottom:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <span style={{fontWeight:700,color:C.text,fontSize:15}}>Order #{r.orderNo}</span>
+              <Badge label="Refund" color={C.danger} bg={C.dangerLight} border={C.dangerBorder}/>
+            </div>
+            <div style={{fontSize:18,fontWeight:800,color:C.danger,marginBottom:4}}>−{inr(r.amount)} <span style={{fontSize:13,fontWeight:600}}>Cash</span></div>
+            {r.note&&<div style={{color:C.sub,fontSize:13,marginBottom:4}}>{r.note}</div>}
+            <div style={{color:C.muted,fontSize:11}}>{fmt(r.ts)}{r.createdByName?` · ${r.createdByName}`:""}</div>
+          </div>
+        ))
+      }
+    </div>
+  );
 }
 
 function TxnCard({txn,onEdit,onDelete,editable}){
-const total=txn.payments.reduce((s,p)=>s+Number(p.amount),0)+(txn.boxAmount||0);
-return(
-<div style={{...Cd,marginBottom:10}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-<span style={{fontWeight:700,color:C.text,fontSize:15}}>Order #{txn.orderNo}</span>
-<div style={{display:"flex",alignItems:"center",gap:6}}>
-{editable&&<button onClick={onEdit} style={BEd}>Edit</button>}
-{onDelete&&<button onClick={onDelete} style={BDn}>Delete</button>}
-<span style={{fontWeight:800,color:C.success,fontSize:16}}>{inr(total)}</span>
-</div>
-</div>
-<div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>
-{txn.payments.map((p,i)=>(
-<span key={i} style={{fontSize:11,borderRadius:4,padding:"3px 9px",fontWeight:600,background:MODE_BG[p.mode],color:MODE_COLORS[p.mode],border:`1px solid ${MODE_COLORS[p.mode]}33`}}>{p.mode}: {inr(p.amount)}</span>
-))}
-{txn.boxAmount>0&&<span style={{fontSize:11,borderRadius:4,padding:"3px 9px",fontWeight:600,background:C.bg,color:C.sub,border:`1px solid ${C.border}`}}>📦 Box ({txn.boxMode}): {inr(txn.boxAmount)}</span>}
-</div>
-<div style={{color:C.muted,fontSize:11}}>{fmt(txn.ts)}{txn.createdByName?` · ${txn.createdByName}`:""} · {txn.outletName}</div>
-</div>
-);
+  const total=txn.payments.reduce((s,p)=>s+Number(p.amount),0)+(txn.boxAmount||0);
+  return(
+    <div style={{...Cd,marginBottom:10}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+        <span style={{fontWeight:700,color:C.text,fontSize:15}}>Order #{txn.orderNo}</span>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          {editable&&<button onClick={onEdit} style={BEd}>Edit</button>}
+          {onDelete&&<button onClick={onDelete} style={BDn}>Delete</button>}
+          <span style={{fontWeight:800,color:C.success,fontSize:16}}>{inr(total)}</span>
+        </div>
+      </div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>
+        {txn.payments.map((p,i)=>(
+          <span key={i} style={{fontSize:11,borderRadius:4,padding:"3px 9px",fontWeight:600,background:MODE_BG[p.mode],color:MODE_COLORS[p.mode],border:`1px solid ${MODE_COLORS[p.mode]}33`}}>{p.mode}: {inr(p.amount)}</span>
+        ))}
+        {txn.boxAmount>0&&<span style={{fontSize:11,borderRadius:4,padding:"3px 9px",fontWeight:600,background:C.bg,color:C.sub,border:`1px solid ${C.border}`}}>📦 Box ({txn.boxMode}): {inr(txn.boxAmount)}</span>}
+      </div>
+      <div style={{color:C.muted,fontSize:11}}>{fmt(txn.ts)}{txn.createdByName?` · ${txn.createdByName}`:""} · {txn.outletName}</div>
+    </div>
+  );
 }
 
 // ─── Day End Modal ────────────────────────────────────────────────────────────
 function DayEndModal({open,onClose,onConfirm,totals,totalRef,grand,txnCount,outletName,alreadyClosed}){
-const [endType,setEndType]=useState(null); // null = picking, "shift" | "day"
-const [zeroConfirm,setZeroConfirm]=useState(false);
-const net=grand-totalRef,cashIn=totals["Cash"]||0,cashInHand=cashIn-totalRef;
-const rows=PAYMENT_MODES.filter(m=>totals[m]>0);
+  const [endType,setEndType]=useState(null); // null = picking, "shift" | "day"
+  const [zeroConfirm,setZeroConfirm]=useState(false);
+  const net=grand-totalRef,cashIn=totals["Cash"]||0,cashInHand=cashIn-totalRef;
+  const rows=PAYMENT_MODES.filter(m=>totals[m]>0);
 
-// Reset type choice when modal closes
-const handleClose=()=>{setEndType(null);setZeroConfirm(false);onClose();};
+  // Reset type choice when modal closes
+  const handleClose=()=>{setEndType(null);setZeroConfirm(false);onClose();};
 
-const buildWA=()=>{
-const label=endType==="shift"?"Shift End":"Day End";
-const lines=[`ಕಾಸು *Kāsu ${label}*`,`📍 ${outletName}`,`📅 ${fmtD(getToday())}`,``,`💰 Gross: ${inr(grand)}`,`↩ Refunds: −${inr(totalRef)}`,`✅ Net: *${inr(net)}*`,`📋 Orders: ${txnCount}`,`💵 Cash in Hand: *${inr(cashInHand)}*`,``,`*Breakdown:*`];
-PAYMENT_MODES.filter(m=>totals[m]>0).forEach(m=>lines.push(`• ${m}: ${inr(totals[m])}`));
-return lines.join("\n");
-};
-const buildPrintHTML=()=>`
-<h1>${endType==="shift"?"Shift End":"Day End"} Summary</h1><div class="sub">${outletName} · ${fmtD(getToday())}</div>
-<div class="kpi-grid">
-<div class="kpi"><div class="kpi-label">Gross Sales</div><div class="kpi-val green">${inr(grand)}</div></div>
-<div class="kpi"><div class="kpi-label">Net Sales</div><div class="kpi-val">${inr(net)}</div></div>
-<div class="kpi"><div class="kpi-label">Orders</div><div class="kpi-val">${txnCount}</div></div>
-<div class="kpi"><div class="kpi-label">Refunds</div><div class="kpi-val red">−${inr(totalRef)}</div></div>
-<div class="kpi"><div class="kpi-label">Cash In</div><div class="kpi-val green">${inr(cashIn)}</div></div>
-<div class="kpi"><div class="kpi-label">Cash in Hand</div><div class="kpi-val green">${inr(cashInHand)}</div></div>
-</div>
-<div class="section">Payment Mode Breakdown</div>
-<table><thead><tr><th>Mode</th><th class="right">Amount</th></tr></thead><tbody>${rows.map(m=>`<tr><td>${m}</td><td class="right bold">${inr(totals[m])}</td></tr>`).join("")}</tbody></table>`;
+  const buildWA=()=>{
+    const label=endType==="shift"?"Shift End":"Day End";
+    const lines=[`ಕಾಸು *Kāsu ${label}*`,`📍 ${outletName}`,`📅 ${fmtD(getToday())}`,``,`💰 Gross: ${inr(grand)}`,`↩ Refunds: −${inr(totalRef)}`,`✅ Net: *${inr(net)}*`,`📋 Orders: ${txnCount}`,`💵 Cash in Hand: *${inr(cashInHand)}*`,``,`*Breakdown:*`];
+    PAYMENT_MODES.filter(m=>totals[m]>0).forEach(m=>lines.push(`• ${m}: ${inr(totals[m])}`));
+    return lines.join("\n");
+  };
+  const buildPrintHTML=()=>`
+    <h1>${endType==="shift"?"Shift End":"Day End"} Summary</h1><div class="sub">${outletName} · ${fmtD(getToday())}</div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Gross Sales</div><div class="kpi-val green">${inr(grand)}</div></div>
+      <div class="kpi"><div class="kpi-label">Net Sales</div><div class="kpi-val">${inr(net)}</div></div>
+      <div class="kpi"><div class="kpi-label">Orders</div><div class="kpi-val">${txnCount}</div></div>
+      <div class="kpi"><div class="kpi-label">Refunds</div><div class="kpi-val red">−${inr(totalRef)}</div></div>
+      <div class="kpi"><div class="kpi-label">Cash In</div><div class="kpi-val green">${inr(cashIn)}</div></div>
+      <div class="kpi"><div class="kpi-label">Cash in Hand</div><div class="kpi-val green">${inr(cashInHand)}</div></div>
+    </div>
+    <div class="section">Payment Mode Breakdown</div>
+    <table><thead><tr><th>Mode</th><th class="right">Amount</th></tr></thead><tbody>${rows.map(m=>`<tr><td>${m}</td><td class="right bold">${inr(totals[m])}</td></tr>`).join("")}</tbody></table>`;
 
-if(!open)return null;
+  if(!open)return null;
 
-// ── Step 1: pick shift or day end ──
-if(!endType&&!alreadyClosed)return(
-<Modal open onClose={handleClose} title="End of Shift / Day" width={400}>
-<div style={{color:C.sub,fontSize:13,marginBottom:20}}>What would you like to close?</div>
-<div style={{display:"flex",flexDirection:"column",gap:10}}>
-<button onClick={()=>setEndType("shift")}
-style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,padding:"16px 20px",cursor:"pointer",textAlign:"left",fontWeight:600,fontSize:15,color:C.text}}>
-<div style={{fontWeight:700,fontSize:15,marginBottom:3}}>Shift End</div>
-<div style={{fontSize:12,color:C.sub,fontWeight:400}}>View your shift summary. Orders stay open for the next shift.</div>
-</button>
-<button onClick={()=>setEndType("day")}
-style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"16px 20px",cursor:"pointer",textAlign:"left",color:C.text}}>
-<div style={{fontWeight:700,fontSize:15,marginBottom:3,color:C.accentDark}}>Day End</div>
-<div style={{fontSize:12,color:C.sub,fontWeight:400}}>Close the business day for this outlet. No new entries after this.</div>
-</button>
-</div>
-</Modal>
-);
+  // ── Step 1: pick shift or day end ──
+  if(!endType&&!alreadyClosed)return(
+    <Modal open onClose={handleClose} title="End of Shift / Day" width={400}>
+      <div style={{color:C.sub,fontSize:13,marginBottom:20}}>What would you like to close?</div>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <button onClick={()=>setEndType("shift")}
+          style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,padding:"16px 20px",cursor:"pointer",textAlign:"left",fontWeight:600,fontSize:15,color:C.text}}>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>Shift End</div>
+          <div style={{fontSize:12,color:C.sub,fontWeight:400}}>View your shift summary. Orders stay open for the next shift.</div>
+        </button>
+        <button onClick={()=>setEndType("day")}
+          style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"16px 20px",cursor:"pointer",textAlign:"left",color:C.text}}>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:3,color:C.accentDark}}>Day End</div>
+          <div style={{fontSize:12,color:C.sub,fontWeight:400}}>Close the business day for this outlet. No new entries after this.</div>
+        </button>
+      </div>
+    </Modal>
+  );
 
-// ── Step 2: summary ──
-return(
-<>
-<Modal open={open&&!zeroConfirm} onClose={handleClose} title={endType==="shift"?"Shift End Summary":"Day End Summary"} width={460}>
-{alreadyClosed?(
-<div style={{textAlign:"center",padding:"20px 0"}}>
-<div style={{fontSize:36,marginBottom:12}}>✅</div>
-<div style={{fontWeight:700,fontSize:16,color:C.success,marginBottom:8}}>Day Already Closed</div>
-<div style={{color:C.sub,fontSize:13,marginBottom:20}}>This outlet closed for {fmtD(getToday())}.</div>
-<button onClick={handleClose} style={{...BSc,width:"100%"}}>Close</button>
-</div>
-):(
-<>
-<div style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:12,textAlign:"center",marginBottom:16}}>
-<div style={{fontSize:11,color:C.accent,fontWeight:700,marginBottom:2}}>{endType==="shift"?"SHIFT END":"BUSINESS DAY"}</div>
-<div style={{fontSize:18,fontWeight:800,color:C.text}}>{fmtD(getToday())}</div>
-<div style={{fontSize:12,color:C.sub,marginTop:2}}>{outletName}</div>
-</div>
-{txnCount===0&&<Msg type="warn">⚠ No orders recorded today.</Msg>}
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
-<StatCard label="Gross Sales" value={inr(grand)} color={C.success}/>
-<StatCard label="Net Sales" value={inr(net)} color={C.accent}/>
-<StatCard label="Refunds" value={"−"+inr(totalRef)} color={C.danger}/>
-<StatCard label="Orders" value={txnCount} color={C.text}/>
-<StatCard label="Cash In" value={inr(cashIn)} color={C.success}/>
-<StatCard label="Cash in Hand" value={inr(cashInHand)} color={C.success} sub="Cash − Refunds"/>
-</div>
-<Divider/>
-<div style={{marginBottom:14}}>
-<div style={{fontWeight:700,fontSize:12,color:C.sub,textTransform:"uppercase",letterSpacing:.4,marginBottom:8}}>Payment Mode Breakdown</div>
-{rows.length===0?<div style={{color:C.muted,fontSize:13}}>No transactions today.</div>
-:rows.map(m=>(
-<div key={m} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${C.border}`}}>
-<span style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:C.text}}><span style={{width:10,height:10,borderRadius:"50%",background:MODE_COLORS[m],display:"inline-block"}}/>{m}</span>
-<span style={{fontWeight:700,color:MODE_COLORS[m]}}>{inr(totals[m])}</span>
-</div>
-))
-}
-</div>
-<div style={{background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:12,textAlign:"center",marginBottom:14}}>
-<div style={{fontSize:11,color:C.success,fontWeight:700,marginBottom:2}}>CASH IN HAND</div>
-<div style={{fontSize:26,fontWeight:800,color:C.success}}>{inr(cashInHand)}</div>
-</div>
-<div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-<CopyWABtn getText={buildWA}/>
-<button onClick={()=>printHTML(buildPrintHTML(),`${endType==="shift"?"Shift":"Day"} End — `+outletName)} style={{...BSc,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>🖨 Print</button>
-</div>
-{endType==="shift"
-?<button onClick={handleClose} style={{...BPr,background:C.success,padding:14,fontSize:15}}>Done</button>
-:<button onClick={()=>txnCount===0?setZeroConfirm(true):onConfirm()} style={{...BPr,background:C.success,padding:14,fontSize:15}}>✓ Confirm Day End</button>
-}
-</>
-)}
-</Modal>
-<ConfirmDialog open={zeroConfirm} onClose={()=>setZeroConfirm(false)} onConfirm={()=>{setZeroConfirm(false);onConfirm();}} title="No Orders Today" warn
-message="You have 0 orders recorded today. Are you sure you want to close the day?" confirmLabel="Close Anyway"/>
-</>
-);
+  // ── Step 2: summary ──
+  return(
+    <>
+      <Modal open={open&&!zeroConfirm} onClose={handleClose} title={endType==="shift"?"Shift End Summary":"Day End Summary"} width={460}>
+        {alreadyClosed?(
+          <div style={{textAlign:"center",padding:"20px 0"}}>
+            <div style={{fontSize:36,marginBottom:12}}>✅</div>
+            <div style={{fontWeight:700,fontSize:16,color:C.success,marginBottom:8}}>Day Already Closed</div>
+            <div style={{color:C.sub,fontSize:13,marginBottom:20}}>This outlet closed for {fmtD(getToday())}.</div>
+            <button onClick={handleClose} style={{...BSc,width:"100%"}}>Close</button>
+          </div>
+        ):(
+          <>
+            <div style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:12,textAlign:"center",marginBottom:16}}>
+              <div style={{fontSize:11,color:C.accent,fontWeight:700,marginBottom:2}}>{endType==="shift"?"SHIFT END":"BUSINESS DAY"}</div>
+              <div style={{fontSize:18,fontWeight:800,color:C.text}}>{fmtD(getToday())}</div>
+              <div style={{fontSize:12,color:C.sub,marginTop:2}}>{outletName}</div>
+            </div>
+            {txnCount===0&&<Msg type="warn">⚠ No orders recorded today.</Msg>}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+              <StatCard label="Gross Sales" value={inr(grand)} color={C.success}/>
+              <StatCard label="Net Sales" value={inr(net)} color={C.accent}/>
+              <StatCard label="Refunds" value={"−"+inr(totalRef)} color={C.danger}/>
+              <StatCard label="Orders" value={txnCount} color={C.text}/>
+              <StatCard label="Cash In" value={inr(cashIn)} color={C.success}/>
+              <StatCard label="Cash in Hand" value={inr(cashInHand)} color={C.success} sub="Cash − Refunds"/>
+            </div>
+            <Divider/>
+            <div style={{marginBottom:14}}>
+              <div style={{fontWeight:700,fontSize:12,color:C.sub,textTransform:"uppercase",letterSpacing:.4,marginBottom:8}}>Payment Mode Breakdown</div>
+              {rows.length===0?<div style={{color:C.muted,fontSize:13}}>No transactions today.</div>
+                :rows.map(m=>(
+                  <div key={m} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${C.border}`}}>
+                    <span style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:C.text}}><span style={{width:10,height:10,borderRadius:"50%",background:MODE_COLORS[m],display:"inline-block"}}/>{m}</span>
+                    <span style={{fontWeight:700,color:MODE_COLORS[m]}}>{inr(totals[m])}</span>
+                  </div>
+                ))
+              }
+            </div>
+            <div style={{background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:12,textAlign:"center",marginBottom:14}}>
+              <div style={{fontSize:11,color:C.success,fontWeight:700,marginBottom:2}}>CASH IN HAND</div>
+              <div style={{fontSize:26,fontWeight:800,color:C.success}}>{inr(cashInHand)}</div>
+            </div>
+            <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+              <CopyWABtn getText={buildWA}/>
+              <button onClick={()=>printHTML(buildPrintHTML(),`${endType==="shift"?"Shift":"Day"} End — `+outletName)} style={{...BSc,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>🖨 Print</button>
+            </div>
+            {endType==="shift"
+              ?<button onClick={handleClose} style={{...BPr,background:C.success,padding:14,fontSize:15}}>Done</button>
+              :<button onClick={()=>txnCount===0?setZeroConfirm(true):onConfirm()} style={{...BPr,background:C.success,padding:14,fontSize:15}}>✓ Confirm Day End</button>
+            }
+          </>
+        )}
+      </Modal>
+      <ConfirmDialog open={zeroConfirm} onClose={()=>setZeroConfirm(false)} onConfirm={()=>{setZeroConfirm(false);onConfirm();}} title="No Orders Today" warn
+        message="You have 0 orders recorded today. Are you sure you want to close the day?" confirmLabel="Close Anyway"/>
+    </>
+  );
 }
 
 // ─── Admin App ────────────────────────────────────────────────────────────────
 function AdminApp({user,onLogout,showToast,onBMO}){
-const [screen,setScreen]=useState("dashboard");
-const [menuOpen,setMenuOpen]=useState(false);
-const [txnFilter,setTxnFilter]=useState({outlet:"all",date:null});
-const isMobile=useIsMobile();
-const navItems=[
-{id:"dashboard",icon:"📊",label:"Dashboard"},
-{id:"transactions",icon:"📋",label:"Transactions"},
-{id:"reports",icon:"📈",label:"Reports"},
-...( ["superadmin","admin"].includes(user.role)?[{id:"outlets",icon:"🏪",label:"Outlets"},{id:"users",icon:"👥",label:"Users"}]:[]),
-...(user.role==="superadmin"?[{id:"logs",icon:"🔍",label:"Audit Logs"},{id:"backup",icon:"💾",label:"Backup"}]:[]),
-];
-const goTo=(id,filter)=>{if(filter)setTxnFilter(filter);setScreen(id);setMenuOpen(false);};
-const SidebarContent=()=>(
-<>
-<div style={{padding:"18px 16px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:10}}>
-<div style={{width:36,height:36,background:C.accentLight,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",}}><BenneLogo size={38}/></div>
-<div><div className="font-serif" style={{fontWeight:600,fontSize:16,color:C.text}}>ಕಾಸು</div><div style={{fontSize:10,color:C.sub}}>Benne</div></div>
-</div>
-<div style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}`}}>
-<div style={{fontWeight:600,color:C.text,fontSize:13,marginBottom:4}}>{user.name}</div>
-<Badge label={user.role.toUpperCase()} color={C.accent} bg={C.accentLight} border={C.accentBorder}/>
-</div>
-<div style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}`}}>
-<button onClick={()=>{setMenuOpen(false);onBMO();}} title="Emergency manual ordering — use only if POS is down" style={{width:"100%",background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:4,padding:"10px",fontWeight:800,fontSize:14,cursor:"pointer",letterSpacing:".5px",boxShadow:`0 0 0 3px ${C.dangerLight}`}}>⚠ BMO — Emergency Orders</button>
-</div>
-<nav style={{flex:1,padding:"6px 0",overflowY:"auto"}}>
-{navItems.map(n=>(
-<button key={n.id} onClick={()=>goTo(n.id)} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"10px 16px",background:"transparent",border:"none",borderLeft:screen===n.id?`3px solid ${C.accent}`:"3px solid transparent",color:screen===n.id?C.accent:C.sub,fontSize:13,cursor:"pointer",fontWeight:screen===n.id?700:400,textAlign:"left"}}>
-<span style={{fontSize:15}}>{n.icon}</span>{n.label}
-</button>
-))}
-</nav>
-<button onClick={onLogout} style={{padding:"14px 16px",background:"none",border:"none",borderTop:`1px solid ${C.border}`,color:C.muted,fontSize:12,cursor:"pointer",textAlign:"left"}}>← Sign Out</button>
-</>
-);
-return(
-<div style={{display:"flex",minHeight:"100vh"}}>
-{!isMobile&&(
-<div className="no-print" style={{width:220,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,position:"sticky",top:0,height:"100vh",overflowY:"auto"}}>
-<SidebarContent/>
-</div>
-)}
-<div style={{flex:1,overflowY:"auto",background:C.bg,minWidth:0,display:"flex",flexDirection:"column"}}>
-{isMobile&&(
-<div className="no-print" style={{background:C.accent,borderBottom:`1px solid ${C.accentDark}`,padding:"11px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:20}}>
-<div style={{display:"flex",alignItems:"center",gap:10}}>
-<button onClick={()=>setMenuOpen(!menuOpen)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#fff",padding:"2px",lineHeight:1}}>☰</button>
-<div style={{fontWeight:700,fontSize:15,color:"#fff"}}>{navItems.find(n=>n.id===screen)?.label||"ಕಾಸು"}</div>
-</div>
-<div style={{display:"flex",alignItems:"center",gap:8}}>
-<button onClick={onBMO} title="Emergency manual ordering" style={{background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:4,padding:"6px 10px",fontWeight:800,fontSize:12,cursor:"pointer"}}>⚠ BMO</button>
-<button onClick={onLogout} style={{background:"transparent",color:"#fff",border:"1px solid rgba(255,255,255,0.5)",borderRadius:4,padding:"6px 10px",fontWeight:600,fontSize:11,cursor:"pointer"}}>Logout</button>
-</div>
-</div>
-)}
-{isMobile&&menuOpen&&(
-<>
-<div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.35)",zIndex:30,animation:"fadeIn .15s ease"}}/>
-<div style={{position:"fixed",left:0,top:0,bottom:0,width:250,background:C.surface,zIndex:31,boxShadow:"4px 0 24px rgba(0,0,0,.12)",display:"flex",flexDirection:"column",animation:"slideUp .18s ease"}}>
-<SidebarContent/>
-</div>
-</>
-)}
-<div style={{flex:1}}>
-{screen==="dashboard"&&<Dashboard user={user} goTo={goTo}/>}
-{screen==="transactions"&&<Transactions user={user} showToast={showToast} initFilter={txnFilter}/>}
-{screen==="reports"&&<Reports/>}
-{screen==="outlets"&&<Outlets user={user} showToast={showToast}/>}
-{screen==="users"&&<Users user={user} showToast={showToast}/>}
-{screen==="logs"&&<Logs/>}
-{screen==="backup"&&user.role==="superadmin"&&<BackupRestore showToast={showToast}/>}
-</div>
-</div>
-</div>
-);
+  const [screen,setScreen]=useState("dashboard");
+  const [menuOpen,setMenuOpen]=useState(false);
+  const [txnFilter,setTxnFilter]=useState({outlet:"all",date:null});
+  const isMobile=useIsMobile();
+  const navItems=[
+    {id:"dashboard",icon:"📊",label:"Dashboard"},
+    {id:"transactions",icon:"📋",label:"Transactions"},
+    {id:"cashclosings",icon:"💵",label:"Cash Closings"},
+    {id:"reports",icon:"📈",label:"Reports"},
+    ...( ["superadmin","admin"].includes(user.role)?[{id:"outlets",icon:"🏪",label:"Outlets"},{id:"users",icon:"👥",label:"Users"}]:[]),
+    ...(user.role==="superadmin"?[{id:"logs",icon:"🔍",label:"Audit Logs"},{id:"backup",icon:"💾",label:"Backup"}]:[]),
+  ];
+  const goTo=(id,filter)=>{if(filter)setTxnFilter(filter);setScreen(id);setMenuOpen(false);};
+  const SidebarContent=()=>(
+    <>
+      <div style={{padding:"18px 16px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:10}}>
+        <div style={{width:36,height:36,background:C.accentLight,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",}}><BenneLogo size={38}/></div>
+        <div><div className="font-serif" style={{fontWeight:600,fontSize:16,color:C.text}}>ಕಾಸು</div><div style={{fontSize:10,color:C.sub}}>Benne</div></div>
+      </div>
+      <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}`}}>
+        <div style={{fontWeight:600,color:C.text,fontSize:13,marginBottom:4}}>{user.name}</div>
+        <Badge label={user.role.toUpperCase()} color={C.accent} bg={C.accentLight} border={C.accentBorder}/>
+      </div>
+      <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}`}}>
+        <button onClick={()=>{setMenuOpen(false);onBMO();}} title="Emergency manual ordering — use only if POS is down" style={{width:"100%",background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:4,padding:"10px",fontWeight:800,fontSize:14,cursor:"pointer",letterSpacing:".5px",boxShadow:`0 0 0 3px ${C.dangerLight}`}}>⚠ BMO — Emergency Orders</button>
+      </div>
+      <nav style={{flex:1,padding:"6px 0",overflowY:"auto"}}>
+        {navItems.map(n=>(
+          <button key={n.id} onClick={()=>goTo(n.id)} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"10px 16px",background:"transparent",border:"none",borderLeft:screen===n.id?`3px solid ${C.accent}`:"3px solid transparent",color:screen===n.id?C.accent:C.sub,fontSize:13,cursor:"pointer",fontWeight:screen===n.id?700:400,textAlign:"left"}}>
+            <span style={{fontSize:15}}>{n.icon}</span>{n.label}
+          </button>
+        ))}
+      </nav>
+      <button onClick={onLogout} style={{padding:"14px 16px",background:"none",border:"none",borderTop:`1px solid ${C.border}`,color:C.muted,fontSize:12,cursor:"pointer",textAlign:"left"}}>← Sign Out</button>
+    </>
+  );
+  return(
+    <div style={{display:"flex",minHeight:"100vh"}}>
+      {!isMobile&&(
+        <div className="no-print" style={{width:220,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,position:"sticky",top:0,height:"100vh",overflowY:"auto"}}>
+          <SidebarContent/>
+        </div>
+      )}
+      <div style={{flex:1,overflowY:"auto",background:C.bg,minWidth:0,display:"flex",flexDirection:"column"}}>
+        {isMobile&&(
+          <div className="no-print" style={{background:C.accent,borderBottom:`1px solid ${C.accentDark}`,padding:"11px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:20}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#fff",padding:"2px",lineHeight:1}}>☰</button>
+              <div style={{fontWeight:700,fontSize:15,color:"#fff"}}>{navItems.find(n=>n.id===screen)?.label||"ಕಾಸು"}</div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <button onClick={onBMO} title="Emergency manual ordering" style={{background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:4,padding:"6px 10px",fontWeight:800,fontSize:12,cursor:"pointer"}}>⚠ BMO</button>
+              <button onClick={onLogout} style={{background:"transparent",color:"#fff",border:"1px solid rgba(255,255,255,0.5)",borderRadius:4,padding:"6px 10px",fontWeight:600,fontSize:11,cursor:"pointer"}}>Logout</button>
+            </div>
+          </div>
+        )}
+        {isMobile&&menuOpen&&(
+          <>
+            <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.35)",zIndex:30,animation:"fadeIn .15s ease"}}/>
+            <div style={{position:"fixed",left:0,top:0,bottom:0,width:250,background:C.surface,zIndex:31,boxShadow:"4px 0 24px rgba(0,0,0,.12)",display:"flex",flexDirection:"column",animation:"slideUp .18s ease"}}>
+              <SidebarContent/>
+            </div>
+          </>
+        )}
+        <div style={{flex:1}}>
+          {screen==="dashboard"&&<Dashboard user={user} goTo={goTo}/>}
+          {screen==="transactions"&&<Transactions user={user} showToast={showToast} initFilter={txnFilter}/>}
+          {screen==="cashclosings"&&<CashClosingsAdmin user={user} showToast={showToast}/>}
+          {screen==="reports"&&<Reports/>}
+          {screen==="outlets"&&<Outlets user={user} showToast={showToast}/>}
+          {screen==="users"&&<Users user={user} showToast={showToast}/>}
+          {screen==="logs"&&<Logs/>}
+          {screen==="backup"&&user.role==="superadmin"&&<BackupRestore showToast={showToast}/>}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 function Dashboard({user,goTo}){
-const [txns,setTxns]=useState([]);const [refs,setRefs]=useState([]);const [boxCharges,setBoxCharges]=useState([]);const [outlets,setOutlets]=useState([]);const [dayStatus,setDayStatus]=useState({});const [loading,setLoading]=useState(true);
-useEffect(()=>{
-getAllTxns().then(a=>{Promise.all([sget("refunds"),sget("boxCharges"),sget("outlets"),sget("dayStatus")]).then(([b,bx,o,ds])=>{setTxns((a||[]).filter(t=>t.day===getToday()));setRefs((b||[]).filter(r=>r.day===getToday()));setBoxCharges((bx||[]).filter(x=>x.day===getToday()));setOutlets(o||[]);setDayStatus(ds||{});setLoading(false);});});
-},[]);
-const totals={};PAYMENT_MODES.forEach(m=>{totals[m]=0;});
-txns.forEach(t=>{t.payments.forEach(p=>{totals[p.mode]=(totals[p.mode]||0)+Number(p.amount);});if(t.boxAmount)totals[t.boxMode||"Cash"]=(totals[t.boxMode||"Cash"]||0)+Number(t.boxAmount);});
-boxCharges.forEach(b=>{totals[b.mode]=(totals[b.mode]||0)+Number(b.amount);});
-const totalRef=refs.reduce((s,r)=>s+Number(r.amount),0);
-const grand=Object.values(totals).reduce((a,b)=>a+b,0);
-const net=grand-totalRef,cashInHand=(totals["Cash"]||0)-totalRef,avgOrder=txns.length?Math.round(grand/txns.length):0;
-const cashFails=["PhonePe QR Fail","Pine QR Fail","Pine Card Fail"].reduce((s,m)=>s+(totals[m]||0),0);
-const outletMap={};
-txns.forEach(t=>{if(!outletMap[t.outletId])outletMap[t.outletId]={name:t.outletName,total:0,orders:0};t.payments.forEach(p=>{outletMap[t.outletId].total+=Number(p.amount);});if(t.boxAmount)outletMap[t.outletId].total+=Number(t.boxAmount);outletMap[t.outletId].orders+=1;});
-boxCharges.forEach(b=>{if(!outletMap[b.outletId])outletMap[b.outletId]={name:b.outletName,total:0,orders:0};outletMap[b.outletId].total+=Number(b.amount);});
-const userMap={};txns.forEach(t=>{const k=t.createdBy||"?";if(!userMap[k])userMap[k]={name:t.createdByName||k,orders:0,total:0};t.payments.forEach(p=>{userMap[k].total+=Number(p.amount);});userMap[k].orders+=1;});
-if(loading)return <div style={{display:"flex",justifyContent:"center",padding:48}}><Spinner/></div>;
-return(
-<div style={{padding:"20px 28px",maxWidth:1100,margin:"0 auto"}}>
-<div style={{marginBottom:20}}><div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Dashboard</div><div style={{color:C.sub,fontSize:13,marginTop:2}}>Business day: {fmtD(getToday())}</div></div>
-<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:20}}>
-<div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Gross Sales" value={inr(grand)} color={C.success} icon="💰"/></div>
-<div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Net Sales" value={inr(net)} color={C.accent} icon="📊"/></div>
-<div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Cash in Hand" value={inr(cashInHand)} color={C.success} icon="💵" sub="Cash − Refunds"/></div>
-<div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Refunds" value={"−"+inr(totalRef)} color={C.danger} icon="↩"/></div>
-<div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Orders" value={txns.length} color={C.text} icon="📋"/></div>
-<div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="QR/Card Fails" value={inr(cashFails)} color={C.warn} icon="⚠"/></div>
-<div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Avg Order" value={inr(avgOrder)} color={C.sub} icon="📐"/></div>
-</div>
-<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:16}}>
-<div style={Cd}>
-<SectionHeader title="Payment Mode Breakdown"/>
-{PAYMENT_MODES.map(m=>{const pct=grand>0?Math.round((totals[m]||0)/grand*100):0;return(
-<div key={m} style={{marginBottom:10}}>
-<div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-<span style={{fontSize:12,color:C.text,display:"flex",alignItems:"center",gap:6}}><span style={{width:8,height:8,borderRadius:"50%",background:MODE_COLORS[m],display:"inline-block"}}/>{m}</span>
-<span style={{fontSize:12,fontWeight:700,color:MODE_COLORS[m]}}>{inr(totals[m]||0)}</span>
-</div>
-<div style={{height:5,background:C.bg,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",background:MODE_COLORS[m],width:pct+"%",borderRadius:4}}/></div>
-</div>
-);})}
-</div>
-<div style={Cd}>
-<SectionHeader title="🏪 Outlet Closing Status"/>
-{outlets.filter(o=>o.active).map(o=>{
-const closed=dayStatus[o.id]===getToday();
-const oT=txns.filter(t=>t.outletId===o.id);
-const oTot=oT.reduce((s,t)=>s+t.payments.reduce((a,p)=>a+Number(p.amount),0)+(t.boxAmount||0),0);
-return(<div key={o.id} onClick={()=>goTo("transactions",{outlet:o.id,date:getToday()})} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:`1px solid ${C.border}`,cursor:"pointer",borderRadius:4,transition:"background .15s"}}
-onMouseEnter={e=>e.currentTarget.style.background=C.accentLight}
-onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-<div><div style={{fontWeight:600,color:C.accent,fontSize:13}}>{o.name} →</div><div style={{color:C.sub,fontSize:11}}>{oT.length} orders · {inr(oTot)}</div></div>
-<Badge label={closed?"Closed":"Open"} color={closed?C.success:C.warn} bg={closed?C.successLight:C.warnLight} border={closed?C.successBorder:C.warnBorder}/>
-</div>);
-})}
-</div>
-<div style={Cd}>
-<SectionHeader title="Entries by Staff"/>
-{Object.values(userMap).length===0?<EmptyState icon="👤" title="No data" desc=""/>
-:Object.values(userMap).map(u=>(
-<div key={u.name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
-<div><div style={{fontWeight:600,color:C.text,fontSize:13}}>{u.name}</div><div style={{color:C.sub,fontSize:11}}>{u.orders} orders</div></div>
-<div style={{fontWeight:700,color:C.accent}}>{inr(u.total)}</div>
-</div>
-))
-}
-</div>
-<div style={{...Cd,gridColumn:"1/-1"}}>
-<SectionHeader title="Recent Transactions" action={<button onClick={()=>goTo("transactions")} style={{fontSize:12,color:C.accent,background:"transparent",border:"none",cursor:"pointer",fontWeight:600}}>View all →</button>}/>
-{txns.length===0?<EmptyState icon="📋" title="No transactions" desc=""/>:txns.slice(-5).reverse().map(t=><TxnCard key={t.id} txn={t}/>)}
-</div>
-{(totalRef>grand*0.1||cashFails>grand*0.2)&&(
-<div style={{...Cd,gridColumn:"1/-1",border:`1px solid ${C.warnBorder}`,background:C.warnLight}}>
-<SectionHeader title="⚠ Alerts"/>
-{totalRef>grand*0.1&&<div style={{fontSize:13,color:C.warn,marginBottom:6}}>• High refund rate: {inr(totalRef)} ({grand>0?Math.round(totalRef/grand*100):0}% of gross)</div>}
-{cashFails>grand*0.2&&<div style={{fontSize:13,color:C.warn}}>• High payment failure: {inr(cashFails)}</div>}
-</div>
-)}
-</div>
-</div>
-);
+  const [txns,setTxns]=useState([]);const [refs,setRefs]=useState([]);const [boxCharges,setBoxCharges]=useState([]);const [outlets,setOutlets]=useState([]);const [dayStatus,setDayStatus]=useState({});const [loading,setLoading]=useState(true);
+  useEffect(()=>{
+    getAllTxns().then(a=>{Promise.all([sget("refunds"),sget("boxCharges"),sget("outlets"),sget("dayStatus")]).then(([b,bx,o,ds])=>{setTxns((a||[]).filter(t=>t.day===getToday()));setRefs((b||[]).filter(r=>r.day===getToday()));setBoxCharges((bx||[]).filter(x=>x.day===getToday()));setOutlets(o||[]);setDayStatus(ds||{});setLoading(false);});});
+  },[]);
+  const totals={};PAYMENT_MODES.forEach(m=>{totals[m]=0;});
+  txns.forEach(t=>{t.payments.forEach(p=>{totals[p.mode]=(totals[p.mode]||0)+Number(p.amount);});if(t.boxAmount)totals[t.boxMode||"Cash"]=(totals[t.boxMode||"Cash"]||0)+Number(t.boxAmount);});
+  boxCharges.forEach(b=>{totals[b.mode]=(totals[b.mode]||0)+Number(b.amount);});
+  const totalRef=refs.reduce((s,r)=>s+Number(r.amount),0);
+  const grand=Object.values(totals).reduce((a,b)=>a+b,0);
+  const net=grand-totalRef,cashInHand=(totals["Cash"]||0)-totalRef,avgOrder=txns.length?Math.round(grand/txns.length):0;
+  const cashFails=["PhonePe QR Fail","Pine QR Fail","Pine Card Fail"].reduce((s,m)=>s+(totals[m]||0),0);
+  const outletMap={};
+  txns.forEach(t=>{if(!outletMap[t.outletId])outletMap[t.outletId]={name:t.outletName,total:0,orders:0};t.payments.forEach(p=>{outletMap[t.outletId].total+=Number(p.amount);});if(t.boxAmount)outletMap[t.outletId].total+=Number(t.boxAmount);outletMap[t.outletId].orders+=1;});
+  boxCharges.forEach(b=>{if(!outletMap[b.outletId])outletMap[b.outletId]={name:b.outletName,total:0,orders:0};outletMap[b.outletId].total+=Number(b.amount);});
+  const userMap={};txns.forEach(t=>{const k=t.createdBy||"?";if(!userMap[k])userMap[k]={name:t.createdByName||k,orders:0,total:0};t.payments.forEach(p=>{userMap[k].total+=Number(p.amount);});userMap[k].orders+=1;});
+  if(loading)return <div style={{display:"flex",justifyContent:"center",padding:48}}><Spinner/></div>;
+  return(
+    <div style={{padding:"20px 28px",maxWidth:1100,margin:"0 auto"}}>
+      <div style={{marginBottom:20}}><div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Dashboard</div><div style={{color:C.sub,fontSize:13,marginTop:2}}>Business day: {fmtD(getToday())}</div></div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:20}}>
+        <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Gross Sales" value={inr(grand)} color={C.success} icon="💰"/></div>
+        <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Net Sales" value={inr(net)} color={C.accent} icon="📊"/></div>
+        <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Cash in Hand" value={inr(cashInHand)} color={C.success} icon="💵" sub="Cash − Refunds"/></div>
+        <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Refunds" value={"−"+inr(totalRef)} color={C.danger} icon="↩"/></div>
+        <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Orders" value={txns.length} color={C.text} icon="📋"/></div>
+        <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="QR/Card Fails" value={inr(cashFails)} color={C.warn} icon="⚠"/></div>
+        <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Avg Order" value={inr(avgOrder)} color={C.sub} icon="📐"/></div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:16}}>
+        <div style={Cd}>
+          <SectionHeader title="Payment Mode Breakdown"/>
+          {PAYMENT_MODES.map(m=>{const pct=grand>0?Math.round((totals[m]||0)/grand*100):0;return(
+            <div key={m} style={{marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                <span style={{fontSize:12,color:C.text,display:"flex",alignItems:"center",gap:6}}><span style={{width:8,height:8,borderRadius:"50%",background:MODE_COLORS[m],display:"inline-block"}}/>{m}</span>
+                <span style={{fontSize:12,fontWeight:700,color:MODE_COLORS[m]}}>{inr(totals[m]||0)}</span>
+              </div>
+              <div style={{height:5,background:C.bg,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",background:MODE_COLORS[m],width:pct+"%",borderRadius:4}}/></div>
+            </div>
+          );})}
+        </div>
+        <div style={Cd}>
+          <SectionHeader title="🏪 Outlet Closing Status"/>
+          {outlets.filter(o=>o.active).map(o=>{
+            const closed=dayStatus[o.id]===getToday();
+            const oT=txns.filter(t=>t.outletId===o.id);
+            const oTot=oT.reduce((s,t)=>s+t.payments.reduce((a,p)=>a+Number(p.amount),0)+(t.boxAmount||0),0);
+            return(<div key={o.id} onClick={()=>goTo("transactions",{outlet:o.id,date:getToday()})} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:`1px solid ${C.border}`,cursor:"pointer",borderRadius:4,transition:"background .15s"}}
+              onMouseEnter={e=>e.currentTarget.style.background=C.accentLight}
+              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              <div><div style={{fontWeight:600,color:C.accent,fontSize:13}}>{o.name} →</div><div style={{color:C.sub,fontSize:11}}>{oT.length} orders · {inr(oTot)}</div></div>
+              <Badge label={closed?"Closed":"Open"} color={closed?C.success:C.warn} bg={closed?C.successLight:C.warnLight} border={closed?C.successBorder:C.warnBorder}/>
+            </div>);
+          })}
+        </div>
+        <div style={Cd}>
+          <SectionHeader title="Entries by Staff"/>
+          {Object.values(userMap).length===0?<EmptyState icon="👤" title="No data" desc=""/>
+            :Object.values(userMap).map(u=>(
+              <div key={u.name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+                <div><div style={{fontWeight:600,color:C.text,fontSize:13}}>{u.name}</div><div style={{color:C.sub,fontSize:11}}>{u.orders} orders</div></div>
+                <div style={{fontWeight:700,color:C.accent}}>{inr(u.total)}</div>
+              </div>
+            ))
+          }
+        </div>
+        <div style={{...Cd,gridColumn:"1/-1"}}>
+          <SectionHeader title="Recent Transactions" action={<button onClick={()=>goTo("transactions")} style={{fontSize:12,color:C.accent,background:"transparent",border:"none",cursor:"pointer",fontWeight:600}}>View all →</button>}/>
+          {txns.length===0?<EmptyState icon="📋" title="No transactions" desc=""/>:txns.slice(-5).reverse().map(t=><TxnCard key={t.id} txn={t}/>)}
+        </div>
+        {(totalRef>grand*0.1||cashFails>grand*0.2)&&(
+          <div style={{...Cd,gridColumn:"1/-1",border:`1px solid ${C.warnBorder}`,background:C.warnLight}}>
+            <SectionHeader title="⚠ Alerts"/>
+            {totalRef>grand*0.1&&<div style={{fontSize:13,color:C.warn,marginBottom:6}}>• High refund rate: {inr(totalRef)} ({grand>0?Math.round(totalRef/grand*100):0}% of gross)</div>}
+            {cashFails>grand*0.2&&<div style={{fontSize:13,color:C.warn}}>• High payment failure: {inr(cashFails)}</div>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ─── Transactions ─────────────────────────────────────────────────────────────
 function Transactions({user,showToast,initFilter}){
-const [all,setAll]=useState([]);const [refs,setRefs]=useState([]);const [outlets,setOutlets]=useState([]);
-const [fO,setFO]=useState(initFilter?.outlet||"all");const [fD,setFD]=useState(initFilter?.date||getToday());const [fM,setFM]=useState("all");const [search,setSearch]=useState("");
-const [editTxn,setEditTxn]=useState(null);const [delTxn,setDelTxn]=useState(null);const [loading,setLoading]=useState(true);
-const load=useCallback(async()=>{
-// Always bypass cache for admin to get fresh data from Firestore
-const [t,r,o]=await Promise.all([getAllTxns(),sget("refunds"),sget("outlets")]);
-setAll(t||[]);setRefs(r||[]);setOutlets(o||[]);setLoading(false);
-},[]);
-useEffect(()=>{load();},[load]);
-const doDelete=async(reason)=>{
-if(!delTxn)return;
-await deleteOneTxn(delTxn.id);
-await addLog("DEL_TXN",user.id,"Deleted order "+delTxn.orderNo,reason);
-setAll(all.filter(t=>t.id!==delTxn.id));setDelTxn(null);showToast("Deleted","success");
-};
-const doEdit=async(updated,reason,oldVals)=>{
-await updateOneTxn(updated);
-await addLog("EDIT_TXN",user.id,"Edited order "+updated.orderNo,reason,{oldPayments:oldVals.payments,newPayments:updated.payments});
-setAll(all.map(t=>t.id===updated.id?updated:t));setEditTxn(null);showToast("Updated","success");
-};
-const canEdit=t=>user.role==="superadmin"||(user.role==="manager"&&t.day===getToday());
-const canDel=["superadmin","admin"].includes(user.role);
-const filtered=all.filter(t=>(fO==="all"||t.outletId===fO)&&(!fD||t.day===fD)&&(fM==="all"||t.payments.some(p=>p.mode===fM))&&(!search||t.orderNo.includes(search.trim())));
-const filteredR=refs.filter(r=>(fO==="all"||r.outletId===fO)&&(!fD||r.day===fD));
-const exportCSV=()=>{
-const rows=[["Date","Time","Outlet","Order No","Payment Mode","Amount","Box Mode","Box Amount","Created By","Created At"]];
-filtered.forEach(t=>{t.payments.forEach((p,i)=>{rows.push([t.day,fmtT(t.ts),t.outletName||"",t.orderNo,p.mode,p.amount,i===0?(t.boxMode||""):"",(i===0&&t.boxAmount)?t.boxAmount:"",t.createdByName||"",t.ts]);});});
-const blob=new Blob([rows.map(r=>r.map(v=>`"${String(v||"").replace(/"/g,'""')}"`).join(",")).join("\n")],{type:"text/csv"});
-const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`kasu_txns_${fD||"all"}.csv`;a.click();
-};
-return(
-<div style={{padding:"20px 28px",maxWidth:1100,margin:"0 auto"}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
-<div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Transactions</div>
-<button onClick={exportCSV} style={{...BSc,display:"flex",alignItems:"center",gap:6,padding:"8px 14px",fontSize:12}}>⬇ CSV</button>
-</div>
-<div style={{...Cd,marginBottom:16,padding:14}}>
-<div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-<div style={{flex:"1 1 130px"}}><label style={LS}>Search #</label><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Order No" style={IS}/></div>
-<div style={{flex:"1 1 130px"}}><label style={LS}>Outlet</label><select value={fO} onChange={e=>setFO(e.target.value)} style={IS}><option value="all">All</option>{outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></div>
-<div style={{flex:"1 1 130px"}}><label style={LS}>Date</label><input type="date" value={fD} onChange={e=>setFD(e.target.value)} style={IS}/></div>
-<div style={{flex:"1 1 150px"}}><label style={LS}>Mode</label><select value={fM} onChange={e=>setFM(e.target.value)} style={IS}><option value="all">All</option>{PAYMENT_MODES.map(m=><option key={m}>{m}</option>)}</select></div>
-</div>
-</div>
-{loading?<div style={{display:"flex",justifyContent:"center",padding:40}}><Spinner/></div>:<>
-<SectionHeader title={`Orders (${filtered.length})`}/>
-{filtered.length===0?<EmptyState icon="📋" title="No transactions" desc="Adjust filters"/>
-:filtered.slice().reverse().map(t=><TxnCard key={t.id} txn={t} editable={canEdit(t)} onEdit={()=>setEditTxn(t)} onDelete={canDel?()=>setDelTxn(t):null}/>)
-}
-{filteredR.length>0&&<>
-<SectionHeader title={`Refunds (${filteredR.length})`}/>
-{filteredR.slice().reverse().map(r=>(
-<div key={r.id} style={{...Cd,marginBottom:10}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontWeight:700,color:C.text}}>Order #{r.orderNo}</span><Badge label="Refund" color={C.danger} bg={C.dangerLight} border={C.dangerBorder}/></div>
-<div style={{color:C.danger,fontWeight:700,fontSize:16}}>−{inr(r.amount)} Cash</div>
-{r.note&&<div style={{color:C.sub,fontSize:13,marginTop:3}}>{r.note}</div>}
-<div style={{color:C.muted,fontSize:11,marginTop:5}}>{fmt(r.ts)} · {r.outletName}</div>
-</div>
-))}
-</>}
-</>}
-{editTxn&&<EditTxnModal txn={editTxn} onSave={doEdit} onClose={()=>setEditTxn(null)}/>}
-<ConfirmDialog open={!!delTxn} onClose={()=>setDelTxn(null)} onConfirm={()=>doDelete("Admin delete")} title="Delete Transaction" danger message={`Delete Order #${delTxn?.orderNo}?`} confirmLabel="Delete"/>
-</div>
-);
+  const [all,setAll]=useState([]);const [refs,setRefs]=useState([]);const [outlets,setOutlets]=useState([]);
+  const [fO,setFO]=useState(initFilter?.outlet||"all");const [fD,setFD]=useState(initFilter?.date||getToday());const [fM,setFM]=useState("all");const [search,setSearch]=useState("");
+  const [editTxn,setEditTxn]=useState(null);const [delTxn,setDelTxn]=useState(null);const [loading,setLoading]=useState(true);
+  const load=useCallback(async()=>{
+    // Always bypass cache for admin to get fresh data from Firestore
+    const [t,r,o]=await Promise.all([getAllTxns(),sget("refunds"),sget("outlets")]);
+    setAll(t||[]);setRefs(r||[]);setOutlets(o||[]);setLoading(false);
+  },[]);
+  useEffect(()=>{load();},[load]);
+  const doDelete=async(reason)=>{
+    if(!delTxn)return;
+    await deleteOneTxn(delTxn.id);
+    await addLog("DEL_TXN",user.id,"Deleted order "+delTxn.orderNo,reason);
+    setAll(all.filter(t=>t.id!==delTxn.id));setDelTxn(null);showToast("Deleted","success");
+  };
+  const doEdit=async(updated,reason,oldVals)=>{
+    await updateOneTxn(updated);
+    await addLog("EDIT_TXN",user.id,"Edited order "+updated.orderNo,reason,{oldPayments:oldVals.payments,newPayments:updated.payments});
+    setAll(all.map(t=>t.id===updated.id?updated:t));setEditTxn(null);showToast("Updated","success");
+  };
+  const canEdit=t=>user.role==="superadmin"||(user.role==="manager"&&t.day===getToday());
+  const canDel=["superadmin","admin"].includes(user.role);
+  const filtered=all.filter(t=>(fO==="all"||t.outletId===fO)&&(!fD||t.day===fD)&&(fM==="all"||t.payments.some(p=>p.mode===fM))&&(!search||t.orderNo.includes(search.trim())));
+  const filteredR=refs.filter(r=>(fO==="all"||r.outletId===fO)&&(!fD||r.day===fD));
+  const exportCSV=()=>{
+    const rows=[["Date","Time","Outlet","Order No","Payment Mode","Amount","Box Mode","Box Amount","Created By","Created At"]];
+    filtered.forEach(t=>{t.payments.forEach((p,i)=>{rows.push([t.day,fmtT(t.ts),t.outletName||"",t.orderNo,p.mode,p.amount,i===0?(t.boxMode||""):"",(i===0&&t.boxAmount)?t.boxAmount:"",t.createdByName||"",t.ts]);});});
+    const blob=new Blob([rows.map(r=>r.map(v=>`"${String(v||"").replace(/"/g,'""')}"`).join(",")).join("\n")],{type:"text/csv"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`kasu_txns_${fD||"all"}.csv`;a.click();
+  };
+  return(
+    <div style={{padding:"20px 28px",maxWidth:1100,margin:"0 auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+        <div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Transactions</div>
+        <button onClick={exportCSV} style={{...BSc,display:"flex",alignItems:"center",gap:6,padding:"8px 14px",fontSize:12}}>⬇ CSV</button>
+      </div>
+      <div style={{...Cd,marginBottom:16,padding:14}}>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+          <div style={{flex:"1 1 130px"}}><label style={LS}>Search #</label><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Order No" style={IS}/></div>
+          <div style={{flex:"1 1 130px"}}><label style={LS}>Outlet</label><select value={fO} onChange={e=>setFO(e.target.value)} style={IS}><option value="all">All</option>{outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></div>
+          <div style={{flex:"1 1 130px"}}><label style={LS}>Date</label><input type="date" value={fD} onChange={e=>setFD(e.target.value)} style={IS}/></div>
+          <div style={{flex:"1 1 150px"}}><label style={LS}>Mode</label><select value={fM} onChange={e=>setFM(e.target.value)} style={IS}><option value="all">All</option>{PAYMENT_MODES.map(m=><option key={m}>{m}</option>)}</select></div>
+        </div>
+      </div>
+      {loading?<div style={{display:"flex",justifyContent:"center",padding:40}}><Spinner/></div>:<>
+        <SectionHeader title={`Orders (${filtered.length})`}/>
+        {filtered.length===0?<EmptyState icon="📋" title="No transactions" desc="Adjust filters"/>
+          :filtered.slice().reverse().map(t=><TxnCard key={t.id} txn={t} editable={canEdit(t)} onEdit={()=>setEditTxn(t)} onDelete={canDel?()=>setDelTxn(t):null}/>)
+        }
+        {filteredR.length>0&&<>
+          <SectionHeader title={`Refunds (${filteredR.length})`}/>
+          {filteredR.slice().reverse().map(r=>(
+            <div key={r.id} style={{...Cd,marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontWeight:700,color:C.text}}>Order #{r.orderNo}</span><Badge label="Refund" color={C.danger} bg={C.dangerLight} border={C.dangerBorder}/></div>
+              <div style={{color:C.danger,fontWeight:700,fontSize:16}}>−{inr(r.amount)} Cash</div>
+              {r.note&&<div style={{color:C.sub,fontSize:13,marginTop:3}}>{r.note}</div>}
+              <div style={{color:C.muted,fontSize:11,marginTop:5}}>{fmt(r.ts)} · {r.outletName}</div>
+            </div>
+          ))}
+        </>}
+      </>}
+      {editTxn&&<EditTxnModal txn={editTxn} onSave={doEdit} onClose={()=>setEditTxn(null)}/>}
+      <ConfirmDialog open={!!delTxn} onClose={()=>setDelTxn(null)} onConfirm={()=>doDelete("Admin delete")} title="Delete Transaction" danger message={`Delete Order #${delTxn?.orderNo}?`} confirmLabel="Delete"/>
+    </div>
+  );
 }
 
 function EditTxnModal({txn,onSave,onClose}){
-const [orderNo,setOrderNo]=useState(txn.orderNo);
-const [pays,setPays]=useState(txn.payments.map(p=>({...p,amount:String(p.amount)})));
-const [reason,setReason]=useState("");
-const orig={payments:txn.payments.map(p=>({...p}))};
-const canSave = orderNo.trim() && pays.every(p=>p.amount&&!isNaN(p.amount)&&Number(p.amount)>0) && reason.trim();
-return(
-<Modal open title={`Edit Order #${txn.orderNo}`} onClose={onClose} width={460}>
-<div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:"10px 14px",marginBottom:14}}>
-<div style={{fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Current Values</div>
-<div style={{fontSize:13,color:C.sub}}>Order #{txn.orderNo}</div>
-{txn.payments.map((p,i)=><div key={i} style={{fontSize:13,color:C.sub}}>{p.mode}: {inr(p.amount)}</div>)}
-</div>
-<Field label="Order Number"><Inp value={orderNo} onChange={setOrderNo} placeholder="Order number"/></Field>
-{pays.map((p,i)=>(
-<div key={i} style={{marginBottom:14}}>
-<Field label={i===0?"Payment Mode":"Split Payment"}>
-<div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-{PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={p.mode===m} onClick={()=>setPays(pays.map((x,j)=>j===i?{...x,mode:m}:x))}/>)}
-</div>
-<div style={{display:"flex",gap:8}}>
-<Inp type="number" value={p.amount} onChange={v=>setPays(pays.map((x,j)=>j===i?{...x,amount:v}:x))} placeholder="Amount" large/>
-{pays.length>1&&<button onClick={()=>setPays(pays.filter((_,j)=>j!==i))} style={{...BDn,flexShrink:0}}>✕</button>}
-</div>
-</Field>
-</div>
-))}
-{pays.length<2&&(
-<button onClick={()=>setPays([...pays,{mode:"Cash",amount:""}])}
-style={{background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:600,marginBottom:14}}>
-+ Split Payment
-</button>
-)}
-<Divider/>
-<Field label="Reason (required)"><textarea value={reason} onChange={e=>setReason(e.target.value)} rows={2} style={{...IS,resize:"vertical"}} placeholder="Why are you editing this?"/></Field>
-<div style={{display:"flex",gap:8}}>
-<button onClick={()=>{if(!canSave)return;onSave({...txn,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)}))},reason,orig);}}
-disabled={!canSave} style={{...BPr,flex:1,opacity:canSave?1:.5}}>Save</button>
-<button onClick={onClose} style={{...BSc,flex:1}}>Cancel</button>
-</div>
-</Modal>
-);
+  const [orderNo,setOrderNo]=useState(txn.orderNo);
+  const [pays,setPays]=useState(txn.payments.map(p=>({...p,amount:String(p.amount)})));
+  const [reason,setReason]=useState("");
+  const orig={payments:txn.payments.map(p=>({...p}))};
+  const canSave = orderNo.trim() && pays.every(p=>p.amount&&!isNaN(p.amount)&&Number(p.amount)>0) && reason.trim();
+  return(
+    <Modal open title={`Edit Order #${txn.orderNo}`} onClose={onClose} width={460}>
+      <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:"10px 14px",marginBottom:14}}>
+        <div style={{fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Current Values</div>
+        <div style={{fontSize:13,color:C.sub}}>Order #{txn.orderNo}</div>
+        {txn.payments.map((p,i)=><div key={i} style={{fontSize:13,color:C.sub}}>{p.mode}: {inr(p.amount)}</div>)}
+      </div>
+      <Field label="Order Number"><Inp value={orderNo} onChange={setOrderNo} placeholder="Order number"/></Field>
+      {pays.map((p,i)=>(
+        <div key={i} style={{marginBottom:14}}>
+          <Field label={i===0?"Payment Mode":"Split Payment"}>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+              {PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={p.mode===m} onClick={()=>setPays(pays.map((x,j)=>j===i?{...x,mode:m}:x))}/>)}
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <Inp type="number" value={p.amount} onChange={v=>setPays(pays.map((x,j)=>j===i?{...x,amount:v}:x))} placeholder="Amount" large/>
+              {pays.length>1&&<button onClick={()=>setPays(pays.filter((_,j)=>j!==i))} style={{...BDn,flexShrink:0}}>✕</button>}
+            </div>
+          </Field>
+        </div>
+      ))}
+      {pays.length<2&&(
+        <button onClick={()=>setPays([...pays,{mode:"Cash",amount:""}])}
+          style={{background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:600,marginBottom:14}}>
+          + Split Payment
+        </button>
+      )}
+      <Divider/>
+      <Field label="Reason (required)"><textarea value={reason} onChange={e=>setReason(e.target.value)} rows={2} style={{...IS,resize:"vertical"}} placeholder="Why are you editing this?"/></Field>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={()=>{if(!canSave)return;onSave({...txn,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)}))},reason,orig);}}
+          disabled={!canSave} style={{...BPr,flex:1,opacity:canSave?1:.5}}>Save</button>
+        <button onClick={onClose} style={{...BSc,flex:1}}>Cancel</button>
+      </div>
+    </Modal>
+  );
 }
 
 // ─── Reports ──────────────────────────────────────────────────────────────────
 function Reports(){
-const [outlets,setOutlets]=useState([]);
-const [from,setFrom]=useState(getToday());const [to,setTo]=useState(getToday());const [sel,setSel]=useState("all");const [selMode,setSelMode]=useState("all");
-const [rep,setRep]=useState(null);const [loading,setLoading]=useState(false);const [dateErr,setDateErr]=useState("");
-useEffect(()=>{sget("outlets").then(o=>setOutlets(o||[]));},[]);
-const generate=async()=>{
-setDateErr("");if(from>to){setDateErr("'From' date cannot be after 'To' date.");return;}setLoading(true);
-let txns=(await getAllTxns()).filter(t=>t.day>=from&&t.day<=to);
-let rfs=(await sget("refunds")||[]).filter(r=>r.day>=from&&r.day<=to);
-let boxes=(await sget("boxCharges")||[]).filter(b=>b.day>=from&&b.day<=to);
-if(sel!=="all"){txns=txns.filter(t=>t.outletId===sel);rfs=rfs.filter(r=>r.outletId===sel);boxes=boxes.filter(b=>b.outletId===sel);}
-if(selMode!=="all")txns=txns.filter(t=>t.payments.some(p=>p.mode===selMode));
-const mt={};PAYMENT_MODES.forEach(m=>{mt[m]={amount:0,count:0};});
-txns.forEach(t=>{t.payments.forEach(p=>{mt[p.mode].amount+=Number(p.amount);mt[p.mode].count+=1;});if(t.boxAmount)mt[t.boxMode||"Cash"].amount+=Number(t.boxAmount);});
-boxes.forEach(b=>{mt[b.mode].amount+=Number(b.amount);});
-const byDay={};
-txns.forEach(t=>{if(!byDay[t.day])byDay[t.day]={total:0,orders:0,refunds:0};t.payments.forEach(p=>{byDay[t.day].total+=Number(p.amount);});if(t.boxAmount)byDay[t.day].total+=Number(t.boxAmount);byDay[t.day].orders+=1;});
-boxes.forEach(b=>{if(!byDay[b.day])byDay[b.day]={total:0,orders:0,refunds:0};byDay[b.day].total+=Number(b.amount);});
-rfs.forEach(r=>{if(!byDay[r.day])byDay[r.day]={total:0,orders:0,refunds:0};byDay[r.day].refunds+=Number(r.amount);});
-const byOutlet={};txns.forEach(t=>{if(!byOutlet[t.outletId])byOutlet[t.outletId]={name:t.outletName,total:0,orders:0};t.payments.forEach(p=>{byOutlet[t.outletId].total+=Number(p.amount);});byOutlet[t.outletId].orders+=1;});
-boxes.forEach(b=>{if(!byOutlet[b.outletId])byOutlet[b.outletId]={name:b.outletName,total:0,orders:0};byOutlet[b.outletId].total+=Number(b.amount);});
-const byUser={};txns.forEach(t=>{const k=t.createdBy||"?";if(!byUser[k])byUser[k]={name:t.createdByName||k,orders:0,total:0};t.payments.forEach(p=>{byUser[k].total+=Number(p.amount);});byUser[k].orders+=1;});
-const totalSales=Object.values(mt).reduce((s,v)=>s+v.amount,0);
-const totalRef=rfs.reduce((s,r)=>s+Number(r.amount),0);
-const totalBox=boxes.reduce((s,b)=>s+Number(b.amount),0);
-setRep({mt,byDay,byOutlet,byUser,totalSales,totalRef,totalBox,cashInHand:(mt["Cash"]?.amount||0)-totalRef,count:txns.length});setLoading(false);
-};
-const csv=()=>{
-if(!rep)return;
-const rows=[["Kāsu · Benne Report",`${fmtD(from)} to ${fmtD(to)}`],[],["Payment Mode","Amount","Transactions"],...PAYMENT_MODES.map(m=>[m,rep.mt[m].amount,rep.mt[m].count]),[],["Date","Orders","Sales","Refunds","Net"],...Object.entries(rep.byDay).sort().map(([d,v])=>[fmtD(d),v.orders,v.total,v.refunds,v.total-v.refunds]),[],["Total Sales",rep.totalSales],["Total Refunds",rep.totalRef],["Cash in Hand",rep.cashInHand]];
-const blob=new Blob([rows.map(r=>r.join(",")).join("\n")],{type:"text/csv"});
-const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`kasu_report_${from}_${to}.csv`;a.click();
-};
-const outletName=sel==="all"?"All Outlets":(outlets.find(o=>o.id===sel)?.name||"All");
-const thS={padding:"9px 14px",textAlign:"left",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",background:C.bg,borderBottom:`1px solid ${C.border}`};
-const tdS={padding:"9px 14px",color:C.text,fontSize:13,borderBottom:`1px solid ${C.border}`};
-return(
-<div style={{padding:"20px 28px",maxWidth:1100,margin:"0 auto"}}>
-<div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px",marginBottom:16}}>Reports</div>
-<div style={{...Cd,marginBottom:20,padding:14}}>
-<div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-<div><label style={LS}>From</label><input type="date" value={from} onChange={e=>{setFrom(e.target.value);setDateErr("");}} style={IS}/></div>
-<div><label style={LS}>To</label><input type="date" value={to} onChange={e=>{setTo(e.target.value);setDateErr("");}} style={IS}/></div>
-<div style={{flex:"1 1 150px"}}><label style={LS}>Outlet</label><select value={sel} onChange={e=>setSel(e.target.value)} style={IS}><option value="all">All</option>{outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></div>
-<div style={{flex:"1 1 160px"}}><label style={LS}>Mode</label><select value={selMode} onChange={e=>setSelMode(e.target.value)} style={IS}><option value="all">All</option>{PAYMENT_MODES.map(m=><option key={m}>{m}</option>)}</select></div>
-<button onClick={generate} style={{...BPr,width:"auto",padding:"10px 20px"}}>{loading?"Generating…":"Generate"}</button>
-</div>
-{dateErr&&<Msg type="error">{dateErr}</Msg>}
-</div>
-{rep&&<>
-<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
-<button onClick={csv} style={{...BSc,display:"flex",alignItems:"center",gap:6}}>⬇ CSV</button>
-<CopyWABtn getText={()=>{
-const net=rep.totalSales-rep.totalRef;
-const lines=[`ಕಾಸು *Kāsu Report*`,`📍 ${outletName}`,`📅 ${fmtD(from)} → ${fmtD(to)}`,``,`💰 Gross: ${inr(rep.totalSales)}`,`↩ Refunds: −${inr(rep.totalRef)}`,`✅ Net: *${inr(net)}*`,`📋 Orders: ${rep.count}`,`💵 Cash in Hand: *${inr(rep.cashInHand)}*`,``,`*Breakdown:*`];
-PAYMENT_MODES.filter(m=>rep.mt[m]?.amount>0).forEach(m=>lines.push(`• ${m}: ${inr(rep.mt[m].amount)}`));
-return lines.join("\n");
-}}/>
-</div>
-<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:20}}>
-<StatCard label="Gross Sales" value={inr(rep.totalSales)} color={C.success}/>
-<StatCard label="Net Sales" value={inr(rep.totalSales-rep.totalRef)} color={C.accent}/>
-<StatCard label="Orders" value={rep.count} color={C.text}/>
-<StatCard label="Refunds" value={"−"+inr(rep.totalRef)} color={C.danger}/>
-<StatCard label="Cash in Hand" value={inr(rep.cashInHand)} color={C.success} sub="Cash − Refunds"/>
-</div>
-{[["Payment Mode",PAYMENT_MODES.map(m=>({name:m,count:rep.mt[m].count,total:rep.mt[m].amount,color:MODE_COLORS[m]}))],
-["Outlet",Object.values(rep.byOutlet).map(o=>({name:o.name,count:o.orders,total:o.total}))],
-["Staff",Object.values(rep.byUser||{}).map(u=>({name:u.name,count:u.orders,total:u.total}))]
-].map(([title,rows])=>rows.length>0&&(
-<div key={title} style={{marginBottom:16}}>
-<div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:8}}>{title} Breakdown</div>
-<div style={{...Cd,padding:0,overflow:"hidden"}}>
-<table style={{width:"100%",borderCollapse:"collapse"}}>
-<thead><tr><th style={thS}>{title}</th><th style={{...thS,textAlign:"right"}}>Count</th><th style={{...thS,textAlign:"right"}}>Amount</th></tr></thead>
-<tbody>{rows.map(r=>(
-<tr key={r.name}><td style={tdS}><span style={{display:"flex",alignItems:"center",gap:8}}>{r.color&&<span style={{width:9,height:9,borderRadius:"50%",background:r.color,display:"inline-block"}}/>}{r.name}</span></td>
-<td style={{...tdS,textAlign:"right",color:C.sub}}>{r.count}</td><td style={{...tdS,textAlign:"right",fontWeight:700,color:r.color||C.text}}>{inr(r.total)}</td></tr>
-))}</tbody>
-</table>
-</div>
-</div>
-))}
-<div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:8}}>Daily Breakdown</div>
-<div style={{...Cd,padding:0,overflowX:"auto",marginBottom:16}}>
-<table style={{width:"100%",borderCollapse:"collapse"}}>
-<thead><tr><th style={thS}>Date</th><th style={{...thS,textAlign:"right"}}>Orders</th><th style={{...thS,textAlign:"right"}}>Sales</th><th style={{...thS,textAlign:"right"}}>Refunds</th><th style={{...thS,textAlign:"right"}}>Net</th></tr></thead>
-<tbody>{Object.entries(rep.byDay).sort().map(([d,v])=>(
-<tr key={d}><td style={tdS}>{fmtD(d)}</td><td style={{...tdS,textAlign:"right",color:C.sub}}>{v.orders}</td><td style={{...tdS,textAlign:"right",color:C.success}}>{inr(v.total)}</td><td style={{...tdS,textAlign:"right",color:C.danger}}>{inr(v.refunds)}</td><td style={{...tdS,textAlign:"right",fontWeight:700}}>{inr(v.total-v.refunds)}</td></tr>
-))}</tbody>
-</table>
-</div>
-<div style={{...Cd,background:C.successLight,border:`1px solid ${C.successBorder}`}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
-<div><div style={{fontSize:11,color:C.success,fontWeight:700,textTransform:"uppercase"}}>Cash in Hand</div><div style={{fontSize:26,fontWeight:800,color:C.success,marginTop:4}}>{inr(rep.cashInHand)}</div></div>
-<div style={{textAlign:"right",fontSize:13,color:C.sub}}><div>Gross: {inr(rep.totalSales)}</div><div style={{color:C.danger,marginTop:2}}>Refunds: −{inr(rep.totalRef)}</div></div>
-</div>
-</div>
-</>}
-</div>
-);
+  const [outlets,setOutlets]=useState([]);
+  const [from,setFrom]=useState(getToday());const [to,setTo]=useState(getToday());const [sel,setSel]=useState("all");const [selMode,setSelMode]=useState("all");
+  const [rep,setRep]=useState(null);const [loading,setLoading]=useState(false);const [dateErr,setDateErr]=useState("");
+  useEffect(()=>{sget("outlets").then(o=>setOutlets(o||[]));},[]);
+  const generate=async()=>{
+    setDateErr("");if(from>to){setDateErr("'From' date cannot be after 'To' date.");return;}setLoading(true);
+    let txns=(await getAllTxns()).filter(t=>t.day>=from&&t.day<=to);
+    let rfs=(await sget("refunds")||[]).filter(r=>r.day>=from&&r.day<=to);
+    let boxes=(await sget("boxCharges")||[]).filter(b=>b.day>=from&&b.day<=to);
+    if(sel!=="all"){txns=txns.filter(t=>t.outletId===sel);rfs=rfs.filter(r=>r.outletId===sel);boxes=boxes.filter(b=>b.outletId===sel);}
+    if(selMode!=="all")txns=txns.filter(t=>t.payments.some(p=>p.mode===selMode));
+    const mt={};PAYMENT_MODES.forEach(m=>{mt[m]={amount:0,count:0};});
+    txns.forEach(t=>{t.payments.forEach(p=>{mt[p.mode].amount+=Number(p.amount);mt[p.mode].count+=1;});if(t.boxAmount)mt[t.boxMode||"Cash"].amount+=Number(t.boxAmount);});
+    boxes.forEach(b=>{mt[b.mode].amount+=Number(b.amount);});
+    const byDay={};
+    txns.forEach(t=>{if(!byDay[t.day])byDay[t.day]={total:0,orders:0,refunds:0};t.payments.forEach(p=>{byDay[t.day].total+=Number(p.amount);});if(t.boxAmount)byDay[t.day].total+=Number(t.boxAmount);byDay[t.day].orders+=1;});
+    boxes.forEach(b=>{if(!byDay[b.day])byDay[b.day]={total:0,orders:0,refunds:0};byDay[b.day].total+=Number(b.amount);});
+    rfs.forEach(r=>{if(!byDay[r.day])byDay[r.day]={total:0,orders:0,refunds:0};byDay[r.day].refunds+=Number(r.amount);});
+    const byOutlet={};txns.forEach(t=>{if(!byOutlet[t.outletId])byOutlet[t.outletId]={name:t.outletName,total:0,orders:0};t.payments.forEach(p=>{byOutlet[t.outletId].total+=Number(p.amount);});byOutlet[t.outletId].orders+=1;});
+    boxes.forEach(b=>{if(!byOutlet[b.outletId])byOutlet[b.outletId]={name:b.outletName,total:0,orders:0};byOutlet[b.outletId].total+=Number(b.amount);});
+    const byUser={};txns.forEach(t=>{const k=t.createdBy||"?";if(!byUser[k])byUser[k]={name:t.createdByName||k,orders:0,total:0};t.payments.forEach(p=>{byUser[k].total+=Number(p.amount);});byUser[k].orders+=1;});
+    const totalSales=Object.values(mt).reduce((s,v)=>s+v.amount,0);
+    const totalRef=rfs.reduce((s,r)=>s+Number(r.amount),0);
+    const totalBox=boxes.reduce((s,b)=>s+Number(b.amount),0);
+    setRep({mt,byDay,byOutlet,byUser,totalSales,totalRef,totalBox,cashInHand:(mt["Cash"]?.amount||0)-totalRef,count:txns.length});setLoading(false);
+  };
+  const csv=()=>{
+    if(!rep)return;
+    const rows=[["Kāsu · Benne Report",`${fmtD(from)} to ${fmtD(to)}`],[],["Payment Mode","Amount","Transactions"],...PAYMENT_MODES.map(m=>[m,rep.mt[m].amount,rep.mt[m].count]),[],["Date","Orders","Sales","Refunds","Net"],...Object.entries(rep.byDay).sort().map(([d,v])=>[fmtD(d),v.orders,v.total,v.refunds,v.total-v.refunds]),[],["Total Sales",rep.totalSales],["Total Refunds",rep.totalRef],["Cash in Hand",rep.cashInHand]];
+    const blob=new Blob([rows.map(r=>r.join(",")).join("\n")],{type:"text/csv"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`kasu_report_${from}_${to}.csv`;a.click();
+  };
+  const outletName=sel==="all"?"All Outlets":(outlets.find(o=>o.id===sel)?.name||"All");
+  const thS={padding:"9px 14px",textAlign:"left",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",background:C.bg,borderBottom:`1px solid ${C.border}`};
+  const tdS={padding:"9px 14px",color:C.text,fontSize:13,borderBottom:`1px solid ${C.border}`};
+  return(
+    <div style={{padding:"20px 28px",maxWidth:1100,margin:"0 auto"}}>
+      <div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px",marginBottom:16}}>Reports</div>
+      <div style={{...Cd,marginBottom:20,padding:14}}>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+          <div><label style={LS}>From</label><input type="date" value={from} onChange={e=>{setFrom(e.target.value);setDateErr("");}} style={IS}/></div>
+          <div><label style={LS}>To</label><input type="date" value={to} onChange={e=>{setTo(e.target.value);setDateErr("");}} style={IS}/></div>
+          <div style={{flex:"1 1 150px"}}><label style={LS}>Outlet</label><select value={sel} onChange={e=>setSel(e.target.value)} style={IS}><option value="all">All</option>{outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></div>
+          <div style={{flex:"1 1 160px"}}><label style={LS}>Mode</label><select value={selMode} onChange={e=>setSelMode(e.target.value)} style={IS}><option value="all">All</option>{PAYMENT_MODES.map(m=><option key={m}>{m}</option>)}</select></div>
+          <button onClick={generate} style={{...BPr,width:"auto",padding:"10px 20px"}}>{loading?"Generating…":"Generate"}</button>
+        </div>
+        {dateErr&&<Msg type="error">{dateErr}</Msg>}
+      </div>
+      {rep&&<>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+          <button onClick={csv} style={{...BSc,display:"flex",alignItems:"center",gap:6}}>⬇ CSV</button>
+          <CopyWABtn getText={()=>{
+            const net=rep.totalSales-rep.totalRef;
+            const lines=[`ಕಾಸು *Kāsu Report*`,`📍 ${outletName}`,`📅 ${fmtD(from)} → ${fmtD(to)}`,``,`💰 Gross: ${inr(rep.totalSales)}`,`↩ Refunds: −${inr(rep.totalRef)}`,`✅ Net: *${inr(net)}*`,`📋 Orders: ${rep.count}`,`💵 Cash in Hand: *${inr(rep.cashInHand)}*`,``,`*Breakdown:*`];
+            PAYMENT_MODES.filter(m=>rep.mt[m]?.amount>0).forEach(m=>lines.push(`• ${m}: ${inr(rep.mt[m].amount)}`));
+            return lines.join("\n");
+          }}/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:20}}>
+          <StatCard label="Gross Sales" value={inr(rep.totalSales)} color={C.success}/>
+          <StatCard label="Net Sales" value={inr(rep.totalSales-rep.totalRef)} color={C.accent}/>
+          <StatCard label="Orders" value={rep.count} color={C.text}/>
+          <StatCard label="Refunds" value={"−"+inr(rep.totalRef)} color={C.danger}/>
+          <StatCard label="Cash in Hand" value={inr(rep.cashInHand)} color={C.success} sub="Cash − Refunds"/>
+        </div>
+        {[["Payment Mode",PAYMENT_MODES.map(m=>({name:m,count:rep.mt[m].count,total:rep.mt[m].amount,color:MODE_COLORS[m]}))],
+          ["Outlet",Object.values(rep.byOutlet).map(o=>({name:o.name,count:o.orders,total:o.total}))],
+          ["Staff",Object.values(rep.byUser||{}).map(u=>({name:u.name,count:u.orders,total:u.total}))]
+        ].map(([title,rows])=>rows.length>0&&(
+          <div key={title} style={{marginBottom:16}}>
+            <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:8}}>{title} Breakdown</div>
+            <div style={{...Cd,padding:0,overflow:"hidden"}}>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead><tr><th style={thS}>{title}</th><th style={{...thS,textAlign:"right"}}>Count</th><th style={{...thS,textAlign:"right"}}>Amount</th></tr></thead>
+                <tbody>{rows.map(r=>(
+                  <tr key={r.name}><td style={tdS}><span style={{display:"flex",alignItems:"center",gap:8}}>{r.color&&<span style={{width:9,height:9,borderRadius:"50%",background:r.color,display:"inline-block"}}/>}{r.name}</span></td>
+                  <td style={{...tdS,textAlign:"right",color:C.sub}}>{r.count}</td><td style={{...tdS,textAlign:"right",fontWeight:700,color:r.color||C.text}}>{inr(r.total)}</td></tr>
+                ))}</tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+        <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:8}}>Daily Breakdown</div>
+        <div style={{...Cd,padding:0,overflowX:"auto",marginBottom:16}}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead><tr><th style={thS}>Date</th><th style={{...thS,textAlign:"right"}}>Orders</th><th style={{...thS,textAlign:"right"}}>Sales</th><th style={{...thS,textAlign:"right"}}>Refunds</th><th style={{...thS,textAlign:"right"}}>Net</th></tr></thead>
+            <tbody>{Object.entries(rep.byDay).sort().map(([d,v])=>(
+              <tr key={d}><td style={tdS}>{fmtD(d)}</td><td style={{...tdS,textAlign:"right",color:C.sub}}>{v.orders}</td><td style={{...tdS,textAlign:"right",color:C.success}}>{inr(v.total)}</td><td style={{...tdS,textAlign:"right",color:C.danger}}>{inr(v.refunds)}</td><td style={{...tdS,textAlign:"right",fontWeight:700}}>{inr(v.total-v.refunds)}</td></tr>
+            ))}</tbody>
+          </table>
+        </div>
+        <div style={{...Cd,background:C.successLight,border:`1px solid ${C.successBorder}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+            <div><div style={{fontSize:11,color:C.success,fontWeight:700,textTransform:"uppercase"}}>Cash in Hand</div><div style={{fontSize:26,fontWeight:800,color:C.success,marginTop:4}}>{inr(rep.cashInHand)}</div></div>
+            <div style={{textAlign:"right",fontSize:13,color:C.sub}}><div>Gross: {inr(rep.totalSales)}</div><div style={{color:C.danger,marginTop:2}}>Refunds: −{inr(rep.totalRef)}</div></div>
+          </div>
+        </div>
+      </>}
+    </div>
+  );
 }
 
 // ─── Outlets ──────────────────────────────────────────────────────────────────
 // ─── Outlets ──────────────────────────────────────────────────────────────────
 function Outlets({user,showToast}){
-const [outlets,setOutlets]=useState([]);
-const [loading,setLoading]=useState(true);
-const [editItem,setEditItem]=useState(null);
-const [addOpen,setAddOpen]=useState(false);
-const [delConfirm,setDelConfirm]=useState(null);
-const isSuperAdmin=user&&user.role==="superadmin";
-const canEdit=user&&["superadmin","admin"].includes(user.role);
+  const [outlets,setOutlets]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [editItem,setEditItem]=useState(null);
+  const [addOpen,setAddOpen]=useState(false);
+  const [delConfirm,setDelConfirm]=useState(null);
+  const isSuperAdmin=user&&user.role==="superadmin";
+  const canEdit=user&&["superadmin","admin"].includes(user.role);
 
-const load=async()=>{setOutlets(await sget("outlets")||[]);setLoading(false);};
-useEffect(()=>{load();},[]);
+  const load=async()=>{setOutlets(await sget("outlets")||[]);setLoading(false);};
+  useEffect(()=>{load();},[]);
 
-const save=async(form)=>{
-const list=await sget("outlets")||[];
-const dup=list.find(o=>o.name.toLowerCase()===form.name.trim().toLowerCase()&&o.id!==form.id);
-if(dup){showToast("An outlet with this name already exists","error");return;}
-let updated;
-const emailArr=typeof form.emails==="string"?form.emails.split(",").map(e=>e.trim()).filter(Boolean):form.emails||[];
-if(form.id){
-updated=list.map(o=>o.id===form.id?{...o,name:form.name.trim(),emails:emailArr}:o);
-showToast("Outlet updated","success");
-} else {
-updated=[...list,{id:"o"+Date.now(),name:form.name.trim(),emails:emailArr,active:true}];
-showToast("Outlet created","success");
-}
-await sset("outlets",updated);setOutlets(updated);setEditItem(null);setAddOpen(false);
-};
+  const save=async(form)=>{
+    const list=await sget("outlets")||[];
+    const dup=list.find(o=>o.name.toLowerCase()===form.name.trim().toLowerCase()&&o.id!==form.id);
+    if(dup){showToast("An outlet with this name already exists","error");return;}
+    let updated;
+    const emailArr=typeof form.emails==="string"?form.emails.split(",").map(e=>e.trim()).filter(Boolean):form.emails||[];
+    if(form.id){
+      updated=list.map(o=>o.id===form.id?{...o,name:form.name.trim(),emails:emailArr}:o);
+      showToast("Outlet updated","success");
+    } else {
+      updated=[...list,{id:"o"+Date.now(),name:form.name.trim(),emails:emailArr,active:true}];
+      showToast("Outlet created","success");
+    }
+    await sset("outlets",updated);setOutlets(updated);setEditItem(null);setAddOpen(false);
+  };
 
-const toggle=async(id)=>{
-const list=(await sget("outlets")||[]).map(o=>o.id===id?{...o,active:!o.active}:o);
-await sset("outlets",list);setOutlets(list);
-showToast("Outlet status updated","success");
-};
+  const toggle=async(id)=>{
+    const list=(await sget("outlets")||[]).map(o=>o.id===id?{...o,active:!o.active}:o);
+    await sset("outlets",list);setOutlets(list);
+    showToast("Outlet status updated","success");
+  };
 
-const tryDelete=async(id)=>{
-const [users,txns,bmo]=await Promise.all([sget("users"),getAllTxns(),sget("bmoOrders")]);
-if((users||[]).some(u=>u.outlets&&u.outlets.includes(id))){showToast("Cannot delete — users are assigned here","error");return;}
-if((txns||[]).some(t=>t.outletId===id)){showToast("Cannot delete — transactions exist for this outlet","error");return;}
-if((bmo||[]).some(o=>o.outletId===id)){showToast("Cannot delete — BMO orders exist for this outlet","error");return;}
-setDelConfirm(id);
-};
+  const tryDelete=async(id)=>{
+    const [users,txns,bmo]=await Promise.all([sget("users"),getAllTxns(),sget("bmoOrders")]);
+    if((users||[]).some(u=>u.outlets&&u.outlets.includes(id))){showToast("Cannot delete — users are assigned here","error");return;}
+    if((txns||[]).some(t=>t.outletId===id)){showToast("Cannot delete — transactions exist for this outlet","error");return;}
+    if((bmo||[]).some(o=>o.outletId===id)){showToast("Cannot delete — BMO orders exist for this outlet","error");return;}
+    setDelConfirm(id);
+  };
 
-const doDelete=async(id)=>{
-const list=(await sget("outlets")||[]).filter(o=>o.id!==id);
-await sset("outlets",list);setOutlets(list);setDelConfirm(null);
-showToast("Outlet deleted","success");
-};
+  const doDelete=async(id)=>{
+    const list=(await sget("outlets")||[]).filter(o=>o.id!==id);
+    await sset("outlets",list);setOutlets(list);setDelConfirm(null);
+    showToast("Outlet deleted","success");
+  };
 
-return(
-<div style={{padding:"20px 28px",maxWidth:800,margin:"0 auto"}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-<div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Outlets</div>
-{canEdit&&<button onClick={()=>setAddOpen(true)} style={{...BPr,width:"auto",padding:"9px 18px"}}>+ Add Outlet</button>}
-</div>
-{loading
-?<div style={{display:"flex",justifyContent:"center",padding:32}}><Spinner/></div>
-:outlets.length===0
-?<EmptyState icon="🏪" title="No outlets" desc="Add your first outlet above"/>
-:outlets.map(o=>(
-<div key={o.id} style={{...Cd,marginBottom:10}}>
-<div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-<div style={{flex:1}}>
-<div style={{fontWeight:700,color:C.text,fontSize:15}}>{o.name}</div>
-<div style={{color:C.sub,fontSize:12,marginTop:3}}>📧 {o.emails&&o.emails.length?o.emails.join(", "):"No report emails configured"}</div>
-</div>
-<Badge label={o.active?"Active":"Inactive"} color={o.active?C.success:C.sub} bg={o.active?C.successLight:C.bg} border={o.active?C.successBorder:C.border}/>
-{canEdit&&<>
-<button onClick={()=>setEditItem({...o,emails:o.emails?o.emails.join(", "):""})} style={BEd}>Edit</button>
-<button onClick={()=>toggle(o.id)} style={{...BSc,padding:"4px 10px",fontSize:11}}>{o.active?"Deactivate":"Activate"}</button>
-{isSuperAdmin&&<button onClick={()=>tryDelete(o.id)} style={{...BDn,padding:"4px 10px"}}>Delete</button>}
-</>}
-</div>
-</div>
-))
-}
-<Modal open={addOpen||!!editItem} onClose={()=>{setAddOpen(false);setEditItem(null);}} title={editItem?"Edit Outlet":"Add New Outlet"} width={420}>
-<OutletForm initial={editItem||{name:"",emails:""}} onSave={save} onCancel={()=>{setAddOpen(false);setEditItem(null);}}/>
-</Modal>
-<ConfirmDialog open={!!delConfirm} onClose={()=>setDelConfirm(null)} onConfirm={()=>doDelete(delConfirm)} title="Delete Outlet" danger message="Permanently delete this outlet? This cannot be undone." confirmLabel="Delete"/>
-</div>
-);
+  return(
+    <div style={{padding:"20px 28px",maxWidth:800,margin:"0 auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Outlets</div>
+        {canEdit&&<button onClick={()=>setAddOpen(true)} style={{...BPr,width:"auto",padding:"9px 18px"}}>+ Add Outlet</button>}
+      </div>
+      {loading
+        ?<div style={{display:"flex",justifyContent:"center",padding:32}}><Spinner/></div>
+        :outlets.length===0
+          ?<EmptyState icon="🏪" title="No outlets" desc="Add your first outlet above"/>
+          :outlets.map(o=>(
+            <div key={o.id} style={{...Cd,marginBottom:10}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,color:C.text,fontSize:15}}>{o.name}</div>
+                  <div style={{color:C.sub,fontSize:12,marginTop:3}}>📧 {o.emails&&o.emails.length?o.emails.join(", "):"No report emails configured"}</div>
+                </div>
+                <Badge label={o.active?"Active":"Inactive"} color={o.active?C.success:C.sub} bg={o.active?C.successLight:C.bg} border={o.active?C.successBorder:C.border}/>
+                {canEdit&&<>
+                  <button onClick={()=>setEditItem({...o,emails:o.emails?o.emails.join(", "):""})} style={BEd}>Edit</button>
+                  <button onClick={()=>toggle(o.id)} style={{...BSc,padding:"4px 10px",fontSize:11}}>{o.active?"Deactivate":"Activate"}</button>
+                  {isSuperAdmin&&<button onClick={()=>tryDelete(o.id)} style={{...BDn,padding:"4px 10px"}}>Delete</button>}
+                </>}
+              </div>
+            </div>
+          ))
+      }
+      <Modal open={addOpen||!!editItem} onClose={()=>{setAddOpen(false);setEditItem(null);}} title={editItem?"Edit Outlet":"Add New Outlet"} width={420}>
+        <OutletForm initial={editItem||{name:"",emails:""}} onSave={save} onCancel={()=>{setAddOpen(false);setEditItem(null);}}/>
+      </Modal>
+      <ConfirmDialog open={!!delConfirm} onClose={()=>setDelConfirm(null)} onConfirm={()=>doDelete(delConfirm)} title="Delete Outlet" danger message="Permanently delete this outlet? This cannot be undone." confirmLabel="Delete"/>
+    </div>
+  );
 }
 
 function OutletForm({initial,onSave,onCancel}){
-const [name,setName]=useState(initial.name||"");
-const [emails,setEmails]=useState(Array.isArray(initial.emails)?initial.emails.join(", "):initial.emails||"");
-const [err,setErr]=useState("");
-const save=()=>{if(!name.trim()){setErr("Outlet name is required.");return;}onSave({...initial,name:name.trim(),emails});};
-return(<>
-<Field label="Outlet Name"><Inp value={name} onChange={v=>{setName(v);setErr("");}} placeholder="e.g. Benne Juhu"/></Field>
-<Field label="Report Emails" hint="comma-separated (optional)"><Inp value={emails} onChange={setEmails} placeholder="mgr@benne.com, accts@benne.com"/></Field>
-{err&&<Msg type="error">{err}</Msg>}
-<div style={{display:"flex",gap:8,marginTop:4}}>
-<button onClick={save} style={{...BPr,flex:1}}>{initial.id?"Save Changes":"Create Outlet"}</button>
-<button onClick={onCancel} style={{...BSc,flex:1}}>Cancel</button>
-</div>
-</>);
+  const [name,setName]=useState(initial.name||"");
+  const [emails,setEmails]=useState(Array.isArray(initial.emails)?initial.emails.join(", "):initial.emails||"");
+  const [err,setErr]=useState("");
+  const save=()=>{if(!name.trim()){setErr("Outlet name is required.");return;}onSave({...initial,name:name.trim(),emails});};
+  return(<>
+    <Field label="Outlet Name"><Inp value={name} onChange={v=>{setName(v);setErr("");}} placeholder="e.g. Benne Juhu"/></Field>
+    <Field label="Report Emails" hint="comma-separated (optional)"><Inp value={emails} onChange={setEmails} placeholder="mgr@benne.com, accts@benne.com"/></Field>
+    {err&&<Msg type="error">{err}</Msg>}
+    <div style={{display:"flex",gap:8,marginTop:4}}>
+      <button onClick={save} style={{...BPr,flex:1}}>{initial.id?"Save Changes":"Create Outlet"}</button>
+      <button onClick={onCancel} style={{...BSc,flex:1}}>Cancel</button>
+    </div>
+  </>);
 }
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 function Users({user,showToast}){
-const [users,setUsers]=useState([]);
-const [outlets,setOutlets]=useState([]);
-const [loading,setLoading]=useState(true);
-const [editUser,setEditUser]=useState(null);
-const [addOpen,setAddOpen]=useState(false);
-const isSuperAdmin=user&&user.role==="superadmin";
-const PROT=["u1","u2"];
+  const [users,setUsers]=useState([]);
+  const [outlets,setOutlets]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [editUser,setEditUser]=useState(null);
+  const [addOpen,setAddOpen]=useState(false);
+  const isSuperAdmin=user&&user.role==="superadmin";
+  const PROT=["u1","u2"];
 
-const load=async()=>{
-const [u,o]=await Promise.all([sget("users"),sget("outlets")]);
-setUsers((u||[]).filter(u=>u.role!=="superadmin"));
-setOutlets(o||[]);setLoading(false);
-};
-useEffect(()=>{load();},[]);
+  const load=async()=>{
+    const [u,o]=await Promise.all([sget("users"),sget("outlets")]);
+    setUsers((u||[]).filter(u=>u.role!=="superadmin"));
+    setOutlets(o||[]);setLoading(false);
+  };
+  useEffect(()=>{load();},[]);
 
-const outletName=(ids)=>{
-if(!ids||!ids.length)return null;
-return ids.map(id=>outlets.find(o=>o.id===id)?.name||id).join(", ");
-};
+  const outletName=(ids)=>{
+    if(!ids||!ids.length)return null;
+    return ids.map(id=>outlets.find(o=>o.id===id)?.name||id).join(", ");
+  };
 
-const saveUser=async(form,isNew)=>{
-const all=await sget("users")||[];
-const username=form.username.trim();
-const name=form.name.trim();
-if(!name||!username){showToast("Name and username are required","error");return;}
-if(isNew&&!form.password.trim()){showToast("Password is required","error");return;}
-if(["outlet","manager"].includes(form.role)&&!form.outlets[0]){showToast("Assign an outlet for this role","error");return;}
-if(isNew){
-if(all.find(u=>u.username===username)){showToast("Username already taken","error");return;}
-all.push({id:"u"+Date.now(),...form,username,name});
-showToast("User created","success");
-} else {
-const conflict=all.find(u=>u.username===username&&u.id!==form.id);
-if(conflict){showToast("Username already taken","error");return;}
-const updated=all.map(u=>{
-if(u.id!==form.id)return u;
-const upd={...u,...form,username,name};
-if(!form.password.trim())delete upd.password; // keep existing if blank
-else upd.password=form.password.trim();
-return upd;
-});
-await sset("users",updated);showToast("User updated","success");
-setEditUser(null);setAddOpen(false);load();return;
-}
-await sset("users",all);setEditUser(null);setAddOpen(false);load();
-};
+  const saveUser=async(form,isNew)=>{
+    const all=await sget("users")||[];
+    const username=form.username.trim();
+    const name=form.name.trim();
+    if(!name||!username){showToast("Name and username are required","error");return;}
+    if(isNew&&!form.password.trim()){showToast("Password is required","error");return;}
+    if(["outlet","manager"].includes(form.role)&&!form.outlets[0]){showToast("Assign an outlet for this role","error");return;}
+    if(isNew){
+      if(all.find(u=>u.username===username)){showToast("Username already taken","error");return;}
+      all.push({id:"u"+Date.now(),...form,username,name});
+      showToast("User created","success");
+    } else {
+      const conflict=all.find(u=>u.username===username&&u.id!==form.id);
+      if(conflict){showToast("Username already taken","error");return;}
+      const updated=all.map(u=>{
+        if(u.id!==form.id)return u;
+        const upd={...u,...form,username,name};
+        if(!form.password.trim())delete upd.password; // keep existing if blank
+        else upd.password=form.password.trim();
+        return upd;
+      });
+      await sset("users",updated);showToast("User updated","success");
+      setEditUser(null);setAddOpen(false);load();return;
+    }
+    await sset("users",all);setEditUser(null);setAddOpen(false);load();
+  };
 
-const del=async(id)=>{
-if(PROT.includes(id)&&!isSuperAdmin){showToast("Cannot delete protected user","error");return;}
-await sset("users",(await sget("users")||[]).filter(u=>u.id!==id));
-showToast("User deleted","success");load();
-};
+  const del=async(id)=>{
+    if(PROT.includes(id)&&!isSuperAdmin){showToast("Cannot delete protected user","error");return;}
+    await sset("users",(await sget("users")||[]).filter(u=>u.id!==id));
+    showToast("User deleted","success");load();
+  };
 
-const toggleActive=async(id)=>{
-if(PROT.includes(id)&&!isSuperAdmin){showToast("Cannot change system user","error");return;}
-const all=(await sget("users")||[]).map(u=>u.id===id?{...u,active:u.active===false?true:false}:u);
-await sset("users",all);load();
-};
+  const toggleActive=async(id)=>{
+    if(PROT.includes(id)&&!isSuperAdmin){showToast("Cannot change system user","error");return;}
+    const all=(await sget("users")||[]).map(u=>u.id===id?{...u,active:u.active===false?true:false}:u);
+    await sset("users",all);load();
+  };
 
-const canAct=(u)=>isSuperAdmin||(u&&!PROT.includes(u.id));
+  const canAct=(u)=>isSuperAdmin||(u&&!PROT.includes(u.id));
 
-return(
-<div style={{padding:"20px 28px",maxWidth:800,margin:"0 auto"}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-<div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Users</div>
-<button onClick={()=>setAddOpen(true)} style={{...BPr,width:"auto",padding:"9px 18px"}}>+ Add User</button>
-</div>
-{loading?<div style={{display:"flex",justifyContent:"center",padding:32}}><Spinner/></div>
-:users.map(u=>(
-<div key={u.id} style={{...Cd,marginBottom:10}}>
-<div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-<div style={{flex:1}}>
-<div style={{fontWeight:700,color:C.text,fontSize:15}}>{u.name}</div>
-<div style={{color:C.sub,fontSize:12,marginTop:3}}>
-@{u.username}
-{outletName(u.outlets)&&<span style={{marginLeft:8,color:C.accent}}>· {outletName(u.outlets)}</span>}
-</div>
-</div>
-<Badge label={u.role.toUpperCase()} color={C.accent} bg={C.accentLight} border={C.accentBorder}/>
-<Badge label={u.active!==false?"Active":"Inactive"} color={u.active!==false?C.success:C.sub} bg={u.active!==false?C.successLight:C.bg} border={u.active!==false?C.successBorder:C.border}/>
-{canAct(u)?<>
-<button onClick={()=>setEditUser({...u,password:""})} style={BEd}>Edit</button>
-<button onClick={()=>toggleActive(u.id)} style={{...BSc,padding:"4px 10px",fontSize:11}}>{u.active!==false?"Deactivate":"Activate"}</button>
-<button onClick={()=>del(u.id)} style={{...BDn,padding:"4px 10px"}}>Delete</button>
-</>:<span style={{fontSize:11,color:C.muted,fontStyle:"italic"}}>Protected</span>}
-</div>
-</div>
-))
-}
-<Modal open={addOpen} onClose={()=>setAddOpen(false)} title="Add User" width={460}>
-<UserForm initial={{username:"",password:"",name:"",role:"outlet",outlets:[],active:true}} outlets={outlets} onSave={(f)=>saveUser(f,true)} onCancel={()=>setAddOpen(false)} isNew/>
-</Modal>
-<Modal open={!!editUser} onClose={()=>setEditUser(null)} title={`Edit: ${editUser?.name||""}`} width={460}>
-{editUser&&<UserForm initial={editUser} outlets={outlets} onSave={(f)=>saveUser(f,false)} onCancel={()=>setEditUser(null)}/>}
-</Modal>
-</div>
-);
+  return(
+    <div style={{padding:"20px 28px",maxWidth:800,margin:"0 auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Users</div>
+        <button onClick={()=>setAddOpen(true)} style={{...BPr,width:"auto",padding:"9px 18px"}}>+ Add User</button>
+      </div>
+      {loading?<div style={{display:"flex",justifyContent:"center",padding:32}}><Spinner/></div>
+        :users.map(u=>(
+          <div key={u.id} style={{...Cd,marginBottom:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,color:C.text,fontSize:15}}>{u.name}</div>
+                <div style={{color:C.sub,fontSize:12,marginTop:3}}>
+                  @{u.username}
+                  {outletName(u.outlets)&&<span style={{marginLeft:8,color:C.accent}}>· {outletName(u.outlets)}</span>}
+                </div>
+              </div>
+              <Badge label={u.role.toUpperCase()} color={C.accent} bg={C.accentLight} border={C.accentBorder}/>
+              <Badge label={u.active!==false?"Active":"Inactive"} color={u.active!==false?C.success:C.sub} bg={u.active!==false?C.successLight:C.bg} border={u.active!==false?C.successBorder:C.border}/>
+              {canAct(u)?<>
+                <button onClick={()=>setEditUser({...u,password:""})} style={BEd}>Edit</button>
+                <button onClick={()=>toggleActive(u.id)} style={{...BSc,padding:"4px 10px",fontSize:11}}>{u.active!==false?"Deactivate":"Activate"}</button>
+                <button onClick={()=>del(u.id)} style={{...BDn,padding:"4px 10px"}}>Delete</button>
+              </>:<span style={{fontSize:11,color:C.muted,fontStyle:"italic"}}>Protected</span>}
+            </div>
+          </div>
+        ))
+      }
+      <Modal open={addOpen} onClose={()=>setAddOpen(false)} title="Add User" width={460}>
+        <UserForm initial={{username:"",password:"",name:"",role:"outlet",outlets:[],active:true}} outlets={outlets} onSave={(f)=>saveUser(f,true)} onCancel={()=>setAddOpen(false)} isNew/>
+      </Modal>
+      <Modal open={!!editUser} onClose={()=>setEditUser(null)} title={`Edit: ${editUser?.name||""}`} width={460}>
+        {editUser&&<UserForm initial={editUser} outlets={outlets} onSave={(f)=>saveUser(f,false)} onCancel={()=>setEditUser(null)}/>}
+      </Modal>
+    </div>
+  );
 }
 
 function UserForm({initial,outlets,onSave,onCancel,isNew}){
-const [f,setF]=useState({...initial,password:initial.password||""});
-const [err,setErr]=useState({});
-const validate=()=>{
-const e={};
-if(!f.name.trim())e.name="Required.";
-if(!f.username.trim())e.username="Required.";
-if(isNew&&!f.password.trim())e.password="Required.";
-if(["outlet","manager"].includes(f.role)&&!f.outlets[0])e.outlets="Select an outlet.";
-return e;
-};
-const save=()=>{const e=validate();setErr(e);if(Object.keys(e).length>0)return;onSave(f);};
-const activeOutlets=outlets.filter(o=>o.active);
-return(<>
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-<Field label="Full Name" error={err.name}><Inp value={f.name} onChange={v=>{setF({...f,name:v});setErr(e=>({...e,name:""}));}} placeholder="Name"/></Field>
-<Field label="Username" error={err.username}><Inp value={f.username} onChange={v=>{setF({...f,username:v});setErr(e=>({...e,username:""}));}} placeholder="username"/></Field>
-<Field label={isNew?"Password":"New Password"} hint={!isNew?"leave blank to keep":""} error={err.password}>
-<Inp type="password" value={f.password} onChange={v=>{setF({...f,password:v});setErr(e=>({...e,password:""}));}} placeholder={isNew?"password":"••••••••"}/>
-</Field>
-<Field label="Role"><Sel value={f.role} onChange={v=>setF({...f,role:v,outlets:[]})} options={["admin","manager","accounts","outlet"]}/></Field>
-</div>
-{["outlet","manager"].includes(f.role)&&(
-<Field label="Assigned Outlet" error={err.outlets}>
-<select value={f.outlets[0]||""} onChange={e=>{setF({...f,outlets:e.target.value?[e.target.value]:[]});setErr(ev=>({...ev,outlets:""}));}} style={IS}>
-<option value="">— Select outlet —</option>
-{activeOutlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
-</select>
-</Field>
-)}
-<div style={{display:"flex",gap:8,marginTop:4}}>
-<button onClick={save} style={{...BPr,flex:1}}>{isNew?"Create User":"Save Changes"}</button>
-<button onClick={onCancel} style={{...BSc,flex:1}}>Cancel</button>
-</div>
-</>);
+  const [f,setF]=useState({...initial,password:initial.password||""});
+  const [err,setErr]=useState({});
+  const validate=()=>{
+    const e={};
+    if(!f.name.trim())e.name="Required.";
+    if(!f.username.trim())e.username="Required.";
+    if(isNew&&!f.password.trim())e.password="Required.";
+    if(["outlet","manager"].includes(f.role)&&!f.outlets[0])e.outlets="Select an outlet.";
+    return e;
+  };
+  const save=()=>{const e=validate();setErr(e);if(Object.keys(e).length>0)return;onSave(f);};
+  const activeOutlets=outlets.filter(o=>o.active);
+  return(<>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+      <Field label="Full Name" error={err.name}><Inp value={f.name} onChange={v=>{setF({...f,name:v});setErr(e=>({...e,name:""}));}} placeholder="Name"/></Field>
+      <Field label="Username" error={err.username}><Inp value={f.username} onChange={v=>{setF({...f,username:v});setErr(e=>({...e,username:""}));}} placeholder="username"/></Field>
+      <Field label={isNew?"Password":"New Password"} hint={!isNew?"leave blank to keep":""} error={err.password}>
+        <Inp type="password" value={f.password} onChange={v=>{setF({...f,password:v});setErr(e=>({...e,password:""}));}} placeholder={isNew?"password":"••••••••"}/>
+      </Field>
+      <Field label="Role"><Sel value={f.role} onChange={v=>setF({...f,role:v,outlets:[]})} options={["admin","manager","accounts","outlet"]}/></Field>
+    </div>
+    {["outlet","manager"].includes(f.role)&&(
+      <Field label="Assigned Outlet" error={err.outlets}>
+        <select value={f.outlets[0]||""} onChange={e=>{setF({...f,outlets:e.target.value?[e.target.value]:[]});setErr(ev=>({...ev,outlets:""}));}} style={IS}>
+          <option value="">— Select outlet —</option>
+          {activeOutlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
+        </select>
+      </Field>
+    )}
+    <div style={{display:"flex",gap:8,marginTop:4}}>
+      <button onClick={save} style={{...BPr,flex:1}}>{isNew?"Create User":"Save Changes"}</button>
+      <button onClick={onCancel} style={{...BSc,flex:1}}>Cancel</button>
+    </div>
+  </>);
 }
 
 
 // ─── Logs ─────────────────────────────────────────────────────────────────────
 function Logs(){
-const [logs,setLogs]=useState([]);const [loading,setLoading]=useState(true);
-useEffect(()=>{sget("logs").then(l=>{setLogs(l||[]);setLoading(false);});},[]);
-const AC={"LOGIN":C.success,"LOGOUT":C.sub,"ADD_TXN":C.accent,"EDIT_TXN":C.warn,"DEL_TXN":C.danger,"ADD_REFUND":C.danger,"DAY_END":C.success,"BMO_ORDER":C.accent};
-return(
-<div style={{padding:"20px 28px",maxWidth:960,margin:"0 auto"}}>
-<div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px",marginBottom:4}}>Audit Logs</div>
-<div style={{color:C.sub,fontSize:13,marginBottom:16}}>Last 500 events</div>
-{loading?<div style={{display:"flex",justifyContent:"center",padding:40}}><Spinner/></div>
-:logs.length===0?<EmptyState icon="🔍" title="No logs" desc=""/>
-:logs.map(l=>(
-<div key={l.id} style={{...Cd,marginBottom:8,padding:"10px 14px"}}>
-<div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-<span style={{background:AC[l.action]||C.sub,color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:10,fontWeight:700,flexShrink:0,marginTop:1}}>{l.action}</span>
-<div style={{flex:1,minWidth:0}}>
-<div style={{fontSize:13,color:C.text}}>{l.detail}</div>
-{l.reason&&<div style={{fontSize:11,color:C.sub,marginTop:2}}>Reason: {l.reason}</div>}
-{l.extra?.oldPayments&&<div style={{fontSize:11,color:C.muted,marginTop:4}}><span style={{color:C.danger}}>Old: </span>{l.extra.oldPayments.map(p=>`${p.mode}: ${inr(p.amount)}`).join(" + ")}&nbsp;&nbsp;<span style={{color:C.success}}>New: </span>{l.extra.newPayments.map(p=>`${p.mode}: ${inr(p.amount)}`).join(" + ")}</div>}
-</div>
-<span style={{color:C.muted,fontSize:11,whiteSpace:"nowrap",flexShrink:0}}>{fmt(l.ts)}</span>
-</div>
-</div>
-))
-}
-</div>
-);
+  const [logs,setLogs]=useState([]);const [loading,setLoading]=useState(true);
+  useEffect(()=>{sget("logs").then(l=>{setLogs(l||[]);setLoading(false);});},[]);
+  const AC={"LOGIN":C.success,"LOGOUT":C.sub,"ADD_TXN":C.accent,"EDIT_TXN":C.warn,"DEL_TXN":C.danger,"ADD_REFUND":C.danger,"DAY_END":C.success,"BMO_ORDER":C.accent};
+  return(
+    <div style={{padding:"20px 28px",maxWidth:960,margin:"0 auto"}}>
+      <div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px",marginBottom:4}}>Audit Logs</div>
+      <div style={{color:C.sub,fontSize:13,marginBottom:16}}>Last 500 events</div>
+      {loading?<div style={{display:"flex",justifyContent:"center",padding:40}}><Spinner/></div>
+        :logs.length===0?<EmptyState icon="🔍" title="No logs" desc=""/>
+        :logs.map(l=>(
+          <div key={l.id} style={{...Cd,marginBottom:8,padding:"10px 14px"}}>
+            <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+              <span style={{background:AC[l.action]||C.sub,color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:10,fontWeight:700,flexShrink:0,marginTop:1}}>{l.action}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,color:C.text}}>{l.detail}</div>
+                {l.reason&&<div style={{fontSize:11,color:C.sub,marginTop:2}}>Reason: {l.reason}</div>}
+                {l.extra?.oldPayments&&<div style={{fontSize:11,color:C.muted,marginTop:4}}><span style={{color:C.danger}}>Old: </span>{l.extra.oldPayments.map(p=>`${p.mode}: ${inr(p.amount)}`).join(" + ")}&nbsp;&nbsp;<span style={{color:C.success}}>New: </span>{l.extra.newPayments.map(p=>`${p.mode}: ${inr(p.amount)}`).join(" + ")}</div>}
+              </div>
+              <span style={{color:C.muted,fontSize:11,whiteSpace:"nowrap",flexShrink:0}}>{fmt(l.ts)}</span>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  );
 }
 
 // ─── Backup ───────────────────────────────────────────────────────────────────
 function BackupRestore({showToast}){
-const [loading,setLoading]=useState(false);const [confirm,setConfirm]=useState(null);const [pendingData,setPendingData]=useState(null);const [info,setInfo]=useState(null);const fileRef=useRef(null);
-const doBackup=async(withPw)=>{
-setConfirm(null);setLoading(true);
-const keys=["users","outlets","transactions","refunds","logs","dayStatus","bmoMenu","bmoOrders","bmoOrderCounter"];
-const data={};for(const k of keys)data[k]=await sget(k);
-if(!withPw)data.users=(data.users||[]).map(({password:_,...u})=>({...u,password:"[REDACTED]"}));
-const bk={exportedAt:new Date().toISOString(),type:withPw?"full":"safe",version:"1.0",data};
-setInfo({users:(data.users||[]).length,outlets:(data.outlets||[]).length,transactions:(data.transactions||[]).length,bmoOrders:(data.bmoOrders||[]).length,logs:(data.logs||[]).length});
-const blob=new Blob([JSON.stringify(bk,null,2)],{type:"application/json"});
-const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`kasu_${withPw?"FULL":"safe"}_backup_${new Date().toISOString().split("T")[0]}.json`;a.click();
-await addLog("BACKUP","superadmin",(withPw?"Full":"Safe")+" backup exported");
-showToast(withPw?"Full backup downloaded — store securely!":"Safe backup downloaded","success");setLoading(false);
-};
-const handleFile=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(!d.data){showToast("Invalid file","error");return;}setPendingData(d);setConfirm("restore");}catch{showToast("Cannot parse file","error");}};r.readAsText(file);e.target.value="";};
-const doRestore=async()=>{
-if(!pendingData)return;setConfirm(null);setLoading(true);
-const keys=["users","outlets","transactions","refunds","logs","dayStatus","bmoMenu","bmoOrders","bmoOrderCounter"];
-for(const k of keys){if(pendingData.data[k]!==undefined){clearCache(k);await sset(k,pendingData.data[k]);}}
-await addLog("RESTORE","superadmin","Data restored from "+pendingData.type+" backup");
-showToast("Restored! Reloading…","warn");setPendingData(null);setLoading(false);
-setTimeout(()=>window.location.reload(),2000);
-};
-return(
-<div style={{padding:20,maxWidth:620,margin:"0 auto"}}>
-<div style={{fontSize:22,fontWeight:800,color:C.text,marginBottom:4}}>Backup & Restore</div>
-<div style={{color:C.sub,fontSize:13,marginBottom:20}}>Super Admin only.</div>
-<div style={{...Cd,marginBottom:12}}>
-<div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:8}}>🔒 Safe Backup <span style={{fontSize:11,fontWeight:400,color:C.sub}}>— passwords redacted</span></div>
-<div style={{color:C.sub,fontSize:13,marginBottom:12}}>All data without passwords. Safe to share with team.</div>
-<button onClick={()=>doBackup(false)} disabled={loading} style={{...BPr,background:C.success}}>⬇ Download Safe Backup</button>
-</div>
-<div style={{...Cd,marginBottom:12}}>
-<div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:8}}>🔓 Full Backup <Badge label="Includes Passwords" color={C.warn} bg={C.warnLight} border={C.warnBorder}/></div>
-<div style={{color:C.sub,fontSize:13,marginBottom:8}}>All data including passwords. Required for full restore.</div>
-<Msg type="warn">⚠ Contains passwords. Store securely. Do not share.</Msg>
-<button onClick={()=>setConfirm("full")} disabled={loading} style={{...BPr,background:C.warn}}>⬇ Download Full Backup</button>
-</div>
-<div style={{...Cd,marginBottom:16}}>
-<div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:8}}>⬆ Restore from Backup</div>
-<Msg type="error">⚠ This will overwrite ALL current data. Cannot be undone.</Msg>
-<input ref={fileRef} type="file" accept=".json" onChange={handleFile} style={{display:"none"}}/>
-<button onClick={()=>fileRef.current&&fileRef.current.click()} disabled={loading} style={{...BPr,background:C.danger}}>📂 Choose Backup File</button>
-</div>
-{info&&<div style={{...Cd,background:C.successLight,border:`1px solid ${C.successBorder}`}}>
-<div style={{fontWeight:700,color:C.success,marginBottom:10}}>✓ Last Backup</div>
-<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(90px,1fr))",gap:8}}>
-{Object.entries(info).map(([k,v])=><div key={k} style={{background:C.surface,borderRadius:4,padding:"8px 12px"}}><div style={{fontSize:10,color:C.sub,textTransform:"uppercase",fontWeight:600,marginBottom:2}}>{k}</div><div style={{fontSize:18,fontWeight:800,color:C.text}}>{v}</div></div>)}
-</div>
-</div>}
-<ConfirmDialog open={confirm==="full"} onClose={()=>setConfirm(null)} onConfirm={()=>doBackup(true)} title="Download Full Backup?" warn message="This file will contain passwords. Store securely." confirmLabel="Yes, Download"/>
-<ConfirmDialog open={confirm==="restore"} onClose={()=>{setConfirm(null);setPendingData(null);}} onConfirm={doRestore} title="Confirm Restore" danger message={`Overwrite ALL data with backup from ${pendingData?.exportedAt?new Date(pendingData.exportedAt).toLocaleString("en-IN"):"file"}? Cannot be undone.`} confirmLabel="Yes, Restore"/>
-</div>
-);
+  const [loading,setLoading]=useState(false);const [confirm,setConfirm]=useState(null);const [pendingData,setPendingData]=useState(null);const [info,setInfo]=useState(null);const fileRef=useRef(null);
+  const doBackup=async(withPw)=>{
+    setConfirm(null);setLoading(true);
+    const keys=["users","outlets","transactions","refunds","logs","dayStatus","bmoMenu","bmoOrders","bmoOrderCounter"];
+    const data={};for(const k of keys)data[k]=await sget(k);
+    if(!withPw)data.users=(data.users||[]).map(({password:_,...u})=>({...u,password:"[REDACTED]"}));
+    const bk={exportedAt:new Date().toISOString(),type:withPw?"full":"safe",version:"1.0",data};
+    setInfo({users:(data.users||[]).length,outlets:(data.outlets||[]).length,transactions:(data.transactions||[]).length,bmoOrders:(data.bmoOrders||[]).length,logs:(data.logs||[]).length});
+    const blob=new Blob([JSON.stringify(bk,null,2)],{type:"application/json"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`kasu_${withPw?"FULL":"safe"}_backup_${new Date().toISOString().split("T")[0]}.json`;a.click();
+    await addLog("BACKUP","superadmin",(withPw?"Full":"Safe")+" backup exported");
+    showToast(withPw?"Full backup downloaded — store securely!":"Safe backup downloaded","success");setLoading(false);
+  };
+  const handleFile=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(!d.data){showToast("Invalid file","error");return;}setPendingData(d);setConfirm("restore");}catch{showToast("Cannot parse file","error");}};r.readAsText(file);e.target.value="";};
+  const doRestore=async()=>{
+    if(!pendingData)return;setConfirm(null);setLoading(true);
+    const keys=["users","outlets","transactions","refunds","logs","dayStatus","bmoMenu","bmoOrders","bmoOrderCounter"];
+    for(const k of keys){if(pendingData.data[k]!==undefined){clearCache(k);await sset(k,pendingData.data[k]);}}
+    await addLog("RESTORE","superadmin","Data restored from "+pendingData.type+" backup");
+    showToast("Restored! Reloading…","warn");setPendingData(null);setLoading(false);
+    setTimeout(()=>window.location.reload(),2000);
+  };
+  return(
+    <div style={{padding:20,maxWidth:620,margin:"0 auto"}}>
+      <div style={{fontSize:22,fontWeight:800,color:C.text,marginBottom:4}}>Backup & Restore</div>
+      <div style={{color:C.sub,fontSize:13,marginBottom:20}}>Super Admin only.</div>
+      <div style={{...Cd,marginBottom:12}}>
+        <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:8}}>🔒 Safe Backup <span style={{fontSize:11,fontWeight:400,color:C.sub}}>— passwords redacted</span></div>
+        <div style={{color:C.sub,fontSize:13,marginBottom:12}}>All data without passwords. Safe to share with team.</div>
+        <button onClick={()=>doBackup(false)} disabled={loading} style={{...BPr,background:C.success}}>⬇ Download Safe Backup</button>
+      </div>
+      <div style={{...Cd,marginBottom:12}}>
+        <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:8}}>🔓 Full Backup <Badge label="Includes Passwords" color={C.warn} bg={C.warnLight} border={C.warnBorder}/></div>
+        <div style={{color:C.sub,fontSize:13,marginBottom:8}}>All data including passwords. Required for full restore.</div>
+        <Msg type="warn">⚠ Contains passwords. Store securely. Do not share.</Msg>
+        <button onClick={()=>setConfirm("full")} disabled={loading} style={{...BPr,background:C.warn}}>⬇ Download Full Backup</button>
+      </div>
+      <div style={{...Cd,marginBottom:16}}>
+        <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:8}}>⬆ Restore from Backup</div>
+        <Msg type="error">⚠ This will overwrite ALL current data. Cannot be undone.</Msg>
+        <input ref={fileRef} type="file" accept=".json" onChange={handleFile} style={{display:"none"}}/>
+        <button onClick={()=>fileRef.current&&fileRef.current.click()} disabled={loading} style={{...BPr,background:C.danger}}>📂 Choose Backup File</button>
+      </div>
+      {info&&<div style={{...Cd,background:C.successLight,border:`1px solid ${C.successBorder}`}}>
+        <div style={{fontWeight:700,color:C.success,marginBottom:10}}>✓ Last Backup</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(90px,1fr))",gap:8}}>
+          {Object.entries(info).map(([k,v])=><div key={k} style={{background:C.surface,borderRadius:4,padding:"8px 12px"}}><div style={{fontSize:10,color:C.sub,textTransform:"uppercase",fontWeight:600,marginBottom:2}}>{k}</div><div style={{fontSize:18,fontWeight:800,color:C.text}}>{v}</div></div>)}
+        </div>
+      </div>}
+      <ConfirmDialog open={confirm==="full"} onClose={()=>setConfirm(null)} onConfirm={()=>doBackup(true)} title="Download Full Backup?" warn message="This file will contain passwords. Store securely." confirmLabel="Yes, Download"/>
+      <ConfirmDialog open={confirm==="restore"} onClose={()=>{setConfirm(null);setPendingData(null);}} onConfirm={doRestore} title="Confirm Restore" danger message={`Overwrite ALL data with backup from ${pendingData?.exportedAt?new Date(pendingData.exportedAt).toLocaleString("en-IN"):"file"}? Cannot be undone.`} confirmLabel="Yes, Restore"/>
+    </div>
+  );
 }
 
 // ─── BMO App ──────────────────────────────────────────────────────────────────
 function BMOApp({user,onClose,showToast}){
-const [screen,setScreen]=useState("home");
-const canManageMenu=["superadmin","admin","manager"].includes(user.role);
+  const [screen,setScreen]=useState("home");
+  const canManageMenu=["superadmin","admin","manager"].includes(user.role);
 
-// Outlet resolution for BMO
-const isOutletUser=user.role==="outlet";
-const isAdminLevel=["superadmin","admin","accounts"].includes(user.role);
-const isManager=user.role==="manager";
+  // Outlet resolution for BMO
+  const isOutletUser=user.role==="outlet";
+  const isAdminLevel=["superadmin","admin","accounts"].includes(user.role);
+  const isManager=user.role==="manager";
 
-return(
-<div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column"}}>
-<div style={{background:C.accent,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:10}}>
-<div style={{display:"flex",alignItems:"center",gap:10}}>
-<BenneLogo size={36} style={{filter:"brightness(0) invert(1)",opacity:.9}}/>
-<div>
-<div style={{fontWeight:800,fontSize:16,color:"#fff",letterSpacing:".5px"}}>BMO</div>
-<div style={{color:"rgba(255,255,255,.7)",fontSize:10,letterSpacing:".3px"}}>BENNE MANUAL ORDERS</div>
-</div>
-</div>
-<div style={{display:"flex",gap:8,alignItems:"center"}}>
-{screen!=="home"&&<button onClick={()=>setScreen("home")} style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"1px solid rgba(255,255,255,.25)",borderRadius:4,padding:"6px 12px",fontSize:12,cursor:"pointer",fontWeight:600}}>← Home</button>}
-<button onClick={onClose} style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"1px solid rgba(255,255,255,.25)",borderRadius:4,padding:"6px 12px",fontSize:12,cursor:"pointer",fontWeight:600}}>✕ Close</button>
-</div>
-</div>
-<div style={{flex:1,overflowY:"auto"}}>
-{screen==="home"&&(
-<div style={{padding:20,maxWidth:480,margin:"0 auto"}}>
-<div style={{padding:"28px 0 32px"}}>
-<div style={{fontWeight:700,fontSize:22,color:C.text,letterSpacing:"-0.3px"}}>Benne Manual Orders</div>
-<div style={{color:C.sub,fontSize:13,marginTop:4}}>Emergency ordering system · {fmtD(getToday())}</div>
-</div>
-<div style={{display:"flex",flexDirection:"column",gap:10}}>
-<button onClick={()=>setScreen("order")} style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"18px 20px",fontWeight:600,fontSize:15,cursor:"pointer",textAlign:"left"}}>
-<div style={{fontWeight:700,fontSize:16}}>Order Taker</div>
-<div style={{fontSize:12,opacity:.85,marginTop:3,fontWeight:400}}>Take new manual orders</div>
-</button>
-<button onClick={()=>setScreen("view")} style={{background:C.surface,color:C.text,border:`1px solid ${C.border}`,borderRadius:4,padding:"18px 20px",fontWeight:600,fontSize:15,cursor:"pointer",textAlign:"left"}}>
-<div style={{fontWeight:700,fontSize:16}}>View Orders</div>
-<div style={{fontSize:12,color:C.sub,marginTop:3,fontWeight:400}}>Kitchen display & counter view</div>
-</button>
-<button onClick={()=>setScreen("reports")} style={{background:C.surface,color:C.text,border:`1px solid ${C.border}`,borderRadius:4,padding:"18px 20px",fontWeight:600,fontSize:15,cursor:"pointer",textAlign:"left"}}>
-<div style={{fontWeight:700,fontSize:16}}>BMO Reports</div>
-<div style={{fontSize:12,color:C.sub,marginTop:3,fontWeight:400}}>Sales, items, payment summary</div>
-</button>
-{canManageMenu&&(
-<button onClick={()=>setScreen("menu")} style={{background:C.surface,color:C.text,border:`1px solid ${C.border}`,borderRadius:4,padding:"18px 20px",fontWeight:600,fontSize:15,cursor:"pointer",textAlign:"left"}}>
-<div style={{fontWeight:700,fontSize:16}}>Manage Menu</div>
-<div style={{fontSize:12,color:C.sub,marginTop:3,fontWeight:400}}>Items, prices, categories</div>
-</button>
-)}
-</div>
-</div>
-)}
-{screen==="order" &&<BMOOrderTaker user={user} showToast={showToast}/>}
-{screen==="view" &&<BMOViewOrders user={user}/>}
-{screen==="reports"&&<BMOReports user={user}/>}
-{screen==="menu" &&canManageMenu&&<BMOMenuManager showToast={showToast}/>}
-</div>
-</div>
-);
+  return(
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column"}}>
+      <div style={{background:C.accent,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <BenneLogo size={36} style={{filter:"brightness(0) invert(1)",opacity:.9}}/>
+          <div>
+            <div style={{fontWeight:800,fontSize:16,color:"#fff",letterSpacing:".5px"}}>BMO</div>
+            <div style={{color:"rgba(255,255,255,.7)",fontSize:10,letterSpacing:".3px"}}>BENNE MANUAL ORDERS</div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          {screen!=="home"&&<button onClick={()=>setScreen("home")} style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"1px solid rgba(255,255,255,.25)",borderRadius:4,padding:"6px 12px",fontSize:12,cursor:"pointer",fontWeight:600}}>← Home</button>}
+          <button onClick={onClose} style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"1px solid rgba(255,255,255,.25)",borderRadius:4,padding:"6px 12px",fontSize:12,cursor:"pointer",fontWeight:600}}>✕ Close</button>
+        </div>
+      </div>
+      <div style={{flex:1,overflowY:"auto"}}>
+        {screen==="home"&&(
+          <div style={{padding:20,maxWidth:480,margin:"0 auto"}}>
+            <div style={{padding:"28px 0 32px"}}>
+              <div style={{fontWeight:700,fontSize:22,color:C.text,letterSpacing:"-0.3px"}}>Benne Manual Orders</div>
+              <div style={{color:C.sub,fontSize:13,marginTop:4}}>Emergency ordering system · {fmtD(getToday())}</div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <button onClick={()=>setScreen("order")} style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"18px 20px",fontWeight:600,fontSize:15,cursor:"pointer",textAlign:"left"}}>
+                <div style={{fontWeight:700,fontSize:16}}>Order Taker</div>
+                <div style={{fontSize:12,opacity:.85,marginTop:3,fontWeight:400}}>Take new manual orders</div>
+              </button>
+              <button onClick={()=>setScreen("view")} style={{background:C.surface,color:C.text,border:`1px solid ${C.border}`,borderRadius:4,padding:"18px 20px",fontWeight:600,fontSize:15,cursor:"pointer",textAlign:"left"}}>
+                <div style={{fontWeight:700,fontSize:16}}>View Orders</div>
+                <div style={{fontSize:12,color:C.sub,marginTop:3,fontWeight:400}}>Kitchen display & counter view</div>
+              </button>
+              <button onClick={()=>setScreen("reports")} style={{background:C.surface,color:C.text,border:`1px solid ${C.border}`,borderRadius:4,padding:"18px 20px",fontWeight:600,fontSize:15,cursor:"pointer",textAlign:"left"}}>
+                <div style={{fontWeight:700,fontSize:16}}>BMO Reports</div>
+                <div style={{fontSize:12,color:C.sub,marginTop:3,fontWeight:400}}>Sales, items, payment summary</div>
+              </button>
+              {canManageMenu&&(
+                <button onClick={()=>setScreen("menu")} style={{background:C.surface,color:C.text,border:`1px solid ${C.border}`,borderRadius:4,padding:"18px 20px",fontWeight:600,fontSize:15,cursor:"pointer",textAlign:"left"}}>
+                  <div style={{fontWeight:700,fontSize:16}}>Manage Menu</div>
+                  <div style={{fontSize:12,color:C.sub,marginTop:3,fontWeight:400}}>Items, prices, categories</div>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        {screen==="order"  &&<BMOOrderTaker user={user} showToast={showToast}/>}
+        {screen==="view"   &&<BMOViewOrders user={user}/>}
+        {screen==="reports"&&<BMOReports user={user}/>}
+        {screen==="menu"   &&canManageMenu&&<BMOMenuManager showToast={showToast}/>}
+      </div>
+    </div>
+  );
 }
 
 // ─── BMO Outlet Selector helper ──────────────────────────────────────────────
 function useBMOOutlet(user){
-const isOutlet=user.role==="outlet";
-const isAdminLevel=["superadmin","admin","accounts"].includes(user.role);
-const isManager=user.role==="manager";
-const [outlets,setOutlets]=useState([]);
-const [selOutlet,setSelOutlet]=useState(
-isOutlet?(user.outlets[0]||""):isManager?(user.outlets[0]||""):"all"
-);
-const [pickerOpen,setPickerOpen]=useState(false);
+  const isOutlet=user.role==="outlet";
+  const isAdminLevel=["superadmin","admin","accounts"].includes(user.role);
+  const isManager=user.role==="manager";
+  const [outlets,setOutlets]=useState([]);
+  const [selOutlet,setSelOutlet]=useState(
+    isOutlet?(user.outlets[0]||""):isManager?(user.outlets[0]||""):"all"
+  );
+  const [pickerOpen,setPickerOpen]=useState(false);
 
-useEffect(()=>{
-sget("outlets").then(list=>{
-const active=(list||[]).filter(o=>o.active);
-setOutlets(active);
-});
-},[]);
+  useEffect(()=>{
+    sget("outlets").then(list=>{
+      const active=(list||[]).filter(o=>o.active);
+      setOutlets(active);
+    });
+  },[]);
 
-const availableOutlets=isOutlet
-?outlets.filter(o=>user.outlets.includes(o.id))
-:isManager
-?outlets.filter(o=>user.outlets.includes(o.id))
-:outlets;
+  const availableOutlets=isOutlet
+    ?outlets.filter(o=>user.outlets.includes(o.id))
+    :isManager
+      ?outlets.filter(o=>user.outlets.includes(o.id))
+      :outlets;
 
-const outletId=isOutlet?user.outlets[0]:selOutlet==="all"?null:selOutlet;
-const outletObj=outlets.find(o=>o.id===(isOutlet?user.outlets[0]:selOutlet));
-const outletName=outletObj?.name||(isOutlet?user.name:"All Outlets");
+  const outletId=isOutlet?user.outlets[0]:selOutlet==="all"?null:selOutlet;
+  const outletObj=outlets.find(o=>o.id===(isOutlet?user.outlets[0]:selOutlet));
+  const outletName=outletObj?.name||(isOutlet?user.name:"All Outlets");
 
-// Clean inline picker — avoids native iOS sheet behaviour
-const Selector=isOutlet?null:(
-<div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"8px 14px",position:"relative"}}>
-<div style={{display:"flex",alignItems:"center",gap:10}}>
-<span style={{fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,whiteSpace:"nowrap"}}>Outlet</span>
-<button onClick={()=>setPickerOpen(p=>!p)} style={{flex:1,background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 12px",fontSize:13,color:C.text,cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center",fontWeight:600}}>
-<span>{outletName}</span>
-<span style={{color:C.muted,fontSize:12}}>{pickerOpen?"▲":"▼"}</span>
-</button>
-</div>
-{pickerOpen&&(
-<div style={{position:"absolute",left:14,right:14,top:"100%",background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,boxShadow:"0 8px 24px rgba(0,0,0,.12)",zIndex:50,overflow:"hidden",marginTop:4}}>
-{isAdminLevel&&(
-<button onClick={()=>{setSelOutlet("all");setPickerOpen(false);}} style={{width:"100%",padding:"12px 16px",background:selOutlet==="all"?C.accentLight:C.surface,color:selOutlet==="all"?C.accent:C.text,border:"none",borderBottom:`1px solid ${C.border}`,fontSize:14,cursor:"pointer",textAlign:"left",fontWeight:selOutlet==="all"?700:500}}>
-All Outlets
-</button>
-)}
-{availableOutlets.map(o=>(
-<button key={o.id} onClick={()=>{setSelOutlet(o.id);setPickerOpen(false);}} style={{width:"100%",padding:"12px 16px",background:selOutlet===o.id?C.accentLight:C.surface,color:selOutlet===o.id?C.accent:C.text,border:"none",borderBottom:`1px solid ${C.border}`,fontSize:14,cursor:"pointer",textAlign:"left",fontWeight:selOutlet===o.id?700:500}}>
-{o.name}
-</button>
-))}
-</div>
-)}
-</div>
-);
+  // Clean inline picker — avoids native iOS sheet behaviour
+  const Selector=isOutlet?null:(
+    <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"8px 14px",position:"relative"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <span style={{fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,whiteSpace:"nowrap"}}>Outlet</span>
+        <button onClick={()=>setPickerOpen(p=>!p)} style={{flex:1,background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 12px",fontSize:13,color:C.text,cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center",fontWeight:600}}>
+          <span>{outletName}</span>
+          <span style={{color:C.muted,fontSize:12}}>{pickerOpen?"▲":"▼"}</span>
+        </button>
+      </div>
+      {pickerOpen&&(
+        <div style={{position:"absolute",left:14,right:14,top:"100%",background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,boxShadow:"0 8px 24px rgba(0,0,0,.12)",zIndex:50,overflow:"hidden",marginTop:4}}>
+          {isAdminLevel&&(
+            <button onClick={()=>{setSelOutlet("all");setPickerOpen(false);}} style={{width:"100%",padding:"12px 16px",background:selOutlet==="all"?C.accentLight:C.surface,color:selOutlet==="all"?C.accent:C.text,border:"none",borderBottom:`1px solid ${C.border}`,fontSize:14,cursor:"pointer",textAlign:"left",fontWeight:selOutlet==="all"?700:500}}>
+              All Outlets
+            </button>
+          )}
+          {availableOutlets.map(o=>(
+            <button key={o.id} onClick={()=>{setSelOutlet(o.id);setPickerOpen(false);}} style={{width:"100%",padding:"12px 16px",background:selOutlet===o.id?C.accentLight:C.surface,color:selOutlet===o.id?C.accent:C.text,border:"none",borderBottom:`1px solid ${C.border}`,fontSize:14,cursor:"pointer",textAlign:"left",fontWeight:selOutlet===o.id?700:500}}>
+              {o.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
-return {outletId,outletName,selOutlet,Selector};
+  return {outletId,outletName,selOutlet,Selector};
 }
 
 // ─── BMO Order Taker ──────────────────────────────────────────────────────────
 function BMOOrderTaker({user,showToast}){
-const [menu,setMenu]=useState([]);
-const [selCat,setSelCat]=useState(BMO_CATEGORIES[0]);
-const [cart,setCart]=useState([]);
-const [payMode,setPayMode]=useState("Cash");
-const [dineType,setDineType]=useState("dinein"); // "dinein" | "takeaway"
-const [stage,setStage]=useState("menu");
-const [customModal,setCustomModal]=useState(null);
-const [busy,setBusy]=useState(false);
-const [lastOrder,setLastOrder]=useState(null);
+  const [menu,setMenu]=useState([]);
+  const [selCat,setSelCat]=useState(BMO_CATEGORIES[0]);
+  const [cart,setCart]=useState([]);
+  const [payMode,setPayMode]=useState("Cash");
+  const [dineType,setDineType]=useState("dinein"); // "dinein" | "takeaway"
+  const [stage,setStage]=useState("menu");
+  const [customModal,setCustomModal]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const [lastOrder,setLastOrder]=useState(null);
 
-// Outlet selection — admins must pick an outlet before taking orders
-const isAdminLevel=["superadmin","admin"].includes(user.role);
-const isOutlet=user.role==="outlet";
-const [outlets,setOutlets]=useState([]);
-const [selOutletId,setSelOutletId]=useState(
-isOutlet?(user.outlets[0]||"")
-:user.role==="manager"?(user.outlets[0]||"")
-:""
-);
-const [outletReady,setOutletReady]=useState(!isAdminLevel||(user.outlets&&user.outlets[0]));
+  // Outlet selection — admins must pick an outlet before taking orders
+  const isAdminLevel=["superadmin","admin"].includes(user.role);
+  const isOutlet=user.role==="outlet";
+  const [outlets,setOutlets]=useState([]);
+  const [selOutletId,setSelOutletId]=useState(
+    isOutlet?(user.outlets[0]||"")
+    :user.role==="manager"?(user.outlets[0]||"")
+    :""
+  );
+  const [outletReady,setOutletReady]=useState(!isAdminLevel||(user.outlets&&user.outlets[0]));
 
-useEffect(()=>{
-sget("outlets").then(list=>{
-const active=(list||[]).filter(o=>o.active);
-setOutlets(active);
-if(isAdminLevel&&!selOutletId&&active.length>0) setOutletReady(false);
-});
-sget("bmoMenu").then(m=>setMenu(m||DEFAULT_MENU));
-},[]);
+  useEffect(()=>{
+    sget("outlets").then(list=>{
+      const active=(list||[]).filter(o=>o.active);
+      setOutlets(active);
+      if(isAdminLevel&&!selOutletId&&active.length>0) setOutletReady(false);
+    });
+    sget("bmoMenu").then(m=>setMenu(m||DEFAULT_MENU));
+  },[]);
 
-const selectedOutlet=outlets.find(o=>o.id===selOutletId)||{id:selOutletId,name:user.name};
-const outletId=isOutlet?user.outlets[0]:selOutletId;
-const outletName=selectedOutlet?.name||user.name||"";
+  const selectedOutlet=outlets.find(o=>o.id===selOutletId)||{id:selOutletId,name:user.name};
+  const outletId=isOutlet?user.outlets[0]:selOutletId;
+  const outletName=selectedOutlet?.name||user.name||"";
 
-const catItems=menu.filter(m=>m.category===selCat&&m.active);
-const cartTotal=cart.reduce((s,l)=>s+l.lineTotal,0);
-const cartTotalQty=cart.reduce((s,l)=>s+l.quantity,0);
-const TAKEAWAY_RATE_FOOD=20,TAKEAWAY_RATE_BEV=10;
-const takeawayChargeForLine=(l)=>(l.category==="Beverages"?TAKEAWAY_RATE_BEV:TAKEAWAY_RATE_FOOD)*l.quantity;
-const takeawayTotal = dineType==="takeaway" ? cart.reduce((s,l)=>s+takeawayChargeForLine(l),0) : 0;
-const grandTotal = cartTotal + takeawayTotal;
+  const catItems=menu.filter(m=>m.category===selCat&&m.active);
+  const cartTotal=cart.reduce((s,l)=>s+l.lineTotal,0);
+  const cartTotalQty=cart.reduce((s,l)=>s+l.quantity,0);
+  const TAKEAWAY_RATE_FOOD=20,TAKEAWAY_RATE_BEV=10;
+  const takeawayChargeForLine=(l)=>(l.category==="Beverages"?TAKEAWAY_RATE_BEV:TAKEAWAY_RATE_FOOD)*l.quantity;
+  const takeawayTotal = dineType==="takeaway" ? cart.reduce((s,l)=>s+takeawayChargeForLine(l),0) : 0;
+  const grandTotal = cartTotal + takeawayTotal;
 
-const lineKey=(itemId,customs)=>`${itemId}||${customs}`;
-const getItemTotalQty=(itemId)=>cart.filter(l=>l.itemId===itemId).reduce((s,l)=>s+l.quantity,0);
+  const lineKey=(itemId,customs)=>`${itemId}||${customs}`;
+  const getItemTotalQty=(itemId)=>cart.filter(l=>l.itemId===itemId).reduce((s,l)=>s+l.quantity,0);
 
-const mergeIntoCart=(item,customs,delta)=>{
-const key=lineKey(item.id,customs);
-setCart(prev=>{
-const existing=prev.find(l=>lineKey(l.itemId,l.customisations)===key);
-if(existing){
-const newQty=existing.quantity+delta;
-if(newQty<=0) return prev.filter(l=>lineKey(l.itemId,l.customisations)!==key);
-return prev.map(l=>lineKey(l.itemId,l.customisations)===key?{...l,quantity:newQty,pendingQuantity:newQty,lineTotal:l.price*newQty}:l);
-} else {
-if(delta<=0) return prev;
-return [...prev,{
-lineId:`l${Date.now()}${Math.random()}`,
-itemId:item.id,itemName:item.name,category:item.category,counter:item.counter,
-quantity:delta,completedQuantity:0,pendingQuantity:delta,
-price:item.price,customisations:customs,lineTotal:item.price*delta,status:"pending"
-}];
-}
-});
-};
+  const mergeIntoCart=(item,customs,delta)=>{
+    const key=lineKey(item.id,customs);
+    setCart(prev=>{
+      const existing=prev.find(l=>lineKey(l.itemId,l.customisations)===key);
+      if(existing){
+        const newQty=existing.quantity+delta;
+        if(newQty<=0) return prev.filter(l=>lineKey(l.itemId,l.customisations)!==key);
+        return prev.map(l=>lineKey(l.itemId,l.customisations)===key?{...l,quantity:newQty,pendingQuantity:newQty,lineTotal:l.price*newQty}:l);
+      } else {
+        if(delta<=0) return prev;
+        return [...prev,{
+          lineId:`l${Date.now()}${Math.random()}`,
+          itemId:item.id,itemName:item.name,category:item.category,counter:item.counter,
+          quantity:delta,completedQuantity:0,pendingQuantity:delta,
+          price:item.price,customisations:customs,lineTotal:item.price*delta,status:"pending"
+        }];
+      }
+    });
+  };
 
-const handleDirectPlus=(item,e)=>{e.stopPropagation();mergeIntoCart(item,"",1);};
-const handleDirectMinus=(item,e)=>{e.stopPropagation();mergeIntoCart(item,"",-1);};
+  const handleDirectPlus=(item,e)=>{e.stopPropagation();mergeIntoCart(item,"",1);};
+  const handleDirectMinus=(item,e)=>{e.stopPropagation();mergeIntoCart(item,"",-1);};
 
-// Options can be a string or {label, extra} — helpers normalise
-const optLabel=o=>typeof o==="object"?o.label:o;
-const optExtra=o=>typeof o==="object"?(o.extra||0):0;
-// Total extra price from all selected options for an item
-const calcExtra=(item,selections)=>{
-let extra=0;
-(item.customGroups||[]).forEach(g=>{
-const sel=selections[g.name];
-const opt=g.options.find(o=>optLabel(o)===optLabel(sel));
-if(opt) extra+=optExtra(opt);
-});
-return extra;
-};
+  // Options can be a string or {label, extra} — helpers normalise
+  const optLabel=o=>typeof o==="object"?o.label:o;
+  const optExtra=o=>typeof o==="object"?(o.extra||0):0;
+  // Total extra price from all selected options for an item
+  const calcExtra=(item,selections)=>{
+    let extra=0;
+    (item.customGroups||[]).forEach(g=>{
+      const sel=selections[g.name];
+      const opt=g.options.find(o=>optLabel(o)===optLabel(sel));
+      if(opt) extra+=optExtra(opt);
+    });
+    return extra;
+  };
 
-const openCustomModal=(item,e)=>{
-e&&e.stopPropagation();
-const init={};(item.customGroups||[]).forEach(g=>{init[g.name]=optLabel(g.options[0]);});
-setCustomModal({item,selections:init,qty:1});
-};
+  const openCustomModal=(item,e)=>{
+    e&&e.stopPropagation();
+    const init={};(item.customGroups||[]).forEach(g=>{init[g.name]=optLabel(g.options[0]);});
+    setCustomModal({item,selections:init,qty:1});
+  };
 
-const confirmCustom=()=>{
-const {item,selections,qty}=customModal;
-const extras=calcExtra(item,selections);
-const effectivePrice=item.price+extras;
-const customs=Object.entries(selections).map(([k,v])=>`${k}: ${v}`).join(", ");
-// pass effectivePrice into mergeIntoCart via a patched item
-mergeIntoCart({...item,price:effectivePrice},customs,qty);
-setCustomModal(null);
-};
+  const confirmCustom=()=>{
+    const {item,selections,qty}=customModal;
+    const extras=calcExtra(item,selections);
+    const effectivePrice=item.price+extras;
+    const customs=Object.entries(selections).map(([k,v])=>`${k}: ${v}`).join(", ");
+    // pass effectivePrice into mergeIntoCart via a patched item
+    mergeIntoCart({...item,price:effectivePrice},customs,qty);
+    setCustomModal(null);
+  };
 
-const removeFromCart=(lineId)=>setCart(c=>c.filter(l=>l.lineId!==lineId));
-const updateQty=(lineId,delta)=>setCart(c=>c.map(l=>{
-if(l.lineId!==lineId)return l;
-const q=l.quantity+delta;
-if(q<=0)return null;
-return{...l,quantity:q,pendingQuantity:q,lineTotal:l.price*q};
-}).filter(Boolean));
+  const removeFromCart=(lineId)=>setCart(c=>c.filter(l=>l.lineId!==lineId));
+  const updateQty=(lineId,delta)=>setCart(c=>c.map(l=>{
+    if(l.lineId!==lineId)return l;
+    const q=l.quantity+delta;
+    if(q<=0)return null;
+    return{...l,quantity:q,pendingQuantity:q,lineTotal:l.price*q};
+  }).filter(Boolean));
 
-const settle=async()=>{
-if(cart.length===0){showToast("Cart is empty","error");return;}
-if(!outletId){showToast("Select an outlet first","error");return;}
-setBusy(true);
-try{
-const today=getToday();
-const counterKey=`${today}_${outletId}`;
-const bmoKey=`bmoOrders_${today.slice(0,7).replace("-","_")}`;
-const ctrRef=doc(db,"kasu","bmoOrderCounter");
-const bmoRef=doc(db,"kasu",bmoKey);
+  const settle=async()=>{
+    if(cart.length===0){showToast("Cart is empty","error");return;}
+    if(!outletId){showToast("Select an outlet first","error");return;}
+    setBusy(true);
+    try{
+      const today=getToday();
+      const counterKey=`${today}_${outletId}`;
+      const bmoKey=`bmoOrders_${today.slice(0,7).replace("-","_")}`;
+      const ctrRef=doc(db,"kasu","bmoOrderCounter");
+      const bmoRef=doc(db,"kasu",bmoKey);
 
-// Single transaction: increment counter AND append order atomically
-// Both cashiers cannot get the same number — Firestore retries on conflict
-let dayCount=1;
-let savedOrder=null;
-await runTransaction(db,async t=>{
-const ctrSnap=await t.get(ctrRef);
-const bmoSnap=await t.get(bmoRef);
-const counter=ctrSnap.exists()&&ctrSnap.data().value?ctrSnap.data().value:{};
-dayCount=(counter[counterKey]||0)+1;
-if(dayCount>2000)throw new Error("limit");
-counter[counterKey]=dayCount;
-const arr=bmoSnap.exists()&&bmoSnap.data().value?bmoSnap.data().value:[];
-savedOrder={
-id:`bmo${Date.now()}`,
-bmoOrderNo:dayCount,
-outletId,outletName,
-businessDay:today,
-createdBy:user.id,createdByName:user.name,
-createdAt:new Date().toISOString(),
-paymentMode:payMode,
-dineType,
-takeawayCharge:takeawayTotal,
-itemsAmount:cartTotal,
-totalAmount:grandTotal,
-status:"open",
-cancelled:false,
-items:cart.map(l=>({...l}))
-};
-t.set(ctrRef,{value:counter});
-t.set(bmoRef,{value:[...arr,savedOrder]});
-}).catch(e=>{
-if(e.message==="limit"){showToast("BMO order limit reached for today.","error");setBusy(false);}
-throw e;
-});
-addLog("BMO_ORDER",user.id,`BMO #${dayCount} — ${outletName} — ${inr(grandTotal)} — ${payMode}${dineType==="takeaway"?" — Takeaway":""}`);
-setLastOrder(savedOrder);setCart([]);setPayMode("Cash");setDineType("dinein");setStage("done");
-showToast(`BMO Order #${dayCount} saved!`,"success");
-}catch(e){
-console.error("settle error",e);
-showToast("Failed to save order — "+e.message,"error");
-}finally{
-setBusy(false);
-}
-};
+      // Single transaction: increment counter AND append order atomically
+      // Both cashiers cannot get the same number — Firestore retries on conflict
+      let dayCount=1;
+      let savedOrder=null;
+      await runTransaction(db,async t=>{
+        const ctrSnap=await t.get(ctrRef);
+        const bmoSnap=await t.get(bmoRef);
+        const counter=ctrSnap.exists()&&ctrSnap.data().value?ctrSnap.data().value:{};
+        dayCount=(counter[counterKey]||0)+1;
+        if(dayCount>2000)throw new Error("limit");
+        counter[counterKey]=dayCount;
+        const arr=bmoSnap.exists()&&bmoSnap.data().value?bmoSnap.data().value:[];
+        savedOrder={
+          id:`bmo${Date.now()}`,
+          bmoOrderNo:dayCount,
+          outletId,outletName,
+          businessDay:today,
+          createdBy:user.id,createdByName:user.name,
+          createdAt:new Date().toISOString(),
+          paymentMode:payMode,
+          dineType,
+          takeawayCharge:takeawayTotal,
+          itemsAmount:cartTotal,
+          totalAmount:grandTotal,
+          status:"open",
+          cancelled:false,
+          items:cart.map(l=>({...l}))
+        };
+        t.set(ctrRef,{value:counter});
+        t.set(bmoRef,{value:[...arr,savedOrder]});
+      }).catch(e=>{
+        if(e.message==="limit"){showToast("BMO order limit reached for today.","error");setBusy(false);}
+        throw e;
+      });
+      addLog("BMO_ORDER",user.id,`BMO #${dayCount} — ${outletName} — ${inr(grandTotal)} — ${payMode}${dineType==="takeaway"?" — Takeaway":""}`);
+      setLastOrder(savedOrder);setCart([]);setPayMode("Cash");setDineType("dinein");setStage("done");
+      showToast(`BMO Order #${dayCount} saved!`,"success");
+    }catch(e){
+      console.error("settle error",e);
+      showToast("Failed to save order — "+e.message,"error");
+    }finally{
+      setBusy(false);
+    }
+  };
 
-// ── Admin outlet picker ──
-if(isAdminLevel&&!outletReady)return(
-<div style={{padding:20,maxWidth:420,margin:"0 auto"}}>
-<div style={{...Cd,padding:28}}>
-<div style={{fontSize:32,textAlign:"center",marginBottom:14}}>🏪</div>
-<div style={{fontWeight:700,fontSize:16,color:C.text,marginBottom:6,textAlign:"center"}}>Select Outlet</div>
-<div style={{color:C.sub,fontSize:13,marginBottom:20,textAlign:"center"}}>Choose which outlet you are taking orders for.</div>
-<Field label="Outlet">
-<select value={selOutletId} onChange={e=>setSelOutletId(e.target.value)} style={IS}>
-<option value="">— Select outlet —</option>
-{outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
-</select>
-</Field>
-<button onClick={()=>{if(!selOutletId){showToast("Select an outlet","error");return;}setOutletReady(true);}} style={{...BPr,background:C.accent}}>Continue →</button>
-</div>
-</div>
-);
+  // ── Admin outlet picker ──
+  if(isAdminLevel&&!outletReady)return(
+    <div style={{padding:20,maxWidth:420,margin:"0 auto"}}>
+      <div style={{...Cd,padding:28}}>
+        <div style={{fontSize:32,textAlign:"center",marginBottom:14}}>🏪</div>
+        <div style={{fontWeight:700,fontSize:16,color:C.text,marginBottom:6,textAlign:"center"}}>Select Outlet</div>
+        <div style={{color:C.sub,fontSize:13,marginBottom:20,textAlign:"center"}}>Choose which outlet you are taking orders for.</div>
+        <Field label="Outlet">
+          <select value={selOutletId} onChange={e=>setSelOutletId(e.target.value)} style={IS}>
+            <option value="">— Select outlet —</option>
+            {outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+        </Field>
+        <button onClick={()=>{if(!selOutletId){showToast("Select an outlet","error");return;}setOutletReady(true);}} style={{...BPr,background:C.accent}}>Continue →</button>
+      </div>
+    </div>
+  );
 
-// ── Success screen ──
-if(stage==="done"&&lastOrder)return(
-<div style={{padding:20,maxWidth:480,margin:"0 auto"}}>
-<div style={{...Cd,textAlign:"center",padding:32}}>
-<div style={{fontSize:48,marginBottom:12}}>✅</div>
-<div style={{fontWeight:800,fontSize:20,color:C.success,marginBottom:4}}>Order Placed!</div>
-<div style={{fontSize:36,fontWeight:900,color:C.accent,marginBottom:4}}>BMO #{lastOrder.bmoOrderNo}</div>
-<div style={{color:C.sub,fontSize:13,marginBottom:4}}>{lastOrder.outletName}</div>
-<div style={{color:C.sub,fontSize:14,marginBottom:4}}>{lastOrder.paymentMode}{lastOrder.dineType==="takeaway"?" · Takeaway":" · Dine-in"}</div>
-{lastOrder.takeawayCharge>0&&<div style={{color:C.sub,fontSize:12,marginBottom:4}}>Includes {inr(lastOrder.takeawayCharge)} takeaway charge</div>}
-<div style={{fontSize:22,fontWeight:800,color:C.text,marginBottom:20}}>{inr(lastOrder.totalAmount)}</div>
-<button onClick={()=>{setStage("menu");setLastOrder(null);}} style={{...BPr,background:C.accent}}>New Order</button>
-</div>
-</div>
-);
+  // ── Success screen ──
+  if(stage==="done"&&lastOrder)return(
+    <div style={{padding:20,maxWidth:480,margin:"0 auto"}}>
+      <div style={{...Cd,textAlign:"center",padding:32}}>
+        <div style={{fontSize:48,marginBottom:12}}>✅</div>
+        <div style={{fontWeight:800,fontSize:20,color:C.success,marginBottom:4}}>Order Placed!</div>
+        <div style={{fontSize:36,fontWeight:900,color:C.accent,marginBottom:4}}>BMO #{lastOrder.bmoOrderNo}</div>
+        <div style={{color:C.sub,fontSize:13,marginBottom:4}}>{lastOrder.outletName}</div>
+        <div style={{color:C.sub,fontSize:14,marginBottom:4}}>{lastOrder.paymentMode}{lastOrder.dineType==="takeaway"?" · Takeaway":" · Dine-in"}</div>
+        {lastOrder.takeawayCharge>0&&<div style={{color:C.sub,fontSize:12,marginBottom:4}}>Includes {inr(lastOrder.takeawayCharge)} takeaway charge</div>}
+        <div style={{fontSize:22,fontWeight:800,color:C.text,marginBottom:20}}>{inr(lastOrder.totalAmount)}</div>
+        <button onClick={()=>{setStage("menu");setLastOrder(null);}} style={{...BPr,background:C.accent}}>New Order</button>
+      </div>
+    </div>
+  );
 
-// ── Cart screen ──
-if(stage==="cart")return(
-<div style={{padding:16,maxWidth:540,margin:"0 auto"}}>
-<div style={{fontWeight:700,fontSize:18,color:C.text,marginBottom:4}}>🛒 Cart</div>
-<div style={{color:C.sub,fontSize:12,marginBottom:16}}>{outletName} · {cartTotalQty} items</div>
-{cart.length===0
-?<EmptyState icon="🛒" title="Cart is empty" desc="Go back and add items"/>
-:<>
-{cart.map(l=>(
-<div key={l.lineId} style={{...Cd,marginBottom:10}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-<div style={{flex:1}}>
-<div style={{fontWeight:700,color:C.text,fontSize:14}}>{l.itemName}</div>
-{l.customisations&&<div style={{color:C.sub,fontSize:12,marginTop:2}}>{l.customisations}</div>}
-<div style={{color:C.accent,fontSize:11,marginTop:2}}>{l.counter}</div>
-</div>
-<button onClick={()=>removeFromCart(l.lineId)} style={{background:"none",border:"none",color:C.danger,fontSize:18,cursor:"pointer",padding:"0 4px",lineHeight:1}}>✕</button>
-</div>
-<div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-<div style={{display:"flex",alignItems:"center",gap:10}}>
-<button onClick={()=>updateQty(l.lineId,-1)} style={{width:36,height:36,borderRadius:4,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:20,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger}}>−</button>
-<span style={{fontWeight:800,fontSize:18,minWidth:28,textAlign:"center",color:C.text}}>{l.quantity}</span>
-<button onClick={()=>updateQty(l.lineId,1)} style={{width:36,height:36,borderRadius:4,border:`1.5px solid ${C.accent}`,background:C.accentLight,cursor:"pointer",fontSize:20,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent}}>+</button>
-</div>
-<div style={{fontWeight:800,color:C.success,fontSize:16}}>{inr(l.lineTotal)}</div>
-</div>
-</div>
-))}
-<div style={{...Cd,marginBottom:16}}>
-<div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:10}}>Order Type</div>
-<div style={{display:"flex",gap:8}}>
-<button onClick={()=>setDineType("dinein")}
-style={{flex:1,padding:"12px",borderRadius:4,border:`1.5px solid ${dineType==="dinein"?C.accent:C.border}`,background:dineType==="dinein"?C.accentLight:"#fff",color:dineType==="dinein"?C.accentDark:C.sub,fontWeight:700,fontSize:14,cursor:"pointer"}}>
-🍽 Dine-in
-</button>
-<button onClick={()=>setDineType("takeaway")}
-style={{flex:1,padding:"12px",borderRadius:4,border:`1.5px solid ${dineType==="takeaway"?C.accent:C.border}`,background:dineType==="takeaway"?C.accentLight:"#fff",color:dineType==="takeaway"?C.accentDark:C.sub,fontWeight:700,fontSize:14,cursor:"pointer"}}>
-🥡 Takeaway
-</button>
-</div>
-{dineType==="takeaway"&&(
-<div style={{marginTop:10,fontSize:12,color:C.sub,lineHeight:1.5}}>
-Takeaway charge applied automatically — ₹20 per food item, ₹10 per beverage.
-</div>
-)}
-</div>
-<div style={{...Cd,background:C.accentLight,border:`1px solid ${C.accentBorder}`,marginBottom:16}}>
-<div style={{fontWeight:700,fontSize:14,color:C.accent,marginBottom:10}}>Payment Mode</div>
-<div style={{display:"flex",flexWrap:"wrap",gap:6}}>{BMO_PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={payMode===m} onClick={()=>setPayMode(m)}/>)}</div>
-</div>
-<div style={{...Cd,background:C.successLight,border:`1px solid ${C.successBorder}`,marginBottom:16}}>
-<div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.sub,marginBottom:takeawayTotal>0?4:0}}>
-<span>Items ({cartTotalQty})</span><span>{inr(cartTotal)}</span>
-</div>
-{takeawayTotal>0&&(
-<div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.sub,marginBottom:8}}>
-<span>Takeaway charge</span><span>{inr(takeawayTotal)}</span>
-</div>
-)}
-<div style={{height:1,background:C.successBorder,margin:"8px 0"}}/>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-<div style={{fontWeight:700,color:C.text,fontSize:15}}>Total</div>
-<span style={{fontWeight:900,color:C.success,fontSize:24}}>{inr(grandTotal)}</span>
-</div>
-</div>
-<div style={{display:"flex",gap:10}}>
-<button onClick={()=>setStage("menu")} style={{...BSc,flex:1}}>← Add More</button>
-<button onClick={settle} disabled={busy} style={{...BPr,background:C.accent,flex:2,opacity:busy?.7:1}}>{busy?"Saving…":"✓ Settle Bill"}</button>
-</div>
-</>
-}
-</div>
-);
+  // ── Cart screen ──
+  if(stage==="cart")return(
+    <div style={{padding:16,maxWidth:540,margin:"0 auto"}}>
+      <div style={{fontWeight:700,fontSize:18,color:C.text,marginBottom:4}}>🛒 Cart</div>
+      <div style={{color:C.sub,fontSize:12,marginBottom:16}}>{outletName} · {cartTotalQty} items</div>
+      {cart.length===0
+        ?<EmptyState icon="🛒" title="Cart is empty" desc="Go back and add items"/>
+        :<>
+          {cart.map(l=>(
+            <div key={l.lineId} style={{...Cd,marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,color:C.text,fontSize:14}}>{l.itemName}</div>
+                  {l.customisations&&<div style={{color:C.sub,fontSize:12,marginTop:2}}>{l.customisations}</div>}
+                  <div style={{color:C.accent,fontSize:11,marginTop:2}}>{l.counter}</div>
+                </div>
+                <button onClick={()=>removeFromCart(l.lineId)} style={{background:"none",border:"none",color:C.danger,fontSize:18,cursor:"pointer",padding:"0 4px",lineHeight:1}}>✕</button>
+              </div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <button onClick={()=>updateQty(l.lineId,-1)} style={{width:36,height:36,borderRadius:4,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:20,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger}}>−</button>
+                  <span style={{fontWeight:800,fontSize:18,minWidth:28,textAlign:"center",color:C.text}}>{l.quantity}</span>
+                  <button onClick={()=>updateQty(l.lineId,1)} style={{width:36,height:36,borderRadius:4,border:`1.5px solid ${C.accent}`,background:C.accentLight,cursor:"pointer",fontSize:20,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent}}>+</button>
+                </div>
+                <div style={{fontWeight:800,color:C.success,fontSize:16}}>{inr(l.lineTotal)}</div>
+              </div>
+            </div>
+          ))}
+          <div style={{...Cd,marginBottom:16}}>
+            <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:10}}>Order Type</div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setDineType("dinein")}
+                style={{flex:1,padding:"12px",borderRadius:4,border:`1.5px solid ${dineType==="dinein"?C.accent:C.border}`,background:dineType==="dinein"?C.accentLight:"#fff",color:dineType==="dinein"?C.accentDark:C.sub,fontWeight:700,fontSize:14,cursor:"pointer"}}>
+                🍽 Dine-in
+              </button>
+              <button onClick={()=>setDineType("takeaway")}
+                style={{flex:1,padding:"12px",borderRadius:4,border:`1.5px solid ${dineType==="takeaway"?C.accent:C.border}`,background:dineType==="takeaway"?C.accentLight:"#fff",color:dineType==="takeaway"?C.accentDark:C.sub,fontWeight:700,fontSize:14,cursor:"pointer"}}>
+                🥡 Takeaway
+              </button>
+            </div>
+            {dineType==="takeaway"&&(
+              <div style={{marginTop:10,fontSize:12,color:C.sub,lineHeight:1.5}}>
+                Takeaway charge applied automatically — ₹20 per food item, ₹10 per beverage.
+              </div>
+            )}
+          </div>
+          <div style={{...Cd,background:C.accentLight,border:`1px solid ${C.accentBorder}`,marginBottom:16}}>
+            <div style={{fontWeight:700,fontSize:14,color:C.accent,marginBottom:10}}>Payment Mode</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{BMO_PAYMENT_MODES.map(m=><ModeChip key={m} mode={m} selected={payMode===m} onClick={()=>setPayMode(m)}/>)}</div>
+          </div>
+          <div style={{...Cd,background:C.successLight,border:`1px solid ${C.successBorder}`,marginBottom:16}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.sub,marginBottom:takeawayTotal>0?4:0}}>
+              <span>Items ({cartTotalQty})</span><span>{inr(cartTotal)}</span>
+            </div>
+            {takeawayTotal>0&&(
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.sub,marginBottom:8}}>
+                <span>Takeaway charge</span><span>{inr(takeawayTotal)}</span>
+              </div>
+            )}
+            <div style={{height:1,background:C.successBorder,margin:"8px 0"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{fontWeight:700,color:C.text,fontSize:15}}>Total</div>
+              <span style={{fontWeight:900,color:C.success,fontSize:24}}>{inr(grandTotal)}</span>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={()=>setStage("menu")} style={{...BSc,flex:1}}>← Add More</button>
+            <button onClick={settle} disabled={busy} style={{...BPr,background:C.accent,flex:2,opacity:busy?.7:1}}>{busy?"Saving…":"✓ Settle Bill"}</button>
+          </div>
+        </>
+      }
+    </div>
+  );
 
-// ── Menu screen ──
-return(
-<div style={{maxWidth:600,margin:"0 auto"}}>
-{/* Outlet badge for non-outlet users */}
-{!isOutlet&&outletReady&&(
-<div style={{background:C.accentLight,borderBottom:`1px solid ${C.accentBorder}`,padding:"8px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-<span style={{fontSize:13,fontWeight:600,color:C.accent}}>🏪 {outletName}</span>
-{isAdminLevel&&<button onClick={()=>{setOutletReady(false);setCart([]);}} style={{background:"none",border:"none",color:C.accent,fontSize:12,cursor:"pointer",textDecoration:"underline"}}>Change</button>}
-</div>
-)}
+  // ── Menu screen ──
+  return(
+    <div style={{maxWidth:600,margin:"0 auto"}}>
+      {/* Outlet badge for non-outlet users */}
+      {!isOutlet&&outletReady&&(
+        <div style={{background:C.accentLight,borderBottom:`1px solid ${C.accentBorder}`,padding:"8px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span style={{fontSize:13,fontWeight:600,color:C.accent}}>🏪 {outletName}</span>
+          {isAdminLevel&&<button onClick={()=>{setOutletReady(false);setCart([]);}} style={{background:"none",border:"none",color:C.accent,fontSize:12,cursor:"pointer",textDecoration:"underline"}}>Change</button>}
+        </div>
+      )}
 
-{/* Category tabs */}
-<div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"0 4px",display:"flex",overflowX:"auto",gap:0}}>
-{BMO_CATEGORIES.map(cat=>{
-const catQty=cart.filter(l=>l.category===cat).reduce((s,l)=>s+l.quantity,0);
-return(
-<button key={cat} onClick={()=>setSelCat(cat)} style={{flexShrink:0,background:"transparent",border:"none",borderBottom:selCat===cat?`2px solid ${C.accent}`:"2px solid transparent",color:selCat===cat?C.accent:C.sub,padding:"11px 14px",fontSize:13,cursor:"pointer",fontWeight:selCat===cat?700:500,whiteSpace:"nowrap",position:"relative"}}>
-{cat}
-{catQty>0&&<span style={{marginLeft:5,background:C.accent,color:"#fff",borderRadius:4,fontSize:9,padding:"1px 5px",fontWeight:800,verticalAlign:"middle"}}>{catQty}</span>}
-</button>
-);
-})}
-</div>
+      {/* Category tabs */}
+      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"0 4px",display:"flex",overflowX:"auto",gap:0}}>
+        {BMO_CATEGORIES.map(cat=>{
+          const catQty=cart.filter(l=>l.category===cat).reduce((s,l)=>s+l.quantity,0);
+          return(
+            <button key={cat} onClick={()=>setSelCat(cat)} style={{flexShrink:0,background:"transparent",border:"none",borderBottom:selCat===cat?`2px solid ${C.accent}`:"2px solid transparent",color:selCat===cat?C.accent:C.sub,padding:"11px 14px",fontSize:13,cursor:"pointer",fontWeight:selCat===cat?700:500,whiteSpace:"nowrap",position:"relative"}}>
+              {cat}
+              {catQty>0&&<span style={{marginLeft:5,background:C.accent,color:"#fff",borderRadius:4,fontSize:9,padding:"1px 5px",fontWeight:800,verticalAlign:"middle"}}>{catQty}</span>}
+            </button>
+          );
+        })}
+      </div>
 
-{/* Items grid */}
-<div style={{padding:12,display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(155px,1fr))",gap:10,paddingBottom:cart.length>0?84:12}}>
-{catItems.length===0
-?<div style={{gridColumn:"1/-1"}}><EmptyState icon="🍽" title="No items" desc="No active items in this category"/></div>
-:catItems.map(item=>{
-const hasCustom=item.customGroups&&item.customGroups.length>0;
-const itemQty=getItemTotalQty(item.id);
-const inCart=itemQty>0;
-return(
-<div key={item.id} style={{background:C.surface,border:`1.5px solid ${inCart?C.accent:C.border}`,borderRadius:4,padding:"12px 12px 10px",display:"flex",flexDirection:"column",gap:6,position:"relative",boxShadow:inCart?`0 0 0 2px ${C.accent}22`:"none"}}>
-{inCart&&<div style={{position:"absolute",top:-8,right:-8,background:C.accent,color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,boxShadow:"0 2px 6px rgba(0,0,0,.2)"}}>{itemQty}</div>}
-<div onClick={hasCustom?()=>openCustomModal(item):undefined} style={{cursor:hasCustom?"pointer":"default",flex:1}}>
-<div style={{fontWeight:700,color:C.text,fontSize:13,lineHeight:1.35,marginBottom:4}}>{item.name}</div>
-<div style={{fontWeight:800,color:C.accent,fontSize:16}}>{inr(item.price)}</div>
-<div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:.3,marginTop:2}}>{item.counter}</div>
-{hasCustom&&<div style={{fontSize:10,color:C.accent,marginTop:3,fontWeight:600}}>Tap to customise</div>}
-</div>
-{hasCustom?(
-<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:4}}>
-<button onClick={()=>openCustomModal(item)} style={{flex:1,background:inCart?C.accent:C.bg,color:inCart?"#fff":C.accent,border:`1.5px solid ${C.accent}`,borderRadius:4,padding:"7px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-{inCart?`+Add (${itemQty})`:"+ Add"}
-</button>
-</div>
-):(
-<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:4,gap:4}}>
-{inCart?(
-<>
-<button onClick={(e)=>handleDirectMinus(item,e)} style={{width:34,height:34,borderRadius:4,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:18,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger,flexShrink:0}}>−</button>
-<span style={{fontWeight:800,fontSize:16,color:C.accent,minWidth:20,textAlign:"center"}}>{itemQty}</span>
-<button onClick={(e)=>handleDirectPlus(item,e)} style={{width:34,height:34,borderRadius:4,border:`1.5px solid ${C.accent}`,background:C.accentLight,cursor:"pointer",fontSize:18,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent,flexShrink:0}}>+</button>
-</>
-):(
-<button onClick={(e)=>handleDirectPlus(item,e)} style={{flex:1,background:C.bg,color:C.accent,border:`1.5px solid ${C.accent}`,borderRadius:4,padding:"7px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Add</button>
-)}
-</div>
-)}
-</div>
-);
-})
-}
-</div>
+      {/* Items grid */}
+      <div style={{padding:12,display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(155px,1fr))",gap:10,paddingBottom:cart.length>0?84:12}}>
+        {catItems.length===0
+          ?<div style={{gridColumn:"1/-1"}}><EmptyState icon="🍽" title="No items" desc="No active items in this category"/></div>
+          :catItems.map(item=>{
+            const hasCustom=item.customGroups&&item.customGroups.length>0;
+            const itemQty=getItemTotalQty(item.id);
+            const inCart=itemQty>0;
+            return(
+              <div key={item.id} style={{background:C.surface,border:`1.5px solid ${inCart?C.accent:C.border}`,borderRadius:4,padding:"12px 12px 10px",display:"flex",flexDirection:"column",gap:6,position:"relative",boxShadow:inCart?`0 0 0 2px ${C.accent}22`:"none"}}>
+                {inCart&&<div style={{position:"absolute",top:-8,right:-8,background:C.accent,color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,boxShadow:"0 2px 6px rgba(0,0,0,.2)"}}>{itemQty}</div>}
+                <div onClick={hasCustom?()=>openCustomModal(item):undefined} style={{cursor:hasCustom?"pointer":"default",flex:1}}>
+                  <div style={{fontWeight:700,color:C.text,fontSize:13,lineHeight:1.35,marginBottom:4}}>{item.name}</div>
+                  <div style={{fontWeight:800,color:C.accent,fontSize:16}}>{inr(item.price)}</div>
+                  <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:.3,marginTop:2}}>{item.counter}</div>
+                  {hasCustom&&<div style={{fontSize:10,color:C.accent,marginTop:3,fontWeight:600}}>Tap to customise</div>}
+                </div>
+                {hasCustom?(
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:4}}>
+                    <button onClick={()=>openCustomModal(item)} style={{flex:1,background:inCart?C.accent:C.bg,color:inCart?"#fff":C.accent,border:`1.5px solid ${C.accent}`,borderRadius:4,padding:"7px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                      {inCart?`+Add (${itemQty})`:"+ Add"}
+                    </button>
+                  </div>
+                ):(
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:4,gap:4}}>
+                    {inCart?(
+                      <>
+                        <button onClick={(e)=>handleDirectMinus(item,e)} style={{width:34,height:34,borderRadius:4,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:18,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger,flexShrink:0}}>−</button>
+                        <span style={{fontWeight:800,fontSize:16,color:C.accent,minWidth:20,textAlign:"center"}}>{itemQty}</span>
+                        <button onClick={(e)=>handleDirectPlus(item,e)} style={{width:34,height:34,borderRadius:4,border:`1.5px solid ${C.accent}`,background:C.accentLight,cursor:"pointer",fontSize:18,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent,flexShrink:0}}>+</button>
+                      </>
+                    ):(
+                      <button onClick={(e)=>handleDirectPlus(item,e)} style={{flex:1,background:C.bg,color:C.accent,border:`1.5px solid ${C.accent}`,borderRadius:4,padding:"7px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Add</button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        }
+      </div>
 
-{/* Floating cart bar */}
-{cart.length>0&&(
-<div style={{position:"fixed",bottom:0,left:0,right:0,padding:"10px 12px",background:C.surface,borderTop:`1px solid ${C.border}`,zIndex:10}}>
-<button onClick={()=>setStage("cart")} style={{...BPr,background:C.accent,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 20px",borderRadius:4}}>
-<div style={{display:"flex",alignItems:"center",gap:8}}>
-<span style={{background:"rgba(255,255,255,.2)",borderRadius:4,padding:"2px 10px",fontWeight:800,fontSize:13}}>{cartTotalQty}</span>
-<span style={{fontWeight:600,fontSize:13,opacity:.9}}>{cart.length} line{cart.length!==1?"s":""}</span>
-</div>
-<span style={{fontWeight:700,fontSize:15}}>View Cart →</span>
-<span style={{fontWeight:900,fontSize:16}}>{inr(cartTotal)}</span>
-</button>
-</div>
-)}
+      {/* Floating cart bar */}
+      {cart.length>0&&(
+        <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"10px 12px",background:C.surface,borderTop:`1px solid ${C.border}`,zIndex:10}}>
+          <button onClick={()=>setStage("cart")} style={{...BPr,background:C.accent,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 20px",borderRadius:4}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{background:"rgba(255,255,255,.2)",borderRadius:4,padding:"2px 10px",fontWeight:800,fontSize:13}}>{cartTotalQty}</span>
+              <span style={{fontWeight:600,fontSize:13,opacity:.9}}>{cart.length} line{cart.length!==1?"s":""}</span>
+            </div>
+            <span style={{fontWeight:700,fontSize:15}}>View Cart →</span>
+            <span style={{fontWeight:900,fontSize:16}}>{inr(cartTotal)}</span>
+          </button>
+        </div>
+      )}
 
-{/* Customisation Modal */}
-<Modal open={!!customModal} onClose={()=>setCustomModal(null)} title={customModal?.item?.name||""} width={400}>
-{customModal&&(
-<>
-{customModal.item.customGroups.map(g=>(
-<div key={g.name} style={{marginBottom:16}}>
-<div style={{fontSize:12,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:.4,marginBottom:8}}>{g.name}{g.required&&<span style={{color:C.danger,marginLeft:4}}>*</span>}</div>
-<div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-{g.options.map(opt=>(
-<button key={optLabel(opt)} onClick={()=>setCustomModal(cm=>({...cm,selections:{...cm.selections,[g.name]:optLabel(opt)}}))}
-style={{background:customModal.selections[g.name]===optLabel(opt)?C.accent:C.surface,color:customModal.selections[g.name]===optLabel(opt)?"#fff":C.sub,border:`1.5px solid ${customModal.selections[g.name]===optLabel(opt)?C.accent:C.border}`,borderRadius:4,padding:"8px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>
-{optLabel(opt)}
-</button>
-))}
-</div>
-</div>
-))}
-<Divider/>
-<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-<div style={{fontSize:13,fontWeight:600,color:C.text}}>Quantity</div>
-<div style={{display:"flex",alignItems:"center",gap:14}}>
-<button onClick={()=>setCustomModal(cm=>({...cm,qty:Math.max(1,(cm.qty||1)-1)}))} style={{width:40,height:40,borderRadius:4,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger}}>−</button>
-<span style={{fontWeight:800,fontSize:22,minWidth:32,textAlign:"center"}}>{customModal.qty||1}</span>
-<button onClick={()=>setCustomModal(cm=>({...cm,qty:(cm.qty||1)+1}))} style={{width:40,height:40,borderRadius:4,border:`1.5px solid ${C.accent}`,background:C.accentLight,cursor:"pointer",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent}}>+</button>
-</div>
-</div>
-<div style={{background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-<span style={{color:C.sub,fontSize:14}}>Subtotal</span>
-<span style={{fontWeight:800,color:C.success,fontSize:20}}>{inr((customModal.item.price+calcExtra(customModal.item,customModal.selections))*(customModal.qty||1))}</span>
-</div>
-<button onClick={confirmCustom} style={{...BPr,background:C.accent}}>Add to Cart</button>
-</>
-)}
-</Modal>
-</div>
-);
+      {/* Customisation Modal */}
+      <Modal open={!!customModal} onClose={()=>setCustomModal(null)} title={customModal?.item?.name||""} width={400}>
+        {customModal&&(
+          <>
+            {customModal.item.customGroups.map(g=>(
+              <div key={g.name} style={{marginBottom:16}}>
+                <div style={{fontSize:12,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:.4,marginBottom:8}}>{g.name}{g.required&&<span style={{color:C.danger,marginLeft:4}}>*</span>}</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                  {g.options.map(opt=>(
+                    <button key={optLabel(opt)} onClick={()=>setCustomModal(cm=>({...cm,selections:{...cm.selections,[g.name]:optLabel(opt)}}))}
+                      style={{background:customModal.selections[g.name]===optLabel(opt)?C.accent:C.surface,color:customModal.selections[g.name]===optLabel(opt)?"#fff":C.sub,border:`1.5px solid ${customModal.selections[g.name]===optLabel(opt)?C.accent:C.border}`,borderRadius:4,padding:"8px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>
+                      {optLabel(opt)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <Divider/>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+              <div style={{fontSize:13,fontWeight:600,color:C.text}}>Quantity</div>
+              <div style={{display:"flex",alignItems:"center",gap:14}}>
+                <button onClick={()=>setCustomModal(cm=>({...cm,qty:Math.max(1,(cm.qty||1)-1)}))} style={{width:40,height:40,borderRadius:4,border:`1px solid ${C.border}`,background:C.bg,cursor:"pointer",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.danger}}>−</button>
+                <span style={{fontWeight:800,fontSize:22,minWidth:32,textAlign:"center"}}>{customModal.qty||1}</span>
+                <button onClick={()=>setCustomModal(cm=>({...cm,qty:(cm.qty||1)+1}))} style={{width:40,height:40,borderRadius:4,border:`1.5px solid ${C.accent}`,background:C.accentLight,cursor:"pointer",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent}}>+</button>
+              </div>
+            </div>
+            <div style={{background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <span style={{color:C.sub,fontSize:14}}>Subtotal</span>
+              <span style={{fontWeight:800,color:C.success,fontSize:20}}>{inr((customModal.item.price+calcExtra(customModal.item,customModal.selections))*(customModal.qty||1))}</span>
+            </div>
+            <button onClick={confirmCustom} style={{...BPr,background:C.accent}}>Add to Cart</button>
+          </>
+        )}
+      </Modal>
+    </div>
+  );
 }
 
 // ─── BMO View Orders ──────────────────────────────────────────────────────────
 function BMOViewOrders({user}){
-const [orders,setOrders]=useState([]);
-const [counter,setCounter]=useState("All");
-const [loading,setLoading]=useState(true);
-const [cancelId,setCancelId]=useState(null);
-const canCancel=["superadmin","admin","manager"].includes(user.role);
-const {outletId,selOutlet,Selector}=useBMOOutlet(user);
+  const [orders,setOrders]=useState([]);
+  const [counter,setCounter]=useState("All");
+  const [loading,setLoading]=useState(true);
+  const [cancelId,setCancelId]=useState(null);
+  const canCancel=["superadmin","admin","manager"].includes(user.role);
+  const {outletId,selOutlet,Selector}=useBMOOutlet(user);
 
-const load=useCallback(async()=>{
-const today=getToday();
-const all=await getAllBmoOrders(today);
-let filtered=all.filter(o=>o.businessDay===today&&!o.cancelled);
-if(user.role==="outlet") filtered=filtered.filter(o=>o.outletId===user.outlets[0]);
-else if(selOutlet&&selOutlet!=="all") filtered=filtered.filter(o=>o.outletId===selOutlet);
-setOrders(filtered.slice().reverse());
-setLoading(false);
-},[selOutlet,user]);
+  const load=useCallback(async()=>{
+    const today=getToday();
+    const all=await getAllBmoOrders(today);
+    let filtered=all.filter(o=>o.businessDay===today&&!o.cancelled);
+    if(user.role==="outlet") filtered=filtered.filter(o=>o.outletId===user.outlets[0]);
+    else if(selOutlet&&selOutlet!=="all") filtered=filtered.filter(o=>o.outletId===selOutlet);
+    setOrders(filtered.slice().reverse());
+    setLoading(false);
+  },[selOutlet,user]);
 
-useEffect(()=>{load();const t=setInterval(load,30000);return()=>clearInterval(t);},[load]);
+  useEffect(()=>{load();const t=setInterval(load,30000);return()=>clearInterval(t);},[load]);
 
-const updateOrderItems=(orderId,updater)=>{
-// Update local state instantly
-setOrders(prev=>{
-const updated=prev.map(o=>{
-if(o.id!==orderId)return o;
-const items=updater(o.items);
-const allDone=items.every(l=>l.status==="completed");
-const anyDone=items.some(l=>l.completedQuantity>0);
-return{...o,items,status:allDone?"completed":anyDone?"partially_completed":"open"};
-});
-// Write to Firestore in background
-updateBmoOrder(orderId,o=>{
-const items=updater(o.items);
-const allDone=items.every(l=>l.status==="completed");
-const anyDone=items.some(l=>l.completedQuantity>0);
-return{...o,items,status:allDone?"completed":anyDone?"partially_completed":"open"};
-});
-return updated;
-});
-};
+  const updateOrderItems=(orderId,updater)=>{
+    // Update local state instantly
+    setOrders(prev=>{
+      const updated=prev.map(o=>{
+        if(o.id!==orderId)return o;
+        const items=updater(o.items);
+        const allDone=items.every(l=>l.status==="completed");
+        const anyDone=items.some(l=>l.completedQuantity>0);
+        return{...o,items,status:allDone?"completed":anyDone?"partially_completed":"open"};
+      });
+      // Write to Firestore in background
+      updateBmoOrder(orderId,o=>{
+        const items=updater(o.items);
+        const allDone=items.every(l=>l.status==="completed");
+        const anyDone=items.some(l=>l.completedQuantity>0);
+        return{...o,items,status:allDone?"completed":anyDone?"partially_completed":"open"};
+      });
+      return updated;
+    });
+  };
 
-const markPlusOne=(orderId,lineId)=>updateOrderItems(orderId,items=>items.map(l=>{
-if(l.lineId!==lineId)return l;
-const nc=Math.min(l.quantity,l.completedQuantity+1);
-return{...l,completedQuantity:nc,pendingQuantity:l.quantity-nc,status:nc>=l.quantity?"completed":"partial"};
-}));
+  const markPlusOne=(orderId,lineId)=>updateOrderItems(orderId,items=>items.map(l=>{
+    if(l.lineId!==lineId)return l;
+    const nc=Math.min(l.quantity,l.completedQuantity+1);
+    return{...l,completedQuantity:nc,pendingQuantity:l.quantity-nc,status:nc>=l.quantity?"completed":"partial"};
+  }));
 
-const markLineDone=(orderId,lineId)=>updateOrderItems(orderId,items=>items.map(l=>{
-if(l.lineId!==lineId)return l;
-return{...l,completedQuantity:l.quantity,pendingQuantity:0,status:"completed"};
-}));
+  const markLineDone=(orderId,lineId)=>updateOrderItems(orderId,items=>items.map(l=>{
+    if(l.lineId!==lineId)return l;
+    return{...l,completedQuantity:l.quantity,pendingQuantity:0,status:"completed"};
+  }));
 
-const cancelOrder=async(orderId)=>{
-setOrders(prev=>prev.filter(o=>o.id!==orderId));
-updateBmoOrder(orderId,o=>({...o,cancelled:true,status:"cancelled"}));
-addLog("BMO_CANCEL",user.id,`Cancelled BMO order ${orderId}`);
-setCancelId(null);
-};
+  const cancelOrder=async(orderId)=>{
+    setOrders(prev=>prev.filter(o=>o.id!==orderId));
+    updateBmoOrder(orderId,o=>({...o,cancelled:true,status:"cancelled"}));
+    addLog("BMO_CANCEL",user.id,`Cancelled BMO order ${orderId}`);
+    setCancelId(null);
+  };
 
-const counterTabs=["All","Dosa Counter","IV Counter","Bevs Bar"];
+  const counterTabs=["All","Dosa Counter","IV Counter","Bevs Bar"];
 
-// Key: per counter, show only lines belonging to that counter that are NOT completed
-const getCounterPendingLines=(order)=>{
-if(counter==="All") return order.items.filter(l=>l.status!=="completed");
-const cats=COUNTER_CATS[counter]||[];
-return order.items.filter(l=>cats.includes(l.category)&&l.status!=="completed");
-};
-const getCounterCompletedLines=(order)=>{
-if(counter==="All") return order.items.filter(l=>l.status==="completed");
-const cats=COUNTER_CATS[counter]||[];
-return order.items.filter(l=>cats.includes(l.category)&&l.status==="completed");
-};
+  // Key: per counter, show only lines belonging to that counter that are NOT completed
+  const getCounterPendingLines=(order)=>{
+    if(counter==="All") return order.items.filter(l=>l.status!=="completed");
+    const cats=COUNTER_CATS[counter]||[];
+    return order.items.filter(l=>cats.includes(l.category)&&l.status!=="completed");
+  };
+  const getCounterCompletedLines=(order)=>{
+    if(counter==="All") return order.items.filter(l=>l.status==="completed");
+    const cats=COUNTER_CATS[counter]||[];
+    return order.items.filter(l=>cats.includes(l.category)&&l.status==="completed");
+  };
 
-// Orders that have at least one pending line for this counter
-const pendingOrders=orders.filter(o=>getCounterPendingLines(o).length>0);
-// Orders that have at least one completed line for this counter, but no pending lines for this counter
-const completedOrders=orders.filter(o=>getCounterPendingLines(o).length===0&&getCounterCompletedLines(o).length>0);
+  // Orders that have at least one pending line for this counter
+  const pendingOrders=orders.filter(o=>getCounterPendingLines(o).length>0);
+  // Orders that have at least one completed line for this counter, but no pending lines for this counter
+  const completedOrders=orders.filter(o=>getCounterPendingLines(o).length===0&&getCounterCompletedLines(o).length>0);
 
-const pendingLineCount=pendingOrders.reduce((s,o)=>s+getCounterPendingLines(o).length,0);
+  const pendingLineCount=pendingOrders.reduce((s,o)=>s+getCounterPendingLines(o).length,0);
 
-if(loading)return <div style={{display:"flex",justifyContent:"center",padding:48}}><Spinner/></div>;
+  if(loading)return <div style={{display:"flex",justifyContent:"center",padding:48}}><Spinner/></div>;
 
-return(
-<div style={{maxWidth:860,margin:"0 auto"}}>
-{/* Outlet selector */}
-{Selector}
+  return(
+    <div style={{maxWidth:860,margin:"0 auto"}}>
+      {/* Outlet selector */}
+      {Selector}
 
-{/* Refresh + Counter tabs */}
-<div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,display:"flex",overflowX:"auto",gap:0,padding:"0 4px",alignItems:"center"}}>
-{counterTabs.map(ct=>{
-const pending=ct==="All"
-?orders.filter(o=>o.items.some(l=>l.status!=="completed")).length
-:orders.filter(o=>o.items.some(l=>(COUNTER_CATS[ct]||[]).includes(l.category)&&l.status!=="completed")).length;
-return(
-<button key={ct} onClick={()=>setCounter(ct)} style={{flexShrink:0,background:"transparent",border:"none",borderBottom:counter===ct?`2px solid ${C.accent}`:"2px solid transparent",color:counter===ct?C.accent:C.sub,padding:"11px 16px",fontSize:13,cursor:"pointer",fontWeight:counter===ct?700:500,whiteSpace:"nowrap",position:"relative"}}>
-{ct}
-{pending>0&&<span style={{marginLeft:5,background:C.warn,color:"#fff",borderRadius:4,fontSize:9,padding:"1px 5px",fontWeight:800,verticalAlign:"middle"}}>{pending}</span>}
-</button>
-);
-})}
-<button onClick={load} style={{flexShrink:0,marginLeft:"auto",background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,color:C.accent,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer",margin:"0 8px",whiteSpace:"nowrap"}}>↻ Refresh</button>
-</div>
+      {/* Refresh + Counter tabs */}
+      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,display:"flex",overflowX:"auto",gap:0,padding:"0 4px",alignItems:"center"}}>
+        {counterTabs.map(ct=>{
+          const pending=ct==="All"
+            ?orders.filter(o=>o.items.some(l=>l.status!=="completed")).length
+            :orders.filter(o=>o.items.some(l=>(COUNTER_CATS[ct]||[]).includes(l.category)&&l.status!=="completed")).length;
+          return(
+            <button key={ct} onClick={()=>setCounter(ct)} style={{flexShrink:0,background:"transparent",border:"none",borderBottom:counter===ct?`2px solid ${C.accent}`:"2px solid transparent",color:counter===ct?C.accent:C.sub,padding:"11px 16px",fontSize:13,cursor:"pointer",fontWeight:counter===ct?700:500,whiteSpace:"nowrap",position:"relative"}}>
+              {ct}
+              {pending>0&&<span style={{marginLeft:5,background:C.warn,color:"#fff",borderRadius:4,fontSize:9,padding:"1px 5px",fontWeight:800,verticalAlign:"middle"}}>{pending}</span>}
+            </button>
+          );
+        })}
+        <button onClick={load} style={{flexShrink:0,marginLeft:"auto",background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,color:C.accent,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer",margin:"0 8px",whiteSpace:"nowrap"}}>↻ Refresh</button>
+      </div>
 
-<div style={{padding:12}}>
-{/* Stats */}
-<div style={{display:"flex",gap:8,marginBottom:14,overflowX:"auto"}}>
-{[["Pending Lines",pendingLineCount,C.warn],["Done Orders",completedOrders.length,C.success],["Total Today",orders.length,C.accent]].map(([l,v,cl])=>(
-<div key={l} style={{flexShrink:0,background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 14px",textAlign:"center",minWidth:90}}>
-<div style={{fontSize:9,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:2}}>{l}</div>
-<div style={{fontSize:20,fontWeight:800,color:cl}}>{v}</div>
-</div>
-))}
-</div>
+      <div style={{padding:12}}>
+        {/* Stats */}
+        <div style={{display:"flex",gap:8,marginBottom:14,overflowX:"auto"}}>
+          {[["Pending Lines",pendingLineCount,C.warn],["Done Orders",completedOrders.length,C.success],["Total Today",orders.length,C.accent]].map(([l,v,cl])=>(
+            <div key={l} style={{flexShrink:0,background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 14px",textAlign:"center",minWidth:90}}>
+              <div style={{fontSize:9,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:2}}>{l}</div>
+              <div style={{fontSize:20,fontWeight:800,color:cl}}>{v}</div>
+            </div>
+          ))}
+        </div>
 
-{pendingOrders.length===0&&<EmptyState icon="✅" title="All clear!" desc="No pending items for this counter"/>}
+        {pendingOrders.length===0&&<EmptyState icon="✅" title="All clear!" desc="No pending items for this counter"/>}
 
-{/* Pending orders — show only pending lines for this counter */}
-{pendingOrders.map(order=>{
-const pendingLines=getCounterPendingLines(order);
-return(
-<div key={order.id} style={{...Cd,marginBottom:12,borderLeft:`4px solid ${C.warn}`}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-<div style={{display:"flex",alignItems:"center",gap:10}}>
-<div style={{fontWeight:900,fontSize:22,color:C.accent}}>#{order.bmoOrderNo}</div>
-<div>
-<div style={{fontSize:11,color:C.muted}}>{fmt(order.createdAt)}</div>
-<div style={{fontSize:11,color:C.sub}}>{order.paymentMode} · {order.outletName}</div>
-</div>
-</div>
-<div style={{display:"flex",gap:6,alignItems:"center"}}>
-{canCancel&&<button onClick={()=>setCancelId(order.id)} style={{...BDn,padding:"3px 8px",fontSize:11}}>Cancel</button>}
-<span style={{fontWeight:800,color:C.success,fontSize:14}}>{inr(order.totalAmount)}</span>
-</div>
-</div>
-{pendingLines.map(line=>(
-<div key={line.lineId} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:"10px 12px",marginBottom:8}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-<div style={{flex:1}}>
-<div style={{fontWeight:700,color:C.text,fontSize:14}}>{line.itemName}</div>
-{line.customisations&&<div style={{color:C.sub,fontSize:12,marginTop:1}}>{line.customisations}</div>}
-<div style={{fontSize:10,color:C.muted,marginTop:1,textTransform:"uppercase"}}>{line.counter}</div>
-</div>
-<div style={{textAlign:"right",flexShrink:0,marginLeft:10}}>
-<div style={{fontWeight:800,color:C.text,fontSize:16}}>×{line.quantity}</div>
-{line.completedQuantity>0&&<div style={{fontSize:11,color:C.success}}>✓ {line.completedQuantity} done</div>}
-<div style={{fontSize:11,color:C.warn}}>{line.pendingQuantity} left</div>
-</div>
-</div>
-<div style={{display:"flex",gap:8}}>
-{line.quantity>1&&(
-<button onClick={()=>markPlusOne(order.id,line.lineId)} style={{flex:1,background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer"}}>+1 Done</button>
-)}
-<button onClick={()=>markLineDone(order.id,line.lineId)} style={{flex:2,background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ All Done</button>
-</div>
-</div>
-))}
-</div>
-);
-})}
+        {/* Pending orders — show only pending lines for this counter */}
+        {pendingOrders.map(order=>{
+          const pendingLines=getCounterPendingLines(order);
+          return(
+            <div key={order.id} style={{...Cd,marginBottom:12,borderLeft:`4px solid ${C.warn}`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{fontWeight:900,fontSize:22,color:C.accent}}>#{order.bmoOrderNo}</div>
+                  <div>
+                    <div style={{fontSize:11,color:C.muted}}>{fmt(order.createdAt)}</div>
+                    <div style={{fontSize:11,color:C.sub}}>{order.paymentMode} · {order.outletName}</div>
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  {canCancel&&<button onClick={()=>setCancelId(order.id)} style={{...BDn,padding:"3px 8px",fontSize:11}}>Cancel</button>}
+                  <span style={{fontWeight:800,color:C.success,fontSize:14}}>{inr(order.totalAmount)}</span>
+                </div>
+              </div>
+              {pendingLines.map(line=>(
+                <div key={line.lineId} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:"10px 12px",marginBottom:8}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:700,color:C.text,fontSize:14}}>{line.itemName}</div>
+                      {line.customisations&&<div style={{color:C.sub,fontSize:12,marginTop:1}}>{line.customisations}</div>}
+                      <div style={{fontSize:10,color:C.muted,marginTop:1,textTransform:"uppercase"}}>{line.counter}</div>
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0,marginLeft:10}}>
+                      <div style={{fontWeight:800,color:C.text,fontSize:16}}>×{line.quantity}</div>
+                      {line.completedQuantity>0&&<div style={{fontSize:11,color:C.success}}>✓ {line.completedQuantity} done</div>}
+                      <div style={{fontSize:11,color:C.warn}}>{line.pendingQuantity} left</div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:8}}>
+                    {line.quantity>1&&(
+                      <button onClick={()=>markPlusOne(order.id,line.lineId)} style={{flex:1,background:C.accentLight,color:C.accent,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer"}}>+1 Done</button>
+                    )}
+                    <button onClick={()=>markLineDone(order.id,line.lineId)} style={{flex:2,background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ All Done</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })}
 
-{/* Completed lines section */}
-{completedOrders.length>0&&(
-<>
-<div style={{fontWeight:600,fontSize:11,color:C.sub,textTransform:"uppercase",letterSpacing:.5,margin:"16px 0 8px"}}>
-Completed for this counter ({completedOrders.length})
-</div>
-{completedOrders.map(order=>{
-const doneLines=getCounterCompletedLines(order);
-return(
-<div key={order.id} style={{...Cd,marginBottom:8,opacity:.65,borderLeft:`4px solid ${C.success}`}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-<div style={{fontWeight:800,fontSize:16,color:C.success}}>#{order.bmoOrderNo}</div>
-<Badge label="Done" color={C.success} bg={C.successLight} border={C.successBorder}/>
-</div>
-<div style={{fontSize:12,color:C.muted}}>{doneLines.map(l=>`${l.itemName}${l.customisations?` (${l.customisations})`:""} ×${l.quantity}`).join(" · ")}</div>
-</div>
-);
-})}
-</>
-)}
-</div>
+        {/* Completed lines section */}
+        {completedOrders.length>0&&(
+          <>
+            <div style={{fontWeight:600,fontSize:11,color:C.sub,textTransform:"uppercase",letterSpacing:.5,margin:"16px 0 8px"}}>
+              Completed for this counter ({completedOrders.length})
+            </div>
+            {completedOrders.map(order=>{
+              const doneLines=getCounterCompletedLines(order);
+              return(
+                <div key={order.id} style={{...Cd,marginBottom:8,opacity:.65,borderLeft:`4px solid ${C.success}`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                    <div style={{fontWeight:800,fontSize:16,color:C.success}}>#{order.bmoOrderNo}</div>
+                    <Badge label="Done" color={C.success} bg={C.successLight} border={C.successBorder}/>
+                  </div>
+                  <div style={{fontSize:12,color:C.muted}}>{doneLines.map(l=>`${l.itemName}${l.customisations?` (${l.customisations})`:""} ×${l.quantity}`).join(" · ")}</div>
+                </div>
+              );
+            })}
+          </>
+        )}
+      </div>
 
-<ConfirmDialog open={!!cancelId} onClose={()=>setCancelId(null)} onConfirm={()=>cancelOrder(cancelId)}
-title="Cancel BMO Order" danger message="Cancel this BMO order? It will be removed from all counter screens and marked as cancelled in reports."/>
-</div>
-);
+      <ConfirmDialog open={!!cancelId} onClose={()=>setCancelId(null)} onConfirm={()=>cancelOrder(cancelId)}
+        title="Cancel BMO Order" danger message="Cancel this BMO order? It will be removed from all counter screens and marked as cancelled in reports."/>
+    </div>
+  );
 }
 
 // ─── BMO Reports ──────────────────────────────────────────────────────────────
 function BMOReports({user}){
-const [from,setFrom]=useState(getToday());
-const [to,setTo]=useState(getToday());
-const [rep,setRep]=useState(null);
-const [loading,setLoading]=useState(false);
-const {outletId,selOutlet,Selector}=useBMOOutlet(user);
+  const [from,setFrom]=useState(getToday());
+  const [to,setTo]=useState(getToday());
+  const [rep,setRep]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const {outletId,selOutlet,Selector}=useBMOOutlet(user);
 
-const generate=async()=>{
-if(from>to)return;
-setLoading(true);
-// Read all months in the date range from sharded docs
-const allOrders=[];
-const seen=new Set();
-// Collect all month keys between from and to
-const monthKeys=new Set(["bmoOrders"]);
-let cur=new Date(from+"T12:00:00Z");
-const end=new Date(to+"T12:00:00Z");
-while(cur<=end){
-const yr=cur.getUTCFullYear();
-const mo=String(cur.getUTCMonth()+1).padStart(2,"0");
-monthKeys.add(`bmoOrders_${yr}_${mo}`);
-cur.setUTCMonth(cur.getUTCMonth()+1);
-}
-for(const key of monthKeys){
-try{
-const snap=await getDoc(doc(db,"kasu",key));
-if(!snap.exists())continue;
-const arr=snap.data().value||[];
-arr.forEach(o=>{if(o&&o.id&&!seen.has(o.id)){seen.add(o.id);allOrders.push(o);}});
-}catch(e){console.error("BMOReports read",key,e);}
-}
-const all=allOrders;
-let orders=all.filter(o=>o.businessDay>=from&&o.businessDay<=to);
-// outlet filter
-const isOutlet=user.role==="outlet";
-if(isOutlet) orders=orders.filter(o=>o.outletId===user.outlets[0]);
-else if(selOutlet&&selOutlet!=="all") orders=orders.filter(o=>o.outletId===selOutlet);
+  const generate=async()=>{
+    if(from>to)return;
+    setLoading(true);
+    // Read all months in the date range from sharded docs
+    const allOrders=[];
+    const seen=new Set();
+    // Collect all month keys between from and to
+    const monthKeys=new Set(["bmoOrders"]);
+    let cur=new Date(from+"T12:00:00Z");
+    const end=new Date(to+"T12:00:00Z");
+    while(cur<=end){
+      const yr=cur.getUTCFullYear();
+      const mo=String(cur.getUTCMonth()+1).padStart(2,"0");
+      monthKeys.add(`bmoOrders_${yr}_${mo}`);
+      cur.setUTCMonth(cur.getUTCMonth()+1);
+    }
+    for(const key of monthKeys){
+      try{
+        const snap=await getDoc(doc(db,"kasu",key));
+        if(!snap.exists())continue;
+        const arr=snap.data().value||[];
+        arr.forEach(o=>{if(o&&o.id&&!seen.has(o.id)){seen.add(o.id);allOrders.push(o);}});
+      }catch(e){console.error("BMOReports read",key,e);}
+    }
+    const all=allOrders;
+    let orders=all.filter(o=>o.businessDay>=from&&o.businessDay<=to);
+    // outlet filter
+    const isOutlet=user.role==="outlet";
+    if(isOutlet) orders=orders.filter(o=>o.outletId===user.outlets[0]);
+    else if(selOutlet&&selOutlet!=="all") orders=orders.filter(o=>o.outletId===selOutlet);
 
-const active=orders.filter(o=>!o.cancelled);
-const cancelled=orders.filter(o=>o.cancelled);
-const grossSales=active.reduce((s,o)=>s+o.totalAmount,0);
-const cancelledAmt=cancelled.reduce((s,o)=>s+o.totalAmount,0);
-const netSales=grossSales-cancelledAmt;
-const totalOrders=active.length;
-const completedOrders=active.filter(o=>o.status==="completed").length;
-const pendingOrders=active.filter(o=>o.status!=="completed").length;
+    const active=orders.filter(o=>!o.cancelled);
+    const cancelled=orders.filter(o=>o.cancelled);
+    const grossSales=active.reduce((s,o)=>s+o.totalAmount,0);
+    const cancelledAmt=cancelled.reduce((s,o)=>s+o.totalAmount,0);
+    const netSales=grossSales-cancelledAmt;
+    const totalOrders=active.length;
+    const completedOrders=active.filter(o=>o.status==="completed").length;
+    const pendingOrders=active.filter(o=>o.status!=="completed").length;
 
-const byMode={};PAYMENT_MODES.forEach(m=>{byMode[m]={amount:0,count:0};});
-active.forEach(o=>{byMode[o.paymentMode].amount+=o.totalAmount;byMode[o.paymentMode].count+=1;});
+    const byMode={};PAYMENT_MODES.forEach(m=>{byMode[m]={amount:0,count:0};});
+    active.forEach(o=>{byMode[o.paymentMode].amount+=o.totalAmount;byMode[o.paymentMode].count+=1;});
 
-const byCat={};const byCounter={};const byItem={};const byOutlet={};
-active.forEach(o=>{
-if(!byOutlet[o.outletId])byOutlet[o.outletId]={name:o.outletName,total:0,orders:0};
-byOutlet[o.outletId].total+=o.totalAmount;byOutlet[o.outletId].orders+=1;
-o.items.forEach(l=>{
-if(!byCat[l.category])byCat[l.category]={total:0,qty:0};
-byCat[l.category].total+=l.lineTotal;byCat[l.category].qty+=l.quantity;
-if(!byCounter[l.counter])byCounter[l.counter]={total:0,qty:0};
-byCounter[l.counter].total+=l.lineTotal;byCounter[l.counter].qty+=l.quantity;
-if(!byItem[l.itemName])byItem[l.itemName]={total:0,qty:0,category:l.category};
-byItem[l.itemName].total+=l.lineTotal;byItem[l.itemName].qty+=l.quantity;
-});
-});
-setRep({grossSales,cancelledAmt,netSales,totalOrders,completedOrders,pendingOrders,cancelledCount:cancelled.length,byMode,byCat,byCounter,byItem,byOutlet,allOrders:orders.slice().sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))});
-setLoading(false);
-};
+    const byCat={};const byCounter={};const byItem={};const byOutlet={};
+    active.forEach(o=>{
+      if(!byOutlet[o.outletId])byOutlet[o.outletId]={name:o.outletName,total:0,orders:0};
+      byOutlet[o.outletId].total+=o.totalAmount;byOutlet[o.outletId].orders+=1;
+      o.items.forEach(l=>{
+        if(!byCat[l.category])byCat[l.category]={total:0,qty:0};
+        byCat[l.category].total+=l.lineTotal;byCat[l.category].qty+=l.quantity;
+        if(!byCounter[l.counter])byCounter[l.counter]={total:0,qty:0};
+        byCounter[l.counter].total+=l.lineTotal;byCounter[l.counter].qty+=l.quantity;
+        if(!byItem[l.itemName])byItem[l.itemName]={total:0,qty:0,category:l.category};
+        byItem[l.itemName].total+=l.lineTotal;byItem[l.itemName].qty+=l.quantity;
+      });
+    });
+    setRep({grossSales,cancelledAmt,netSales,totalOrders,completedOrders,pendingOrders,cancelledCount:cancelled.length,byMode,byCat,byCounter,byItem,byOutlet,allOrders:orders.slice().sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))});
+    setLoading(false);
+  };
 
-const buildWA=()=>{
-if(!rep)return"";
-const lines=[`ಕಾಸು *Kāsu BMO Report*`,`📅 ${fmtD(from)} → ${fmtD(to)}`,``,`💰 Gross: ${inr(rep.grossSales)}`,`🚫 Cancelled: −${inr(rep.cancelledAmt)}`,`✅ Net Sales: *${inr(rep.netSales)}*`,`📋 Orders: ${rep.totalOrders}`,`✓ Completed: ${rep.completedOrders}`,`⏳ Pending: ${rep.pendingOrders}`,``,`*Payment:*`];
-PAYMENT_MODES.filter(m=>rep.byMode[m]?.amount>0).forEach(m=>lines.push(`• ${m}: ${inr(rep.byMode[m].amount)}`));
-lines.push(``);lines.push(`*Top Items:*`);
-Object.entries(rep.byItem).sort((a,b)=>b[1].total-a[1].total).slice(0,5).forEach(([n,v])=>lines.push(`• ${n}: ${v.qty}qty — ${inr(v.total)}`));
-return lines.join("\n");
-};
+  const buildWA=()=>{
+    if(!rep)return"";
+    const lines=[`ಕಾಸು *Kāsu BMO Report*`,`📅 ${fmtD(from)} → ${fmtD(to)}`,``,`💰 Gross: ${inr(rep.grossSales)}`,`🚫 Cancelled: −${inr(rep.cancelledAmt)}`,`✅ Net Sales: *${inr(rep.netSales)}*`,`📋 Orders: ${rep.totalOrders}`,`✓ Completed: ${rep.completedOrders}`,`⏳ Pending: ${rep.pendingOrders}`,``,`*Payment:*`];
+    PAYMENT_MODES.filter(m=>rep.byMode[m]?.amount>0).forEach(m=>lines.push(`• ${m}: ${inr(rep.byMode[m].amount)}`));
+    lines.push(``);lines.push(`*Top Items:*`);
+    Object.entries(rep.byItem).sort((a,b)=>b[1].total-a[1].total).slice(0,5).forEach(([n,v])=>lines.push(`• ${n}: ${v.qty}qty — ${inr(v.total)}`));
+    return lines.join("\n");
+  };
 
-const exportCSV=()=>{
-if(!rep)return;
-const q=v=>typeof v==="string"&&v.includes(",")?'"'+v+'"':v;
-const rows=[
-["BMO Report",`${fmtD(from)} to ${fmtD(to)}`],[],
-["Gross Sales",rep.grossSales],["Cancelled",rep.cancelledAmt],["Net Sales",rep.netSales],
-["Total Orders",rep.totalOrders],["Completed",rep.completedOrders],["Pending",rep.pendingOrders],[],
-["Payment Mode","Amount","Orders"],
-...PAYMENT_MODES.map(m=>[m,rep.byMode[m].amount,rep.byMode[m].count]),[],
-["Outlet","Total","Orders"],...Object.values(rep.byOutlet).map(o=>[o.name,o.total,o.orders]),[],
-["--- ORDER DETAIL ---"],[],
-["Order#","Date","Time","Outlet","Items","Payment Mode","Dine Type","Status","Items Amount","Takeaway Charge","Total"],
-...(rep.allOrders||[]).map(o=>{
-const dt=o.createdAt?new Date(o.createdAt):null;
-const dateStr=dt?dt.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}):"-";
-const timeStr=dt?dt.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}):"-";
-const items=(o.items||[]).map(l=>`${l.itemName}${l.quantity>1?` x${l.quantity}`:""}`).join("; ");
-return [o.bmoOrderNo,dateStr,timeStr,q(o.outletName||o.outletId),q(items),o.paymentMode,o.dineType==="takeaway"?"Takeaway":"Dine-in",o.cancelled?"Cancelled":o.status,o.itemsAmount||0,o.takeawayCharge||0,o.totalAmount];
-})
-];
-const blob=new Blob([rows.map(r=>r.join(",")).join("\n")],{type:"text/csv"});
-const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`bmo_orders_${from}_${to}.csv`;a.click();
-};
+  const exportCSV=()=>{
+    if(!rep)return;
+    const q=v=>typeof v==="string"&&v.includes(",")?'"'+v+'"':v;
+    const rows=[
+      ["BMO Report",`${fmtD(from)} to ${fmtD(to)}`],[],
+      ["Gross Sales",rep.grossSales],["Cancelled",rep.cancelledAmt],["Net Sales",rep.netSales],
+      ["Total Orders",rep.totalOrders],["Completed",rep.completedOrders],["Pending",rep.pendingOrders],[],
+      ["Payment Mode","Amount","Orders"],
+      ...PAYMENT_MODES.map(m=>[m,rep.byMode[m].amount,rep.byMode[m].count]),[],
+      ["Outlet","Total","Orders"],...Object.values(rep.byOutlet).map(o=>[o.name,o.total,o.orders]),[],
+      ["--- ORDER DETAIL ---"],[],
+      ["Order#","Date","Time","Outlet","Items","Payment Mode","Dine Type","Status","Items Amount","Takeaway Charge","Total"],
+      ...(rep.allOrders||[]).map(o=>{
+        const dt=o.createdAt?new Date(o.createdAt):null;
+        const dateStr=dt?dt.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}):"-";
+        const timeStr=dt?dt.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}):"-";
+        const items=(o.items||[]).map(l=>`${l.itemName}${l.quantity>1?` x${l.quantity}`:""}`).join("; ");
+        return [o.bmoOrderNo,dateStr,timeStr,q(o.outletName||o.outletId),q(items),o.paymentMode,o.dineType==="takeaway"?"Takeaway":"Dine-in",o.cancelled?"Cancelled":o.status,o.itemsAmount||0,o.takeawayCharge||0,o.totalAmount];
+      })
+    ];
+    const blob=new Blob([rows.map(r=>r.join(",")).join("\n")],{type:"text/csv"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`bmo_orders_${from}_${to}.csv`;a.click();
+  };
 
-const thS={padding:"9px 14px",textAlign:"left",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",background:C.bg,borderBottom:`1px solid ${C.border}`};
-const tdS={padding:"9px 14px",color:C.text,fontSize:13,borderBottom:`1px solid ${C.border}`};
+  const thS={padding:"9px 14px",textAlign:"left",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",background:C.bg,borderBottom:`1px solid ${C.border}`};
+  const tdS={padding:"9px 14px",color:C.text,fontSize:13,borderBottom:`1px solid ${C.border}`};
 
-return(
-<div style={{maxWidth:860,margin:"0 auto"}}>
-{Selector}
-<div style={{padding:20}}>
-<div style={{fontSize:22,fontWeight:800,color:C.text,marginBottom:16}}>BMO Reports</div>
-<div style={{...Cd,marginBottom:20,padding:14}}>
-<div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-<div><label style={LS}>From</label><input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={IS}/></div>
-<div><label style={LS}>To</label><input type="date" value={to} onChange={e=>setTo(e.target.value)} style={IS}/></div>
-<button onClick={generate} style={{...BPr,width:"auto",padding:"10px 20px",background:C.accent}}>{loading?"Generating…":"Generate"}</button>
-</div>
-</div>
+  return(
+    <div style={{maxWidth:860,margin:"0 auto"}}>
+      {Selector}
+      <div style={{padding:20}}>
+        <div style={{fontSize:22,fontWeight:800,color:C.text,marginBottom:16}}>BMO Reports</div>
+        <div style={{...Cd,marginBottom:20,padding:14}}>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+            <div><label style={LS}>From</label><input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={IS}/></div>
+            <div><label style={LS}>To</label><input type="date" value={to} onChange={e=>setTo(e.target.value)} style={IS}/></div>
+            <button onClick={generate} style={{...BPr,width:"auto",padding:"10px 20px",background:C.accent}}>{loading?"Generating…":"Generate"}</button>
+          </div>
+        </div>
 
-{rep&&<>
-<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
-<button onClick={exportCSV} style={{...BSc,display:"flex",alignItems:"center",gap:6}}>⬇ CSV</button>
-<CopyWABtn getText={buildWA}/>
-</div>
+        {rep&&<>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+            <button onClick={exportCSV} style={{...BSc,display:"flex",alignItems:"center",gap:6}}>⬇ CSV</button>
+            <CopyWABtn getText={buildWA}/>
+          </div>
 
-{/* KPIs */}
-<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:20}}>
-<StatCard label="Gross Sales" value={inr(rep.grossSales)} color={C.accent}/>
-<StatCard label="Cancelled" value={"−"+inr(rep.cancelledAmt)} color={C.danger}/>
-<StatCard label="Net Sales" value={inr(rep.netSales)} color={C.success}/>
-<StatCard label="Orders" value={rep.totalOrders} color={C.text}/>
-<StatCard label="Completed" value={rep.completedOrders} color={C.success}/>
-<StatCard label="Pending" value={rep.pendingOrders} color={C.warn}/>
-{rep.cancelledCount>0&&<StatCard label="Cancelled Orders" value={rep.cancelledCount} color={C.danger}/>}
-</div>
+          {/* KPIs */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:20}}>
+            <StatCard label="Gross Sales" value={inr(rep.grossSales)} color={C.accent}/>
+            <StatCard label="Cancelled" value={"−"+inr(rep.cancelledAmt)} color={C.danger}/>
+            <StatCard label="Net Sales" value={inr(rep.netSales)} color={C.success}/>
+            <StatCard label="Orders" value={rep.totalOrders} color={C.text}/>
+            <StatCard label="Completed" value={rep.completedOrders} color={C.success}/>
+            <StatCard label="Pending" value={rep.pendingOrders} color={C.warn}/>
+            {rep.cancelledCount>0&&<StatCard label="Cancelled Orders" value={rep.cancelledCount} color={C.danger}/>}
+          </div>
 
-{/* Order detail for accounts */}
-<div style={{...Cd,padding:0,overflowX:"auto",marginBottom:20}}>
-<div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-<div style={{fontWeight:700,fontSize:14,color:C.text}}>Order Detail ({rep.allOrders?.length||0} orders)</div>
-</div>
-<table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-<thead><tr>
-<th style={thS}>#</th>
-<th style={thS}>Time</th>
-<th style={thS}>Outlet</th>
-<th style={thS}>Items</th>
-<th style={thS}>Mode</th>
-<th style={thS}>Type</th>
-<th style={thS}>Status</th>
-<th style={{...thS,textAlign:"right"}}>Total</th>
-</tr></thead>
-<tbody>
-{(rep.allOrders||[]).map(o=>(
-<tr key={o.id} style={{background:o.cancelled?C.dangerLight:"transparent"}}>
-<td style={tdS}><b>{o.bmoOrderNo}</b></td>
-<td style={tdS}>{o.createdAt?new Date(o.createdAt).toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):"-"}</td>
-<td style={tdS}>{o.outletName||o.outletId}</td>
-<td style={{...tdS,maxWidth:200}}>{(o.items||[]).map(l=>`${l.itemName}${l.quantity>1?` ×${l.quantity}`:""}`).join(", ")}</td>
-<td style={tdS}>{o.paymentMode}</td>
-<td style={tdS}>{o.dineType==="takeaway"?"Takeaway":"Dine-in"}</td>
-<td style={tdS}><span style={{color:o.cancelled?C.danger:o.status==="completed"?C.success:C.warn,fontWeight:600}}>{o.cancelled?"Cancelled":o.status==="completed"?"Done":"Open"}</span></td>
-<td style={{...tdS,textAlign:"right",fontWeight:700}}>{inr(o.totalAmount)}</td>
-</tr>
-))}
-</tbody>
-</table>
-</div>
+          {/* Order detail for accounts */}
+          <div style={{...Cd,padding:0,overflowX:"auto",marginBottom:20}}>
+            <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{fontWeight:700,fontSize:14,color:C.text}}>Order Detail ({rep.allOrders?.length||0} orders)</div>
+            </div>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+              <thead><tr>
+                <th style={thS}>#</th>
+                <th style={thS}>Time</th>
+                <th style={thS}>Outlet</th>
+                <th style={thS}>Items</th>
+                <th style={thS}>Mode</th>
+                <th style={thS}>Type</th>
+                <th style={thS}>Status</th>
+                <th style={{...thS,textAlign:"right"}}>Total</th>
+              </tr></thead>
+              <tbody>
+                {(rep.allOrders||[]).map(o=>(
+                  <tr key={o.id} style={{background:o.cancelled?C.dangerLight:"transparent"}}>
+                    <td style={tdS}><b>{o.bmoOrderNo}</b></td>
+                    <td style={tdS}>{o.createdAt?new Date(o.createdAt).toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):"-"}</td>
+                    <td style={tdS}>{o.outletName||o.outletId}</td>
+                    <td style={{...tdS,maxWidth:200}}>{(o.items||[]).map(l=>`${l.itemName}${l.quantity>1?` ×${l.quantity}`:""}`).join(", ")}</td>
+                    <td style={tdS}>{o.paymentMode}</td>
+                    <td style={tdS}>{o.dineType==="takeaway"?"Takeaway":"Dine-in"}</td>
+                    <td style={tdS}><span style={{color:o.cancelled?C.danger:o.status==="completed"?C.success:C.warn,fontWeight:600}}>{o.cancelled?"Cancelled":o.status==="completed"?"Done":"Open"}</span></td>
+                    <td style={{...tdS,textAlign:"right",fontWeight:700}}>{inr(o.totalAmount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-{/* Tables */}
-{[
-["Payment Mode",PAYMENT_MODES.filter(m=>rep.byMode[m]?.amount>0).map(m=>({name:m,qty:rep.byMode[m].count,total:rep.byMode[m].amount}))],
-...(Object.keys(rep.byOutlet).length>1?[["Outlet",Object.values(rep.byOutlet).map(o=>({name:o.name,qty:o.orders,total:o.total}))]]:[] ),
-["Counter",Object.entries(rep.byCounter).map(([k,v])=>({name:k,qty:v.qty,total:v.total}))],
-["Category",Object.entries(rep.byCat).sort((a,b)=>b[1].total-a[1].total).map(([k,v])=>({name:k,qty:v.qty,total:v.total}))],
-["Item",Object.entries(rep.byItem).sort((a,b)=>b[1].total-a[1].total).map(([k,v])=>({name:`${k} (${v.category})`,qty:v.qty,total:v.total}))],
-].map(([title,rows])=>rows.length>0&&(
-<div key={title} style={{marginBottom:16}}>
-<div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:8}}>{title} Breakdown</div>
-<div style={{...Cd,padding:0,overflow:"hidden"}}>
-<table style={{width:"100%",borderCollapse:"collapse"}}>
-<thead><tr><th style={thS}>{title}</th><th style={{...thS,textAlign:"right"}}>Qty / Orders</th><th style={{...thS,textAlign:"right"}}>Amount</th></tr></thead>
-<tbody>{rows.map(r=><tr key={r.name}><td style={tdS}>{r.name}</td><td style={{...tdS,textAlign:"right",color:C.sub}}>{r.qty}</td><td style={{...tdS,textAlign:"right",fontWeight:700,color:C.accent}}>{inr(r.total)}</td></tr>)}</tbody>
-</table>
-</div>
-</div>
-))}
+          {/* Tables */}
+          {[
+            ["Payment Mode",PAYMENT_MODES.filter(m=>rep.byMode[m]?.amount>0).map(m=>({name:m,qty:rep.byMode[m].count,total:rep.byMode[m].amount}))],
+            ...(Object.keys(rep.byOutlet).length>1?[["Outlet",Object.values(rep.byOutlet).map(o=>({name:o.name,qty:o.orders,total:o.total}))]]:[] ),
+            ["Counter",Object.entries(rep.byCounter).map(([k,v])=>({name:k,qty:v.qty,total:v.total}))],
+            ["Category",Object.entries(rep.byCat).sort((a,b)=>b[1].total-a[1].total).map(([k,v])=>({name:k,qty:v.qty,total:v.total}))],
+            ["Item",Object.entries(rep.byItem).sort((a,b)=>b[1].total-a[1].total).map(([k,v])=>({name:`${k} (${v.category})`,qty:v.qty,total:v.total}))],
+          ].map(([title,rows])=>rows.length>0&&(
+            <div key={title} style={{marginBottom:16}}>
+              <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:8}}>{title} Breakdown</div>
+              <div style={{...Cd,padding:0,overflow:"hidden"}}>
+                <table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead><tr><th style={thS}>{title}</th><th style={{...thS,textAlign:"right"}}>Qty / Orders</th><th style={{...thS,textAlign:"right"}}>Amount</th></tr></thead>
+                  <tbody>{rows.map(r=><tr key={r.name}><td style={tdS}>{r.name}</td><td style={{...tdS,textAlign:"right",color:C.sub}}>{r.qty}</td><td style={{...tdS,textAlign:"right",fontWeight:700,color:C.accent}}>{inr(r.total)}</td></tr>)}</tbody>
+                </table>
+              </div>
+            </div>
+          ))}
 
-{/* Summary card */}
-<div style={{...Cd,background:C.accentLight,border:`1px solid ${C.accentBorder}`}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
-<div>
-<div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase"}}>BMO Net Sales</div>
-<div style={{fontSize:26,fontWeight:800,color:C.accent,marginTop:4}}>{inr(rep.netSales)}</div>
-</div>
-<div style={{textAlign:"right",fontSize:13,color:C.sub}}>
-<div>Gross: {inr(rep.grossSales)}</div>
-<div style={{color:C.danger,marginTop:2}}>Cancelled: −{inr(rep.cancelledAmt)}</div>
-</div>
-</div>
-</div>
-</>}
-</div>
-</div>
-);
+          {/* Summary card */}
+          <div style={{...Cd,background:C.accentLight,border:`1px solid ${C.accentBorder}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+              <div>
+                <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase"}}>BMO Net Sales</div>
+                <div style={{fontSize:26,fontWeight:800,color:C.accent,marginTop:4}}>{inr(rep.netSales)}</div>
+              </div>
+              <div style={{textAlign:"right",fontSize:13,color:C.sub}}>
+                <div>Gross: {inr(rep.grossSales)}</div>
+                <div style={{color:C.danger,marginTop:2}}>Cancelled: −{inr(rep.cancelledAmt)}</div>
+              </div>
+            </div>
+          </div>
+        </>}
+      </div>
+    </div>
+  );
 }
 
 // ─── BMO Menu Manager ─────────────────────────────────────────────────────────
 function BMOMenuManager({showToast}){
-const [menu,setMenu]=useState([]);const [loading,setLoading]=useState(true);
-const [editItem,setEditItem]=useState(null);const [addOpen,setAddOpen]=useState(false);
-const [filterCat,setFilterCat]=useState("All");
+  const [menu,setMenu]=useState([]);const [loading,setLoading]=useState(true);
+  const [editItem,setEditItem]=useState(null);const [addOpen,setAddOpen]=useState(false);
+  const [filterCat,setFilterCat]=useState("All");
 
-const load=async()=>{setMenu(await sget("bmoMenu")||DEFAULT_MENU);setLoading(false);};
-useEffect(()=>{load();},[]);
+  const load=async()=>{setMenu(await sget("bmoMenu")||DEFAULT_MENU);setLoading(false);};
+  useEffect(()=>{load();},[]);
 
-const saveItem=async(item)=>{
-const list=menu.some(m=>m.id===item.id)?menu.map(m=>m.id===item.id?item:m):[...menu,{...item,id:"m"+Date.now()}];
-await sset("bmoMenu",list);setMenu(list);setEditItem(null);setAddOpen(false);showToast("Menu updated","success");
-};
-const toggleItem=async(id)=>{
-const list=menu.map(m=>m.id===id?{...m,active:!m.active}:m);
-await sset("bmoMenu",list);setMenu(list);
-};
-const deleteItem=async(id)=>{
-const list=menu.filter(m=>m.id!==id);
-await sset("bmoMenu",list);setMenu(list);showToast("Item removed","success");
-};
+  const saveItem=async(item)=>{
+    const list=menu.some(m=>m.id===item.id)?menu.map(m=>m.id===item.id?item:m):[...menu,{...item,id:"m"+Date.now()}];
+    await sset("bmoMenu",list);setMenu(list);setEditItem(null);setAddOpen(false);showToast("Menu updated","success");
+  };
+  const toggleItem=async(id)=>{
+    const list=menu.map(m=>m.id===id?{...m,active:!m.active}:m);
+    await sset("bmoMenu",list);setMenu(list);
+  };
+  const deleteItem=async(id)=>{
+    const list=menu.filter(m=>m.id!==id);
+    await sset("bmoMenu",list);setMenu(list);showToast("Item removed","success");
+  };
 
-const cats=["All",...BMO_CATEGORIES];
-const filtered=filterCat==="All"?menu:menu.filter(m=>m.category===filterCat);
+  const cats=["All",...BMO_CATEGORIES];
+  const filtered=filterCat==="All"?menu:menu.filter(m=>m.category===filterCat);
 
-if(loading)return <div style={{display:"flex",justifyContent:"center",padding:48}}><Spinner/></div>;
+  if(loading)return <div style={{display:"flex",justifyContent:"center",padding:48}}><Spinner/></div>;
 
-return(
-<div style={{padding:"20px 28px",maxWidth:960,margin:"0 auto"}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
-<div style={{fontSize:22,fontWeight:800,color:C.text}}>BMO Menu</div>
-<button onClick={()=>setAddOpen(true)} style={{...BPr,width:"auto",padding:"9px 18px",background:C.accent}}>+ Add Item</button>
-</div>
-<div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:16}}>
-{cats.map(c=>(
-<button key={c} onClick={()=>setFilterCat(c)} style={{flexShrink:0,background:filterCat===c?C.accent:C.surface,color:filterCat===c?"#fff":C.sub,border:`1px solid ${filterCat===c?C.accent:C.border}`,borderRadius:4,padding:"6px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>{c}</button>
-))}
-</div>
-{filtered.map(item=>(
-<div key={item.id} style={{...Cd,marginBottom:10,opacity:item.active?1:.6}}>
-<div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-<div style={{flex:1}}>
-<div style={{fontWeight:700,color:C.text,fontSize:14}}>{item.name}</div>
-<div style={{fontSize:12,color:C.sub,marginTop:2}}>{item.category} · {item.counter}</div>
-{item.customGroups?.length>0&&<div style={{fontSize:11,color:C.muted,marginTop:2}}>Customisations: {item.customGroups.map(g=>g.name).join(", ")}</div>}
-</div>
-<div style={{fontWeight:800,color:C.accent,fontSize:16}}>{inr(item.price)}</div>
-<Badge label={item.active?"Active":"Inactive"} color={item.active?C.success:C.sub} bg={item.active?C.successLight:C.bg} border={item.active?C.successBorder:C.border}/>
-<button onClick={()=>setEditItem({...item,customGroups:item.customGroups||[]})} style={BEd}>Edit</button>
-<button onClick={()=>toggleItem(item.id)} style={{...BSc,padding:"4px 10px",fontSize:12}}>{item.active?"Deactivate":"Activate"}</button>
-<button onClick={()=>deleteItem(item.id)} style={{...BDn,padding:"4px 10px"}}>Del</button>
-</div>
-</div>
-))}
-{(editItem||addOpen)&&<MenuItemForm item={editItem||{name:"",category:BMO_CATEGORIES[0],counter:BMO_COUNTERS[0],price:"",active:true,customGroups:[]}} onSave={saveItem} onClose={()=>{setEditItem(null);setAddOpen(false);}} isNew={addOpen}/>}
-</div>
-);
+  return(
+    <div style={{padding:"20px 28px",maxWidth:960,margin:"0 auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+        <div style={{fontSize:22,fontWeight:800,color:C.text}}>BMO Menu</div>
+        <button onClick={()=>setAddOpen(true)} style={{...BPr,width:"auto",padding:"9px 18px",background:C.accent}}>+ Add Item</button>
+      </div>
+      <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:16}}>
+        {cats.map(c=>(
+          <button key={c} onClick={()=>setFilterCat(c)} style={{flexShrink:0,background:filterCat===c?C.accent:C.surface,color:filterCat===c?"#fff":C.sub,border:`1px solid ${filterCat===c?C.accent:C.border}`,borderRadius:4,padding:"6px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>{c}</button>
+        ))}
+      </div>
+      {filtered.map(item=>(
+        <div key={item.id} style={{...Cd,marginBottom:10,opacity:item.active?1:.6}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,color:C.text,fontSize:14}}>{item.name}</div>
+              <div style={{fontSize:12,color:C.sub,marginTop:2}}>{item.category} · {item.counter}</div>
+              {item.customGroups?.length>0&&<div style={{fontSize:11,color:C.muted,marginTop:2}}>Customisations: {item.customGroups.map(g=>g.name).join(", ")}</div>}
+            </div>
+            <div style={{fontWeight:800,color:C.accent,fontSize:16}}>{inr(item.price)}</div>
+            <Badge label={item.active?"Active":"Inactive"} color={item.active?C.success:C.sub} bg={item.active?C.successLight:C.bg} border={item.active?C.successBorder:C.border}/>
+            <button onClick={()=>setEditItem({...item,customGroups:item.customGroups||[]})} style={BEd}>Edit</button>
+            <button onClick={()=>toggleItem(item.id)} style={{...BSc,padding:"4px 10px",fontSize:12}}>{item.active?"Deactivate":"Activate"}</button>
+            <button onClick={()=>deleteItem(item.id)} style={{...BDn,padding:"4px 10px"}}>Del</button>
+          </div>
+        </div>
+      ))}
+      {(editItem||addOpen)&&<MenuItemForm item={editItem||{name:"",category:BMO_CATEGORIES[0],counter:BMO_COUNTERS[0],price:"",active:true,customGroups:[]}} onSave={saveItem} onClose={()=>{setEditItem(null);setAddOpen(false);}} isNew={addOpen}/>}
+    </div>
+  );
 }
 
 function MenuItemForm({item,onSave,onClose,isNew}){
-const [f,setF]=useState({...item,price:String(item.price||""),customGroups:item.customGroups?.map(g=>({...g,options:[...g.options]}))??[]});
-const [err,setErr]=useState({});
-const addGroup=()=>setF(x=>({...x,customGroups:[...x.customGroups,{name:"",options:[""],required:false}]}));
-const removeGroup=(i)=>setF(x=>({...x,customGroups:x.customGroups.filter((_,j)=>j!==i)}));
-const updateGroup=(i,field,val)=>setF(x=>({...x,customGroups:x.customGroups.map((g,j)=>j===i?{...g,[field]:val}:g)}));
-const addOption=(gi)=>setF(x=>({...x,customGroups:x.customGroups.map((g,j)=>j===gi?{...g,options:[...g.options,""]}:g)}));
-const updateOption=(gi,oi,val)=>setF(x=>({...x,customGroups:x.customGroups.map((g,j)=>j===gi?{...g,options:g.options.map((o,k)=>k===oi?val:o)}:g)}));
-const removeOption=(gi,oi)=>setF(x=>({...x,customGroups:x.customGroups.map((g,j)=>j===gi?{...g,options:g.options.filter((_,k)=>k!==oi)}:g)}));
-const save=()=>{
-const e={};if(!f.name.trim())e.name="Name required.";if(!f.price||isNaN(f.price)||Number(f.price)<=0)e.price="Valid price required.";
-setErr(e);if(Object.keys(e).length>0)return;
-onSave({...f,price:Number(f.price),customGroups:f.customGroups.filter(g=>g.name.trim()&&g.options.filter(o=>o.trim()).length>0).map(g=>({...g,options:g.options.filter(o=>o.trim())}))});
-};
-return(
-<Modal open title={isNew?"Add Menu Item":"Edit: "+item.name} onClose={onClose} width={500}>
-<Field label="Item Name" error={err.name}><Inp value={f.name} onChange={v=>{setF(x=>({...x,name:v}));setErr(e=>({...e,name:""}));}} placeholder="e.g. Benne Masala Dosa"/></Field>
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-<Field label="Category"><Sel value={f.category} onChange={v=>setF(x=>({...x,category:v}))} options={BMO_CATEGORIES}/></Field>
-<Field label="Counter"><Sel value={f.counter} onChange={v=>setF(x=>({...x,counter:v}))} options={BMO_COUNTERS}/></Field>
-</div>
-<Field label="Price (₹)" error={err.price}><Inp type="number" value={f.price} onChange={v=>{setF(x=>({...x,price:v}));setErr(e=>({...e,price:""}));}} placeholder="0" large/></Field>
-<Divider/>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-<div style={{fontWeight:700,fontSize:13,color:C.text}}>Customisation Groups</div>
-<button onClick={addGroup} style={{...BSc,padding:"5px 12px",fontSize:12}}>+ Add Group</button>
-</div>
-{f.customGroups.map((g,gi)=>(
-<div key={gi} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:12,marginBottom:10}}>
-<div style={{display:"flex",gap:8,marginBottom:8}}>
-<input value={g.name} onChange={e=>updateGroup(gi,"name",e.target.value)} placeholder="Group name (e.g. Style)" style={{...IS,flex:1,fontSize:13}}/>
-<label style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:C.sub,whiteSpace:"nowrap"}}>
-<input type="checkbox" checked={g.required} onChange={e=>updateGroup(gi,"required",e.target.checked)}/>Required
-</label>
-<button onClick={()=>removeGroup(gi)} style={{background:"none",border:"none",color:C.danger,cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>
-</div>
-<div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-{g.options.map((opt,oi)=>(
-<div key={oi} style={{display:"flex",gap:4,alignItems:"center"}}>
-<input value={opt} onChange={e=>updateOption(gi,oi,e.target.value)} placeholder={`Option ${oi+1}`} style={{...IS,width:130,fontSize:12,padding:"6px 10px"}}/>
-{g.options.length>1&&<button onClick={()=>removeOption(gi,oi)} style={{background:"none",border:"none",color:C.danger,cursor:"pointer",fontSize:14,padding:"0 2px"}}>✕</button>}
-</div>
-))}
-<button onClick={()=>addOption(gi)} style={{...BSc,padding:"5px 10px",fontSize:11}}>+ Option</button>
-</div>
-</div>
-))}
-<Divider/>
-<div style={{display:"flex",gap:8}}>
-<button onClick={save} style={{...BPr,background:C.accent,flex:1}}>{isNew?"Add Item":"Save Changes"}</button>
-<button onClick={onClose} style={{...BSc,flex:1}}>Cancel</button>
-</div>
-</Modal>
-);
+  const [f,setF]=useState({...item,price:String(item.price||""),customGroups:item.customGroups?.map(g=>({...g,options:[...g.options]}))??[]});
+  const [err,setErr]=useState({});
+  const addGroup=()=>setF(x=>({...x,customGroups:[...x.customGroups,{name:"",options:[""],required:false}]}));
+  const removeGroup=(i)=>setF(x=>({...x,customGroups:x.customGroups.filter((_,j)=>j!==i)}));
+  const updateGroup=(i,field,val)=>setF(x=>({...x,customGroups:x.customGroups.map((g,j)=>j===i?{...g,[field]:val}:g)}));
+  const addOption=(gi)=>setF(x=>({...x,customGroups:x.customGroups.map((g,j)=>j===gi?{...g,options:[...g.options,""]}:g)}));
+  const updateOption=(gi,oi,val)=>setF(x=>({...x,customGroups:x.customGroups.map((g,j)=>j===gi?{...g,options:g.options.map((o,k)=>k===oi?val:o)}:g)}));
+  const removeOption=(gi,oi)=>setF(x=>({...x,customGroups:x.customGroups.map((g,j)=>j===gi?{...g,options:g.options.filter((_,k)=>k!==oi)}:g)}));
+  const save=()=>{
+    const e={};if(!f.name.trim())e.name="Name required.";if(!f.price||isNaN(f.price)||Number(f.price)<=0)e.price="Valid price required.";
+    setErr(e);if(Object.keys(e).length>0)return;
+    onSave({...f,price:Number(f.price),customGroups:f.customGroups.filter(g=>g.name.trim()&&g.options.filter(o=>o.trim()).length>0).map(g=>({...g,options:g.options.filter(o=>o.trim())}))});
+  };
+  return(
+    <Modal open title={isNew?"Add Menu Item":"Edit: "+item.name} onClose={onClose} width={500}>
+      <Field label="Item Name" error={err.name}><Inp value={f.name} onChange={v=>{setF(x=>({...x,name:v}));setErr(e=>({...e,name:""}));}} placeholder="e.g. Benne Masala Dosa"/></Field>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Field label="Category"><Sel value={f.category} onChange={v=>setF(x=>({...x,category:v}))} options={BMO_CATEGORIES}/></Field>
+        <Field label="Counter"><Sel value={f.counter} onChange={v=>setF(x=>({...x,counter:v}))} options={BMO_COUNTERS}/></Field>
+      </div>
+      <Field label="Price (₹)" error={err.price}><Inp type="number" value={f.price} onChange={v=>{setF(x=>({...x,price:v}));setErr(e=>({...e,price:""}));}} placeholder="0" large/></Field>
+      <Divider/>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+        <div style={{fontWeight:700,fontSize:13,color:C.text}}>Customisation Groups</div>
+        <button onClick={addGroup} style={{...BSc,padding:"5px 12px",fontSize:12}}>+ Add Group</button>
+      </div>
+      {f.customGroups.map((g,gi)=>(
+        <div key={gi} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:4,padding:12,marginBottom:10}}>
+          <div style={{display:"flex",gap:8,marginBottom:8}}>
+            <input value={g.name} onChange={e=>updateGroup(gi,"name",e.target.value)} placeholder="Group name (e.g. Style)" style={{...IS,flex:1,fontSize:13}}/>
+            <label style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:C.sub,whiteSpace:"nowrap"}}>
+              <input type="checkbox" checked={g.required} onChange={e=>updateGroup(gi,"required",e.target.checked)}/>Required
+            </label>
+            <button onClick={()=>removeGroup(gi)} style={{background:"none",border:"none",color:C.danger,cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {g.options.map((opt,oi)=>(
+              <div key={oi} style={{display:"flex",gap:4,alignItems:"center"}}>
+                <input value={opt} onChange={e=>updateOption(gi,oi,e.target.value)} placeholder={`Option ${oi+1}`} style={{...IS,width:130,fontSize:12,padding:"6px 10px"}}/>
+                {g.options.length>1&&<button onClick={()=>removeOption(gi,oi)} style={{background:"none",border:"none",color:C.danger,cursor:"pointer",fontSize:14,padding:"0 2px"}}>✕</button>}
+              </div>
+            ))}
+            <button onClick={()=>addOption(gi)} style={{...BSc,padding:"5px 10px",fontSize:11}}>+ Option</button>
+          </div>
+        </div>
+      ))}
+      <Divider/>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={save} style={{...BPr,background:C.accent,flex:1}}>{isNew?"Add Item":"Save Changes"}</button>
+        <button onClick={onClose} style={{...BSc,flex:1}}>Cancel</button>
+      </div>
+    </Modal>
+  );
+}
+
+// ─── Cash Closing ─────────────────────────────────────────────────────────────
+const DENOMS = [500,200,100,50,20,10,5];
+const SHIFTS = ["Morning","Evening"];
+
+// Key: cashClosings_oX_YYYY_MM — one doc per outlet per month
+function cashClosingMonthKey(outletId, dateStr){
+  const d=(dateStr||getToday()).slice(0,7).replace("-","_");
+  return `cashClosings_${outletId}_${d}`;
+}
+
+async function saveCashClosing(closing){
+  const key=cashClosingMonthKey(closing.outletId,closing.date);
+  const ref=doc(db,"kasu",key);
+  await runTransaction(db,async t=>{
+    const snap=await t.get(ref);
+    const arr=snap.exists()&&snap.data().value?snap.data().value:[];
+    // Replace if same date+shift exists, else append
+    const idx=arr.findIndex(c=>c.date===closing.date&&c.shift===closing.shift&&c.outletId===closing.outletId);
+    const next=idx>=0?arr.map((c,i)=>i===idx?closing:c):[...arr,closing];
+    t.set(ref,{value:next});
+  });
+}
+
+async function getRecentCashClosings(outletId){
+  // Get this month + last month
+  const today=getToday();
+  const lastMonth=new Date(today+"T12:00:00Z");
+  lastMonth.setUTCMonth(lastMonth.getUTCMonth()-1);
+  const lastMonthStr=lastMonth.toISOString().split("T")[0];
+  const keys=[...new Set([cashClosingMonthKey(outletId,today),cashClosingMonthKey(outletId,lastMonthStr)])];
+  const results=await Promise.all(keys.map(async k=>{
+    try{const snap=await getDoc(doc(db,"kasu",k));return snap.exists()?snap.data().value||[]:[]}catch(e){return[];}
+  }));
+  return results.flat().filter(c=>c&&c.outletId===outletId).sort((a,b)=>b.ts>a.ts?1:-1);
+}
+
+async function getAllCashClosings(){
+  // Admin view — get last 2 months across all outlets
+  const today=getToday();
+  const lastMonth=new Date(today+"T12:00:00Z");
+  lastMonth.setUTCMonth(lastMonth.getUTCMonth()-1);
+  const lastMonthStr=lastMonth.toISOString().split("T")[0];
+  const keys=[];
+  const months=[today.slice(0,7),lastMonthStr.slice(0,7)];
+  months.forEach(m=>{
+    OUTLET_IDS.forEach(oid=>{
+      keys.push(`cashClosings_${oid}_${m.replace("-","_")}`);
+    });
+  });
+  const results=await Promise.all([...new Set(keys)].map(async k=>{
+    try{const snap=await getDoc(doc(db,"kasu",k));return snap.exists()?snap.data().value||[]:[]}catch(e){return[];}
+  }));
+  return results.flat().filter(c=>c&&c.id).sort((a,b)=>b.ts>a.ts?1:-1);
+}
+
+// Get previous closing's balance-in-box for carry-forward opening float
+async function getPrevBalanceInBox(outletId, date, shift){
+  const closings=await getRecentCashClosings(outletId);
+  // Sort oldest first, find the one immediately before current date+shift
+  const sorted=[...closings].sort((a,b)=>a.ts<b.ts?-1:1);
+  const curIdx=sorted.findIndex(c=>c.date===date&&c.shift===shift);
+  if(curIdx>0) return sorted[curIdx-1].balanceInBox||0;
+  // Find most recent before this date/shift
+  const dateShiftScore=d=>d.date+"-"+(d.shift==="Morning"?"0":"1");
+  const cur=date+"-"+(shift==="Morning"?"0":"1");
+  const prev=sorted.filter(c=>dateShiftScore(c)<cur).pop();
+  return prev?prev.balanceInBox||0:0;
+}
+
+function buildClosingPrintHTML(c, outletName){
+  const denomRows=DENOMS.map(d=>{
+    const count=c.denomCounts?.[d]||0;
+    return `<tr><td>₹${d} × ${count}</td><td class="right">${inr(d*count)}</td></tr>`;
+  }).join("");
+  const coinRow=`<tr><td>Coins × ${c.denomCounts?.coins||0}</td><td class="right">${inr(c.denomCounts?.coins||0)}</td></tr>`;
+  const varPct=c.posReportedCash>0?((c.variance/c.posReportedCash)*100).toFixed(2):"0.00";
+  return `
+    <h1>Cash Closing Report</h1>
+    <div class="sub">${outletName} · ${c.shift} Shift · ${fmtD(c.date)}</div>
+    <div class="sub">Closed by: ${c.closedByName} · ${new Date(c.ts).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">POS Cash Sales</div><div class="kpi-val">${inr(c.posReportedCash)}</div></div>
+      <div class="kpi"><div class="kpi-label">Actual Collected</div><div class="kpi-val">${inr(c.actualCash)}</div></div>
+      <div class="kpi"><div class="kpi-label">Variance</div><div class="kpi-val ${c.variance<0?"red":"green"}">${inr(c.variance)} (${varPct}%)</div></div>
+    </div>
+    <div class="section">Denomination Breakdown</div>
+    <table>
+      <tr><th>Denomination</th><th class="right">Value</th></tr>
+      ${denomRows}${coinRow}
+      <tr class="bold"><td>Total Cash in Till</td><td class="right">${inr(c.totalInTill)}</td></tr>
+    </table>
+    <div class="section">Reconciliation</div>
+    <table>
+      <tr><td>Total in Till</td><td class="right">${inr(c.totalInTill)}</td></tr>
+      <tr><td>Opening Float (from prev shift)</td><td class="right">${inr(c.openingFloat)}</td></tr>
+      <tr><td>Refunds</td><td class="right">${inr(c.refundsTotal)}</td></tr>
+      <tr class="bold"><td>Actual Cash Collected</td><td class="right">${inr(c.actualCash)}</td></tr>
+      <tr><td>POS Reported Cash Sales</td><td class="right">${inr(c.posReportedCash)}</td></tr>
+      <tr class="bold ${c.variance<0?"red":"green"}"><td>Variance</td><td class="right">${inr(c.variance)} (${varPct}%)</td></tr>
+    </table>
+    <div class="section">Handover</div>
+    <table>
+      <tr><td>₹500 Notes Handed to Bank</td><td class="right">${inr(c.handedToBank)}</td></tr>
+      <tr class="bold"><td>Balance in Box (next shift float)</td><td class="right">${inr(c.balanceInBox)}</td></tr>
+    </table>
+    ${c.varianceReason?`<div class="section">Reason for Variance</div><p>${c.varianceReason}</p>`:""}
+    ${c.notes?`<div class="section">Additional Notes</div><p>${c.notes}</p>`:""}
+  `;
+}
+
+// ─── Cash Closing Screen (Outlet) ─────────────────────────────────────────────
+function CashClosingScreen({user,showToast,txns,refs}){
+  const outletId=user.outlets[0];
+  const [shift,setShift]=useState(()=>{
+    const h=new Date().getHours();
+    return h<14?"Morning":"Evening";
+  });
+  const [denomCounts,setDenomCounts]=useState({500:"",200:"",100:"",50:"",20:"",10:"",5:"",coins:""});
+  const [posReportedCash,setPosReportedCash]=useState("");
+  const [handedToBank,setHandedToBank]=useState("");
+  const [varianceReason,setVarianceReason]=useState("");
+  const [notes,setNotes]=useState("");
+  const [openingFloat,setOpeningFloat]=useState(0);
+  const [floatLoading,setFloatLoading]=useState(true);
+  const [busy,setBusy]=useState(false);
+  const [history,setHistory]=useState([]);
+  const [histLoading,setHistLoading]=useState(true);
+  const [tab,setTab]=useState("form"); // "form" | "history"
+
+  const today=getToday();
+
+  useEffect(()=>{
+    (async()=>{
+      setFloatLoading(true);
+      const prev=await getPrevBalanceInBox(outletId,today,shift);
+      setOpeningFloat(prev);
+      setFloatLoading(false);
+    })();
+  },[outletId,today,shift]);
+
+  useEffect(()=>{
+    (async()=>{
+      setHistLoading(true);
+      const h=await getRecentCashClosings(outletId);
+      setHistory(h);
+      setHistLoading(false);
+    })();
+  },[outletId]);
+
+  const setDenom=(d,v)=>setDenomCounts(x=>({...x,[d]:v}));
+
+  // Derived calculations
+  const totalInTill=DENOMS.reduce((s,d)=>s+(Number(denomCounts[d])||0)*d,0)+(Number(denomCounts.coins)||0);
+  const shiftRefunds=refs.filter(r=>r.outletId===outletId&&r.day===today).reduce((s,r)=>s+Number(r.amount),0);
+  const actualCash=totalInTill-openingFloat-shiftRefunds;
+  const pos=Number(posReportedCash)||0;
+  const variance=actualCash-pos;
+  const handedNum=Number(handedToBank)||0;
+  const balanceInBox=totalInTill-handedNum;
+
+  const save=async()=>{
+    if(!posReportedCash||isNaN(posReportedCash)){showToast("Enter POS reported cash sales","error");return;}
+    if(Math.abs(variance)>500&&!varianceReason.trim()){showToast("Please add a reason for variance >₹500","error");return;}
+    setBusy(true);
+    try{
+      const closing={
+        id:`cc_${outletId}_${today}_${shift}_${Date.now()}`,
+        outletId,outletName:user.name,
+        date:today,shift,
+        denomCounts:{...denomCounts},
+        totalInTill,openingFloat,refundsTotal:shiftRefunds,
+        posReportedCash:pos,actualCash,variance,
+        handedToBank:handedNum,balanceInBox,
+        varianceReason:varianceReason.trim(),notes:notes.trim(),
+        closedBy:user.id,closedByName:user.name,
+        ts:new Date().toISOString(),
+      };
+      await saveCashClosing(closing);
+      addLog("CASH_CLOSE",user.id,`Cash Close — ${user.name} — ${shift} — ${today} — Var ${inr(variance)}`);
+      showToast(`${shift} shift closed! Balance in box: ${inr(balanceInBox)}`,"success");
+      // Refresh history
+      const h=await getRecentCashClosings(outletId);
+      setHistory(h);
+      setTab("history");
+    }catch(e){
+      console.error("cash close save",e);
+      showToast("Save failed: "+e.message,"error");
+    }finally{setBusy(false);}
+  };
+
+  const printClosing=(c)=>{
+    printHTML(buildClosingPrintHTML(c,user.name),`Cash Close — ${user.name} — ${c.shift} ${c.date}`);
+  };
+
+  const varColor=variance===0?C.success:variance>0?C.success:C.danger;
+  const varBg=variance===0?C.successLight:variance>0?C.successLight:C.dangerLight;
+
+  return(
+    <div style={{padding:"16px 16px 32px"}}>
+      <SectionHeader title="Cash Closing"/>
+      {/* Tabs */}
+      <div style={{display:"flex",gap:2,marginBottom:16,background:C.surface2,borderRadius:6,padding:3,border:`1px solid ${C.border}`}}>
+        {["form","history"].map(t=>(
+          <button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:"8px",border:"none",borderRadius:4,background:tab===t?C.accent:"transparent",color:tab===t?"#fff":C.sub,fontWeight:700,fontSize:13,cursor:"pointer",transition:"all .15s"}}>
+            {t==="form"?"New Closing":"History"}
+          </button>
+        ))}
+      </div>
+
+      {tab==="form"&&(
+        <>
+          {/* Shift selector */}
+          <div style={{...Cd,marginBottom:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {SHIFTS.map(s=>(
+                <button key={s} onClick={()=>setShift(s)} style={{padding:"12px",border:`2px solid ${shift===s?C.accent:C.border}`,borderRadius:6,background:shift===s?C.accentLight:C.surface,color:shift===s?C.accentDark:C.sub,fontWeight:700,fontSize:14,cursor:"pointer",transition:"all .15s"}}>
+                  {s==="Morning"?"🌅 Morning":"🌙 Evening"} Shift
+                </button>
+              ))}
+            </div>
+            <div style={{marginTop:10,fontSize:12,color:C.sub}}>Date: <strong>{fmtD(today)}</strong> &nbsp;·&nbsp; Opening Float: <strong>{floatLoading?"loading…":inr(openingFloat)}</strong> (from prev shift)</div>
+          </div>
+
+          {/* Denomination entry */}
+          <div style={{...Cd,marginBottom:12}}>
+            <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:12}}>Count Denominations</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {DENOMS.map(d=>(
+                <div key={d} style={{display:"flex",alignItems:"center",gap:8,background:C.bg,borderRadius:4,padding:"8px 10px",border:`1px solid ${C.border}`}}>
+                  <div style={{fontSize:13,fontWeight:700,color:C.text,minWidth:50}}>₹{d}</div>
+                  <div style={{color:C.sub,fontSize:12,minWidth:14}}>×</div>
+                  <input type="number" value={denomCounts[d]} onChange={e=>setDenom(d,e.target.value)} placeholder="0" min="0"
+                    style={{...IS,width:"70px",padding:"6px 8px",fontSize:14,fontWeight:600,textAlign:"center"}}/>
+                  <div style={{fontSize:12,color:C.accent,fontWeight:600,minWidth:70,textAlign:"right"}}>{Number(denomCounts[d])>0?inr((Number(denomCounts[d])||0)*d):""}</div>
+                </div>
+              ))}
+              <div style={{display:"flex",alignItems:"center",gap:8,background:C.bg,borderRadius:4,padding:"8px 10px",border:`1px solid ${C.border}`}}>
+                <div style={{fontSize:13,fontWeight:700,color:C.text,minWidth:50}}>Coins</div>
+                <div style={{color:C.sub,fontSize:12,minWidth:14}}>₹</div>
+                <input type="number" value={denomCounts.coins} onChange={e=>setDenom("coins",e.target.value)} placeholder="0" min="0"
+                  style={{...IS,width:"70px",padding:"6px 8px",fontSize:14,fontWeight:600,textAlign:"center"}}/>
+              </div>
+            </div>
+            <div style={{marginTop:12,padding:"10px 14px",background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontWeight:700,fontSize:14,color:C.accentDark}}>Total Cash in Till</span>
+              <span style={{fontWeight:800,fontSize:18,color:C.accent}}>{inr(totalInTill)}</span>
+            </div>
+          </div>
+
+          {/* POS + Reconciliation */}
+          <div style={{...Cd,marginBottom:12}}>
+            <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:12}}>Reconciliation</div>
+            <Field label="POS Reported Cash Sales (₹)">
+              <Inp type="number" value={posReportedCash} onChange={setPosReportedCash} placeholder="Enter amount from POS" large/>
+            </Field>
+            <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:6,padding:12,marginTop:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:13}}><span style={{color:C.sub}}>Total in Till</span><span style={{fontWeight:600}}>{inr(totalInTill)}</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:13}}><span style={{color:C.sub}}>− Opening Float</span><span style={{fontWeight:600}}>{inr(openingFloat)}</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:13}}><span style={{color:C.sub}}>− Refunds</span><span style={{fontWeight:600,color:C.danger}}>{inr(shiftRefunds)}</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:14,fontWeight:700,borderTop:`1px solid ${C.border}`,marginTop:4}}><span>Actual Cash Collected</span><span style={{color:C.accent}}>{inr(actualCash)}</span></div>
+            </div>
+            {pos>0&&(
+              <div style={{marginTop:8,padding:"10px 14px",background:varBg,border:`1px solid ${variance<0?C.dangerBorder:C.successBorder}`,borderRadius:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontWeight:700,fontSize:14,color:varColor}}>Variance</span>
+                <span style={{fontWeight:800,fontSize:18,color:varColor}}>{variance>=0?"+":""}{inr(variance)} ({pos>0?((variance/pos)*100).toFixed(2):"0.00"}%)</span>
+              </div>
+            )}
+            {pos>0&&Math.abs(variance)>500&&(
+              <Field label="Reason for Variance" hint="Required when variance > ₹500" style={{marginTop:8}}>
+                <Inp value={varianceReason} onChange={setVarianceReason} placeholder="e.g. wrong settlement, POS error"/>
+              </Field>
+            )}
+          </div>
+
+          {/* Bank handover + Balance in Box */}
+          <div style={{...Cd,marginBottom:12}}>
+            <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:12}}>Handover</div>
+            <Field label="₹500 Notes Handed to Bank (₹)">
+              <Inp type="number" value={handedToBank} onChange={setHandedToBank} placeholder="0"/>
+            </Field>
+            <div style={{marginTop:8,padding:"10px 14px",background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontWeight:700,fontSize:14,color:C.accentDark}}>Balance in Box (next shift float)</span>
+              <span style={{fontWeight:800,fontSize:18,color:C.accent}}>{inr(balanceInBox)}</span>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div style={{...Cd,marginBottom:16}}>
+            <Field label="Additional Notes (optional)">
+              <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Any other comments…"
+                style={{...IS,minHeight:70,resize:"vertical",padding:"10px 12px",fontSize:14}}/>
+            </Field>
+          </div>
+
+          <button onClick={save} disabled={busy} style={{...BPr,opacity:busy?.7:1}}>
+            {busy?"Saving…":"✓ Submit Cash Closing"}
+          </button>
+        </>
+      )}
+
+      {tab==="history"&&(
+        <CashClosingHistory closings={history} loading={histLoading} onPrint={printClosing}/>
+      )}
+    </div>
+  );
+}
+
+// ─── Cash Closing History (shared) ───────────────────────────────────────────
+function CashClosingHistory({closings,loading,onPrint,outlets=[]}){
+  if(loading) return <div style={{padding:32,textAlign:"center",color:C.sub}}>Loading…</div>;
+  if(!closings.length) return <div style={{padding:32,textAlign:"center",color:C.sub}}>No closings recorded yet.</div>;
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+      {closings.map(c=>{
+        const varPct=c.posReportedCash>0?((c.variance/c.posReportedCash)*100).toFixed(2):"0.00";
+        const varOk=Math.abs(c.variance)<=50;
+        return(
+          <div key={c.id} style={{...Cd,padding:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:14,color:C.text}}>{c.outletName} · <span style={{color:C.accent}}>{c.shift}</span></div>
+                <div style={{fontSize:12,color:C.sub,marginTop:2}}>{fmtD(c.date)} · Closed by {c.closedByName} · {new Date(c.ts).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</div>
+              </div>
+              <button onClick={()=>onPrint(c)} style={{...BEd,padding:"5px 10px",fontSize:11,whiteSpace:"nowrap"}}>🖨 Print PDF</button>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:8}}>
+              <div style={{background:C.bg,borderRadius:4,padding:"8px 10px",border:`1px solid ${C.border}`}}>
+                <div style={{fontSize:10,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:2}}>POS Cash</div>
+                <div style={{fontWeight:700,fontSize:14}}>{inr(c.posReportedCash)}</div>
+              </div>
+              <div style={{background:C.bg,borderRadius:4,padding:"8px 10px",border:`1px solid ${C.border}`}}>
+                <div style={{fontSize:10,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:2}}>Actual</div>
+                <div style={{fontWeight:700,fontSize:14}}>{inr(c.actualCash)}</div>
+              </div>
+              <div style={{background:varOk?C.successLight:C.dangerLight,borderRadius:4,padding:"8px 10px",border:`1px solid ${varOk?C.successBorder:C.dangerBorder}`}}>
+                <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:2,color:varOk?C.success:C.danger}}>Variance</div>
+                <div style={{fontWeight:700,fontSize:14,color:varOk?C.success:C.danger}}>{c.variance>=0?"+":""}{inr(c.variance)}</div>
+                <div style={{fontSize:10,color:varOk?C.success:C.danger}}>{varPct}%</div>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:12,fontSize:12,color:C.sub}}>
+              <span>Till: <strong style={{color:C.text}}>{inr(c.totalInTill)}</strong></span>
+              <span>Box: <strong style={{color:C.accent}}>{inr(c.balanceInBox)}</strong></span>
+              <span>Bank: <strong style={{color:C.text}}>{inr(c.handedToBank)}</strong></span>
+              {c.varianceReason&&<span style={{color:C.warn}}>Reason: {c.varianceReason}</span>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Cash Closings Admin View ─────────────────────────────────────────────────
+function CashClosingsAdmin({user,showToast}){
+  const [closings,setClosings]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [filterOutlet,setFilterOutlet]=useState("all");
+  const [filterShift,setFilterShift]=useState("all");
+  const [outlets,setOutlets]=useState([]);
+
+  useEffect(()=>{
+    (async()=>{
+      setLoading(true);
+      const [all,outs]=await Promise.all([getAllCashClosings(),sget("outlets")||[]]);
+      setClosings(all);setOutlets(outs);setLoading(false);
+    })();
+  },[]);
+
+  const printClosing=(c)=>{
+    const outName=outlets.find(o=>o.id===c.outletId)?.name||c.outletName||c.outletId;
+    printHTML(buildClosingPrintHTML(c,outName),`Cash Close — ${outName} — ${c.shift} ${c.date}`);
+  };
+
+  const filtered=closings.filter(c=>{
+    if(filterOutlet!=="all"&&c.outletId!==filterOutlet)return false;
+    if(filterShift!=="all"&&c.shift!==filterShift)return false;
+    return true;
+  });
+
+  // Summary stats for filtered view
+  const totalVariance=filtered.reduce((s,c)=>s+c.variance,0);
+  const totalBank=filtered.reduce((s,c)=>s+c.handedToBank,0);
+  const badClosings=filtered.filter(c=>Math.abs(c.variance)>500).length;
+
+  return(
+    <div style={{padding:"20px 24px 32px"}}>
+      <SectionHeader title="Cash Closings"/>
+
+      {/* Summary KPIs */}
+      {!loading&&filtered.length>0&&(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
+          <StatCard label="Total Variance" value={inr(totalVariance)} color={Math.abs(totalVariance)<1000?C.success:C.danger} icon="⚖"/>
+          <StatCard label="Handed to Bank" value={inr(totalBank)} color={C.text} icon="🏦"/>
+          <StatCard label="Variance Alerts" value={badClosings} color={badClosings>0?C.danger:C.success} icon={badClosings>0?"⚠":"✓"} sub=">₹500"/>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        <select value={filterOutlet} onChange={e=>setFilterOutlet(e.target.value)} style={{...IS,width:"auto",fontSize:13,padding:"8px 12px"}}>
+          <option value="all">All Outlets</option>
+          {outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
+        </select>
+        <select value={filterShift} onChange={e=>setFilterShift(e.target.value)} style={{...IS,width:"auto",fontSize:13,padding:"8px 12px"}}>
+          <option value="all">All Shifts</option>
+          {SHIFTS.map(s=><option key={s} value={s}>{s}</option>)}
+        </select>
+        <button onClick={async()=>{setLoading(true);const all=await getAllCashClosings();setClosings(all);setLoading(false);}} style={{...BSc,padding:"8px 14px",fontSize:13}}>↻ Refresh</button>
+      </div>
+
+      <CashClosingHistory closings={filtered} loading={loading} onPrint={printClosing} outlets={outlets}/>
+    </div>
+  );
 }
