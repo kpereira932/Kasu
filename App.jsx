@@ -1579,7 +1579,8 @@ function Dashboard({user,goTo}){
               </div>
             </div>
           )}
-          {activeOutlets.length===0?<EmptyState icon="🏪" title="No active outlets" desc=""/>:activeOutlets.map(o=>{
+          {activeOutlets.length===0?<EmptyState icon="🏪" title="No active outlets" desc=""/>:activeOutlets.map((o,oi)=>{
+            const isLast=oi===activeOutlets.length-1;
             const morningCC=ccByOutletShift[`${o.id}_Morning`];
             const eveningCC=ccByOutletShift[`${o.id}_Evening`];
             const morningLocked=!!dayStatus[`${o.id}_${today}_Morning`];
@@ -1588,7 +1589,7 @@ function Dashboard({user,goTo}){
             const oT=txns.filter(t=>t.outletId===o.id);
             const oTot=oT.reduce((s,t)=>s+t.payments.reduce((a,p)=>a+Number(p.amount),0)+(t.boxAmount||0),0);
             return(
-              <div key={o.id} style={{marginBottom:14,borderBottom:`1px solid ${C.border}`,paddingBottom:14}}>
+              <div key={o.id} style={{marginBottom:isLast?0:14,borderBottom:isLast?"none":`1px solid ${C.border}`,paddingBottom:isLast?0:14}}>
                 {/* Outlet header */}
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                   <div onClick={()=>goTo("transactions",{outlet:o.id,date:today})} style={{cursor:"pointer"}}>
