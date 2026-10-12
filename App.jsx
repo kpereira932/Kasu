@@ -1494,9 +1494,21 @@ function AdminApp({user,onLogout,showToast,onBMO,isFounder}){
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 function Dashboard({user,goTo}){
-  const [txns,setTxns]=useState([]);const [refs,setRefs]=useState([]);const [boxCharges,setBoxCharges]=useState([]);const [outlets,setOutlets]=useState([]);const [dayStatus,setDayStatus]=useState({});const [loading,setLoading]=useState(true);
+  const [txns,setTxns]=useState([]);const [refs,setRefs]=useState([]);const [boxCharges,setBoxCharges]=useState([]);const [outlets,setOutlets]=useState([]);const [dayStatus,setDayStatus]=useState({});const [cashClosings,setCashClosings]=useState([]);const [loading,setLoading]=useState(true);
+  const today=getToday();
   useEffect(()=>{
-    getAllTxns().then(a=>{Promise.all([sget("refunds"),sget("boxCharges"),sget("outlets"),sget("dayStatus")]).then(([b,bx,o,ds])=>{setTxns((a||[]).filter(t=>t.day===getToday()));setRefs((b||[]).filter(r=>r.day===getToday()));setBoxCharges((bx||[]).filter(x=>x.day===getToday()));setOutlets(o||[]);setDayStatus(ds||{});setLoading(false);});});
+    (async()=>{
+      const [a,b,bx,o,ds]=await Promise.all([getAllTxns(),sget("refunds"),sget("boxCharges"),sget("outlets"),sget("dayStatus")]);
+      setTxns((a||[]).filter(t=>t.day===today));
+      setRefs((b||[]).filter(r=>r.day===today));
+      setBoxCharges((bx||[]).filter(x=>x.day===today));
+      setOutlets(o||[]);
+      setDayStatus(ds||{});
+      // Fetch today's cash closings across all outlets
+      const ccResults=await Promise.all((o||[]).filter(x=>x.active).map(x=>getRecentCashClosings(x.id)));
+      setCashClosings(ccResults.flat().filter(c=>c.date===today));
+      setLoading(false);
+    })();
   },[]);
   const totals={};PAYMENT_MODES.forEach(m=>{totals[m]=0;});
   txns.forEach(t=>{t.payments.forEach(p=>{totals[p.mode]=(totals[p.mode]||0)+Number(p.amount);});if(t.boxAmount)totals[t.boxMode||"Cash"]=(totals[t.boxMode||"Cash"]||0)+Number(t.boxAmount);});
@@ -1510,9 +1522,20 @@ function Dashboard({user,goTo}){
   boxCharges.forEach(b=>{if(!outletMap[b.outletId])outletMap[b.outletId]={name:b.outletName,total:0,orders:0};outletMap[b.outletId].total+=Number(b.amount);});
   const userMap={};txns.forEach(t=>{const k=t.createdBy||"?";if(!userMap[k])userMap[k]={name:t.createdByName||k,orders:0,total:0};t.payments.forEach(p=>{userMap[k].total+=Number(p.amount);});userMap[k].orders+=1;});
   if(loading)return <div style={{display:"flex",justifyContent:"center",padding:48}}><Spinner/></div>;
+
+  // Build per-outlet cash closing summary for the dashboard card
+  const activeOutlets=outlets.filter(o=>o.active);
+  const ccByOutletShift={};
+  cashClosings.forEach(c=>{ccByOutletShift[`${c.outletId}_${c.shift}`]=c;});
+
+  // Total variance across all submitted closings today
+  const totalVariance=cashClosings.reduce((s,c)=>s+Number(c.variance||0),0);
+  const totalBoxBalance=cashClosings.reduce((s,c)=>s+Number(c.balanceInBox||0),0);
+  const totalBanked=cashClosings.reduce((s,c)=>s+Number(c.handedToBank||0),0);
+
   return(
     <div style={{padding:"20px 28px",maxWidth:1100,margin:"0 auto"}}>
-      <div style={{marginBottom:20}}><div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Dashboard</div><div style={{color:C.sub,fontSize:13,marginTop:2}}>Business day: {fmtD(getToday())}</div></div>
+      <div style={{marginBottom:20}}><div style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:"-0.5px"}}>Dashboard</div><div style={{color:C.sub,fontSize:13,marginTop:2}}>Business day: {fmtD(today)}</div></div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:20}}>
         <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Gross Sales" value={inr(grand)} color={C.success} icon="💰"/></div>
         <div onClick={()=>goTo("transactions")} style={{cursor:"pointer"}}><StatCard label="Net Sales" value={inr(net)} color={C.accent} icon="📊"/></div>
@@ -1535,20 +1558,91 @@ function Dashboard({user,goTo}){
             </div>
           );})}
         </div>
-        <div style={Cd}>
-          <SectionHeader title="🏪 Outlet Closing Status"/>
-          {outlets.filter(o=>o.active).map(o=>{
-            const closed=dayStatus[o.id]===getToday();
+
+        {/* Outlet status + cash closing combined */}
+        <div style={{...Cd,gridColumn:"span 2"}}>
+          <SectionHeader title="🏪 Outlet Status & Cash Closings" action={<button onClick={()=>goTo("cashclosings")} style={{fontSize:12,color:C.accent,background:"transparent",border:"none",cursor:"pointer",fontWeight:600}}>View all →</button>}/>
+          {/* Summary row */}
+          {cashClosings.length>0&&(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14,padding:"10px 12px",background:C.bg,borderRadius:6,border:`1px solid ${C.border}`}}>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:10,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:2}}>Total Variance</div>
+                <div style={{fontWeight:800,fontSize:15,color:totalVariance>=0?C.success:C.danger}}>{totalVariance>=0?"+":""}{inr(totalVariance)}</div>
+              </div>
+              <div style={{textAlign:"center",borderLeft:`1px solid ${C.border}`,borderRight:`1px solid ${C.border}`}}>
+                <div style={{fontSize:10,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:2}}>Banked (₹500)</div>
+                <div style={{fontWeight:800,fontSize:15,color:C.text}}>{inr(totalBanked)}</div>
+              </div>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:10,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:2}}>Total in Box</div>
+                <div style={{fontWeight:800,fontSize:15,color:C.accent}}>{inr(totalBoxBalance)}</div>
+              </div>
+            </div>
+          )}
+          {activeOutlets.length===0?<EmptyState icon="🏪" title="No active outlets" desc=""/>:activeOutlets.map(o=>{
+            const morningCC=ccByOutletShift[`${o.id}_Morning`];
+            const eveningCC=ccByOutletShift[`${o.id}_Evening`];
+            const morningLocked=!!dayStatus[`${o.id}_${today}_Morning`];
+            const eveningLocked=!!dayStatus[`${o.id}_${today}_Evening`];
+            const dayDone=dayStatus[o.id]===today;
             const oT=txns.filter(t=>t.outletId===o.id);
             const oTot=oT.reduce((s,t)=>s+t.payments.reduce((a,p)=>a+Number(p.amount),0)+(t.boxAmount||0),0);
-            return(<div key={o.id} onClick={()=>goTo("transactions",{outlet:o.id,date:getToday()})} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:`1px solid ${C.border}`,cursor:"pointer",borderRadius:4,transition:"background .15s"}}
-              onMouseEnter={e=>e.currentTarget.style.background=C.accentLight}
-              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-              <div><div style={{fontWeight:600,color:C.accent,fontSize:13}}>{o.name} →</div><div style={{color:C.sub,fontSize:11}}>{oT.length} orders · {inr(oTot)}</div></div>
-              <Badge label={closed?"Closed":"Open"} color={closed?C.success:C.warn} bg={closed?C.successLight:C.warnLight} border={closed?C.successBorder:C.warnBorder}/>
-            </div>);
+            return(
+              <div key={o.id} style={{marginBottom:14,borderBottom:`1px solid ${C.border}`,paddingBottom:14}}>
+                {/* Outlet header */}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                  <div onClick={()=>goTo("transactions",{outlet:o.id,date:today})} style={{cursor:"pointer"}}>
+                    <div style={{fontWeight:700,color:C.accent,fontSize:14}}>{o.name}</div>
+                    <div style={{color:C.sub,fontSize:11}}>{oT.length} orders · {inr(oTot)}</div>
+                  </div>
+                  <Badge label={dayDone?"Day Closed":"Open"} color={dayDone?C.success:C.warn} bg={dayDone?C.successLight:C.warnLight} border={dayDone?C.successBorder:C.warnBorder}/>
+                </div>
+                {/* Shift rows */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  {SHIFTS.map(shift=>{
+                    const cc=shift==="Morning"?morningCC:eveningCC;
+                    const locked=shift==="Morning"?morningLocked:eveningLocked;
+                    const shiftIcon=shift==="Morning"?"🌅":"🌙";
+                    if(!cc)return(
+                      <div key={shift} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:6,padding:"8px 10px"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                          <span style={{fontSize:11,fontWeight:700,color:C.sub}}>{shiftIcon} {shift}</span>
+                          {locked?<span style={{fontSize:9,fontWeight:700,color:C.success,background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:3,padding:"1px 5px"}}>LOCKED</span>
+                            :<span style={{fontSize:9,fontWeight:700,color:C.muted,background:C.surface2,borderRadius:3,padding:"1px 5px"}}>NOT SUBMITTED</span>}
+                        </div>
+                        <div style={{fontSize:11,color:C.muted,fontStyle:"italic"}}>No cash closing yet</div>
+                      </div>
+                    );
+                    const varPos=cc.variance>=0;
+                    return(
+                      <div key={shift} style={{background:C.bg,border:`1px solid ${locked?C.successBorder:C.border}`,borderRadius:6,padding:"8px 10px"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                          <span style={{fontSize:11,fontWeight:700,color:C.sub}}>{shiftIcon} {shift}</span>
+                          {locked?<span style={{fontSize:9,fontWeight:700,color:C.success,background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:3,padding:"1px 5px"}}>🔒 LOCKED</span>
+                            :<span style={{fontSize:9,fontWeight:700,color:C.accent,background:C.accentLight,borderRadius:3,padding:"1px 5px"}}>SUBMITTED</span>}
+                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:3}}>
+                          <span style={{color:C.sub}}>Variance</span>
+                          <span style={{fontWeight:800,color:varPos?C.success:C.danger}}>{varPos?"+":""}{inr(cc.variance)}</span>
+                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:3}}>
+                          <span style={{color:C.sub}}>Banked</span>
+                          <span style={{fontWeight:600,color:C.text}}>{inr(cc.handedToBank)}</span>
+                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:12}}>
+                          <span style={{color:C.sub}}>Box</span>
+                          <span style={{fontWeight:700,color:C.accent}}>{inr(cc.balanceInBox)}</span>
+                        </div>
+                        {cc.varianceReason&&<div style={{fontSize:10,color:C.muted,marginTop:4,fontStyle:"italic"}}>"{cc.varianceReason}"</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
           })}
         </div>
+
         <div style={Cd}>
           <SectionHeader title="Entries by Staff"/>
           {Object.values(userMap).length===0?<EmptyState icon="👤" title="No data" desc=""/>
