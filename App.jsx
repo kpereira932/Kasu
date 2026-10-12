@@ -94,8 +94,8 @@ function migrateTxns(arr){
 }
 const cache = {};
 // Keys that must always be read fresh (multi-user writes)
-const NO_CACHE_KEYS=new Set(["transactions","bmoOrders","bmoOrderCounter","refunds","boxCharges","dayStatus","bmoMenu","users","cashClosings"]);
-function isNoCacheKey(key){return NO_CACHE_KEYS.has(key)||key.startsWith("bmoOrders_")||key.startsWith("txn_")||key==="transactions"||key.startsWith("cashClosings_");}
+const NO_CACHE_KEYS=new Set(["transactions","bmoOrders","bmoOrderCounter","refunds","boxCharges","dayStatus","bmoMenu","users","cashClosings","dayEnds"]);
+function isNoCacheKey(key){return NO_CACHE_KEYS.has(key)||key.startsWith("bmoOrders_")||key.startsWith("txn_")||key==="transactions"||key.startsWith("cashClosings_")||key.startsWith("dayEnds_");}
 async function sget(key) {
   if(key==="transactions"){
     try {
@@ -348,10 +348,38 @@ async function seed(){
     {id:"u2",username:"admin",password:"admin@123",role:"admin",name:"Admin User",outlets:[],active:true},
     {id:"u3",username:"manager1",password:"manager@123",role:"manager",name:"Manager One",outlets:["o1"],active:true},
     {id:"u4",username:"accounts1",password:"accounts@123",role:"accounts",name:"Accounts Team",outlets:[],active:true},
-    {id:"u5",username:"juhu",password:"juhu@123",role:"outlet",name:"Benne Juhu",outlets:["o1"],active:true},
-    {id:"u6",username:"bandra",password:"bandra@123",role:"outlet",name:"Benne Bandra",outlets:["o2"],active:true},
-    {id:"u7",username:"chowpatty",password:"chowpatty@123",role:"outlet",name:"Benne Chowpatty",outlets:["o3"],active:true},
-    {id:"u8",username:"gk2",password:"gk2@123",role:"outlet",name:"Benne GK2",outlets:["o4"],active:true},
+    {id:"u5",username:"Juhu",password:"juhu@123",role:"outlet",name:"Benne Juhu",outlets:["o1"],active:true},
+    {id:"u6",username:"Bandra",password:"bandra@123",role:"outlet",name:"Benne Bandra",outlets:["o2"],active:true},
+    {id:"u7",username:"Chowpatty",password:"chowpatty@123",role:"outlet",name:"Benne Chowpatty",outlets:["o3"],active:true},
+    {id:"u8",username:"Gk2",password:"gk2@123",role:"outlet",name:"Benne GK2",outlets:["o4"],active:true},
+    // Managers
+    {id:"u10",username:"Chandni",password:"Benne@123",role:"manager",name:"Chandni",outlets:[],active:true},
+    {id:"u11",username:"Esha",password:"Benne@123",role:"manager",name:"Esha",outlets:[],active:true},
+    {id:"u12",username:"Sohel",password:"Benne@123",role:"manager",name:"Sohel",outlets:[],active:true},
+    {id:"u13",username:"Ashish",password:"Benne@123",role:"manager",name:"Ashish",outlets:[],active:true},
+    {id:"u14",username:"Niketa",password:"Benne@123",role:"manager",name:"Niketa",outlets:[],active:true},
+    {id:"u15",username:"Chirag",password:"Benne@123",role:"manager",name:"Chirag",outlets:[],active:true},
+    {id:"u16",username:"Mohit",password:"Benne@123",role:"manager",name:"Mohit",outlets:[],active:true},
+    {id:"u17",username:"Aditya",password:"Benne@123",role:"manager",name:"Aditya",outlets:[],active:true},
+    {id:"u18",username:"Sid",password:"Benne@123",role:"manager",name:"Sid",outlets:[],active:true},
+    {id:"u19",username:"Mahesh",password:"Benne@123",role:"manager",name:"Mahesh",outlets:[],active:true},
+    {id:"u20",username:"Abdul",password:"Benne@123",role:"manager",name:"Abdul",outlets:[],active:true},
+    {id:"u21",username:"Anaya",password:"Benne@123",role:"manager",name:"Anaya",outlets:[],active:true},
+    {id:"u22",username:"Patsy",password:"Benne@123",role:"manager",name:"Patsy",outlets:[],active:true},
+    {id:"u23",username:"Yogesh",password:"Benne@123",role:"manager",name:"Yogesh",outlets:[],active:true},
+    {id:"u24",username:"Anushka",password:"Benne@123",role:"manager",name:"Anushka",outlets:[],active:true},
+    {id:"u25",username:"Rohan",password:"Benne@123",role:"manager",name:"Rohan",outlets:[],active:true},
+    // Accounts
+    {id:"u30",username:"Vikas",password:"Benne@123",role:"accounts",name:"Vikas",outlets:[],active:true},
+    {id:"u31",username:"Rahul",password:"Benne@123",role:"accounts",name:"Rahul",outlets:[],active:true},
+    {id:"u32",username:"Sandy",password:"Benne@123",role:"accounts",name:"Sandy",outlets:[],active:true},
+    {id:"u33",username:"Pallavi",password:"Benne@123",role:"accounts",name:"Pallavi",outlets:[],active:true},
+    // Admins
+    {id:"u40",username:"Nayantara",password:"Benne@123",role:"admin",name:"Nayantara",outlets:[],active:true},
+    {id:"u41",username:"Kevin",password:"Benne@123",role:"admin",name:"Kevin",outlets:[],active:true},
+    // Founders
+    {id:"u50",username:"Akhil",password:"Benne@123",role:"founder",name:"Akhil",outlets:[],active:true},
+    {id:"u51",username:"Nikhil",password:"Benne@123",role:"founder",name:"Nikhil",outlets:[],active:true},
   ];
 
   // Run all seed reads in parallel
@@ -373,7 +401,15 @@ async function seed(){
   if(!exU){
     await sset("users",DEFAULT_USERS);
   } else {
-    let ch=false,u2=exU.map(u=>{if(u.id==="u5"&&u.username==="outlet1"){ch=true;return{...u,username:"juhu",name:"Benne Juhu",outlets:["o1"]};}return u;});
+    let ch=false;
+    let u2=exU.map(u=>{
+      if(u.id==="u5"&&u.username==="outlet1"){ch=true;return{...u,username:"Juhu",name:"Benne Juhu",outlets:["o1"]};}
+      if(u.id==="u5"&&u.username==="juhu"){ch=true;return{...u,username:"Juhu"};}
+      if(u.id==="u6"&&u.username==="bandra"){ch=true;return{...u,username:"Bandra"};}
+      if(u.id==="u7"&&u.username==="chowpatty"){ch=true;return{...u,username:"Chowpatty"};}
+      if(u.id==="u8"&&u.username==="gk2"){ch=true;return{...u,username:"Gk2"};}
+      return u;
+    });
     for(const d of DEFAULT_USERS){if(!u2.find(u=>u.id===d.id)){u2.push(d);ch=true;}}
     if(ch)await sset("users",u2);
   }
@@ -594,7 +630,7 @@ export default function App(){
       {!bmoOpen&&(
         !user?<Login onLogin={handleLogin} showToast={showToast}/>
         :user.role==="outlet"?<OutletApp user={user} onLogout={handleLogout} showToast={showToast} onBMO={()=>setBmoOpen(true)}/>
-        :<AdminApp user={user} onLogout={handleLogout} showToast={showToast} onBMO={()=>setBmoOpen(true)}/>
+        :<AdminApp user={user} onLogout={handleLogout} showToast={showToast} onBMO={()=>setBmoOpen(true)} isFounder={user.role==="founder"}/>
       )}
     </div>
   );
@@ -652,11 +688,29 @@ function OutletApp({user,onLogout,showToast,onBMO}){
   const grand=Object.values(totals).reduce((a,b)=>a+b,0);
   const cashInHand=(totals["Cash"]||0)-totalRef;
 
-  const confirmDayEnd=async()=>{
-    const ds=await sget("dayStatus")||{};ds[outletId]=getToday();
-    await sset("dayStatus",ds);setDayDone(true);setDayModal(false);
-    await addLog("DAY_END",user.id,"Day end — "+outletId);
-    showToast("Day closed successfully!","success");
+  const confirmDayEnd=async(shift)=>{
+    const today=getToday();
+    // 1. Update dayStatus
+    const ds=await sget("dayStatus")||{};
+    const key=`${outletId}_${today}_${shift}`;
+    ds[key]=today;
+    if(shift==="Evening")ds[outletId]=today; // full day done on evening
+    await sset("dayStatus",ds);
+    // 2. Lock the matching cash closing record so it can't be re-edited
+    try{
+      const monthKey=`cashClosings_${outletId}_${today.slice(0,7).replace("-","_")}`;
+      const ref=doc(db,"kasu",monthKey);
+      await runTransaction(db,async t=>{
+        const snap=await t.get(ref);
+        const arr=snap.exists()&&snap.data().value?snap.data().value:[];
+        const next=arr.map(c=>(c.date===today&&c.shift===shift&&c.outletId===outletId)?{...c,locked:true,lockedAt:new Date().toISOString()}:c);
+        t.set(ref,{value:next});
+      });
+    }catch(e){console.error("lock cash closing",e);}
+    if(shift==="Evening")setDayDone(true);
+    setDayModal(false);
+    await addLog("DAY_END",user.id,`Day End — ${outletId} — ${shift}`);
+    showToast(`${shift} shift locked!`,"success");
   };
 
   const canEdit=t=>t.day===getToday();
@@ -713,7 +767,8 @@ function OutletApp({user,onLogout,showToast,onBMO}){
       </div>
 
       <DayEndModal open={dayModal} onClose={()=>setDayModal(false)} onConfirm={confirmDayEnd}
-        totals={totals} totalRef={totalRef} grand={grand} txnCount={txns.length} outletName={user.name} alreadyClosed={dayDone}/>
+        totals={totals} totalRef={totalRef} grand={grand} txnCount={txns.length} outletName={user.name} alreadyClosed={dayDone}
+        txns={txns} refs={refs} outletId={outletId}/>
     </div>
   );
 }
@@ -1158,117 +1213,206 @@ function TxnCard({txn,onEdit,onDelete,editable}){
 }
 
 // ─── Day End Modal ────────────────────────────────────────────────────────────
-function DayEndModal({open,onClose,onConfirm,totals,totalRef,grand,txnCount,outletName,alreadyClosed}){
-  const [endType,setEndType]=useState(null); // null = picking, "shift" | "day"
+function DayEndModal({open,onClose,onConfirm,totals,totalRef,grand,txnCount,outletName,alreadyClosed,txns=[],refs=[],outletId}){
+  const [shift,setShift]=useState(()=>{const h=new Date().getHours();return h<14?"Morning":"Evening";});
+  const [step,setStep]=useState("pick"); // "pick" | "summary"
+  const [cashClosing,setCashClosing]=useState(null);
+  const [loadingCC,setLoadingCC]=useState(false);
   const [zeroConfirm,setZeroConfirm]=useState(false);
-  const net=grand-totalRef,cashIn=totals["Cash"]||0,cashInHand=cashIn-totalRef;
-  const rows=PAYMENT_MODES.filter(m=>totals[m]>0);
 
-  // Reset type choice when modal closes
-  const handleClose=()=>{setEndType(null);setZeroConfirm(false);onClose();};
+  const handleClose=()=>{setStep("pick");setZeroConfirm(false);setCashClosing(null);onClose();};
 
-  const buildWA=()=>{
-    const label=endType==="shift"?"Shift End":"Day End";
-    const lines=[`ಕಾಸು *Kāsu ${label}*`,`📍 ${outletName}`,`📅 ${fmtD(getToday())}`,``,`💰 Gross: ${inr(grand)}`,`↩ Refunds: −${inr(totalRef)}`,`✅ Net: *${inr(net)}*`,`📋 Orders: ${txnCount}`,`💵 Cash in Hand: *${inr(cashInHand)}*`,``,`*Breakdown:*`];
-    PAYMENT_MODES.filter(m=>totals[m]>0).forEach(m=>lines.push(`• ${m}: ${inr(totals[m])}`));
-    return lines.join("\n");
+  // Filter txns to this shift's time window
+  const shiftTxns=txns.filter(t=>{
+    const h=new Date(t.createdAt||t.ts||0).getHours();
+    return shift==="Morning"?h<14:h>=14;
+  });
+  const shiftRefs=refs.filter(r=>{
+    const h=new Date(r.ts||r.createdAt||0).getHours();
+    return shift==="Morning"?h<14:h>=14;
+  });
+  const shiftTotals={};PAYMENT_MODES.forEach(m=>{shiftTotals[m]=0;});
+  shiftTxns.forEach(t=>{t.payments.forEach(p=>{shiftTotals[p.mode]=(shiftTotals[p.mode]||0)+Number(p.amount);});});
+  const shiftRefTotal=shiftRefs.reduce((s,r)=>s+Number(r.amount),0);
+  const shiftGrand=Object.values(shiftTotals).reduce((a,b)=>a+b,0);
+  const shiftNet=shiftGrand-shiftRefTotal;
+  const shiftCashIn=shiftTotals["Cash"]||0;
+  const shiftCashInHand=shiftCashIn-shiftRefTotal;
+  const rows=PAYMENT_MODES.filter(m=>shiftTotals[m]>0);
+
+  // Comp entries for this shift
+  const compTxns=shiftTxns.filter(t=>t.payments.some(p=>p.mode==="Comp"));
+  const compTotal=compTxns.reduce((s,t)=>s+t.payments.filter(p=>p.mode==="Comp").reduce((a,p)=>a+Number(p.amount),0),0);
+
+  const loadCashClosing=async()=>{
+    setLoadingCC(true);
+    const recent=await getRecentCashClosings(outletId);
+    const today=getToday();
+    const cc=recent.find(c=>c.date===today&&c.shift===shift&&!c.locked)||null;
+    setCashClosing(cc);setLoadingCC(false);
   };
-  const buildPrintHTML=()=>`
-    <h1>${endType==="shift"?"Shift End":"Day End"} Summary</h1><div class="sub">${outletName} · ${fmtD(getToday())}</div>
+
+  const handleProceed=async()=>{await loadCashClosing();setStep("summary");};
+
+  const buildPrintHTML=()=>{
+    const cc=cashClosing;
+    const compRows=compTxns.map(t=>{
+      const amt=t.payments.filter(p=>p.mode==="Comp").reduce((a,p)=>a+Number(p.amount),0);
+      return`<tr><td>${t.orderNo||"-"}</td><td>${t.compReason||"-"}</td><td class="right">${inr(amt)}</td></tr>`;
+    }).join("");
+    return`
+    <h1>${shift} Shift — Day End Report</h1><div class="sub">${outletName} · ${fmtD(getToday())}</div>
+    <div class="section">Order Summary</div>
     <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-label">Gross Sales</div><div class="kpi-val green">${inr(grand)}</div></div>
-      <div class="kpi"><div class="kpi-label">Net Sales</div><div class="kpi-val">${inr(net)}</div></div>
-      <div class="kpi"><div class="kpi-label">Orders</div><div class="kpi-val">${txnCount}</div></div>
-      <div class="kpi"><div class="kpi-label">Refunds</div><div class="kpi-val red">−${inr(totalRef)}</div></div>
-      <div class="kpi"><div class="kpi-label">Cash In</div><div class="kpi-val green">${inr(cashIn)}</div></div>
-      <div class="kpi"><div class="kpi-label">Cash in Hand</div><div class="kpi-val green">${inr(cashInHand)}</div></div>
+      <div class="kpi"><div class="kpi-label">Gross Sales</div><div class="kpi-val green">${inr(shiftGrand)}</div></div>
+      <div class="kpi"><div class="kpi-label">Net Sales</div><div class="kpi-val">${inr(shiftNet)}</div></div>
+      <div class="kpi"><div class="kpi-label">Orders</div><div class="kpi-val">${shiftTxns.length}</div></div>
+      <div class="kpi"><div class="kpi-label">Refunds</div><div class="kpi-val red">−${inr(shiftRefTotal)}</div></div>
+      <div class="kpi"><div class="kpi-label">Comp Total</div><div class="kpi-val red">−${inr(compTotal)}</div></div>
+      <div class="kpi"><div class="kpi-label">Cash in Hand</div><div class="kpi-val green">${inr(shiftCashInHand)}</div></div>
     </div>
-    <div class="section">Payment Mode Breakdown</div>
-    <table><thead><tr><th>Mode</th><th class="right">Amount</th></tr></thead><tbody>${rows.map(m=>`<tr><td>${m}</td><td class="right bold">${inr(totals[m])}</td></tr>`).join("")}</tbody></table>`;
+    <div class="section">Settlement Breakdown</div>
+    <table><thead><tr><th>Mode</th><th class="right">Amount</th></tr></thead><tbody>
+      ${rows.map(m=>`<tr><td>${m}</td><td class="right bold">${inr(shiftTotals[m])}</td></tr>`).join("")}
+    </tbody></table>
+    ${compTxns.length>0?`
+    <div class="section">Comp Breakdown</div>
+    <table><thead><tr><th>Order</th><th>Reason</th><th class="right">Amount</th></tr></thead><tbody>${compRows}</tbody>
+    <tfoot><tr class="bold"><td colspan="2">Total Comps</td><td class="right">${inr(compTotal)}</td></tr></tfoot></table>`:""}
+    ${cc?`
+    <div class="section">Cash Closing</div>
+    <table><tbody>
+      <tr><td>Total in Till</td><td class="right">${inr(cc.totalInTill)}</td></tr>
+      <tr><td>Opening Float</td><td class="right">−${inr(cc.openingFloat)}</td></tr>
+      <tr><td>Refunds</td><td class="right">−${inr(cc.refundsTotal)}</td></tr>
+      <tr><td>Actual Cash Collected</td><td class="right bold">${inr(cc.actualCash)}</td></tr>
+      <tr><td>POS Reported Cash</td><td class="right">${inr(cc.posReportedCash)}</td></tr>
+      <tr class="bold ${cc.variance<0?"red":"green"}"><td>Variance</td><td class="right">${cc.variance>=0?"+":""}${inr(cc.variance)}</td></tr>
+      <tr><td>₹500 to Bank</td><td class="right">${inr(cc.handedToBank)}</td></tr>
+      <tr class="bold"><td>Balance in Box</td><td class="right">${inr(cc.balanceInBox)}</td></tr>
+    </tbody></table>
+    ${cc.varianceReason?`<p><strong>Variance Reason:</strong> ${cc.varianceReason}</p>`:""}
+    `:`<div class="section">Cash Closing</div><p style="color:#888">No cash closing submitted for this shift.</p>`}
+    `;
+  };
 
   if(!open)return null;
 
-  // ── Step 1: pick shift or day end ──
-  if(!endType&&!alreadyClosed)return(
-    <Modal open onClose={handleClose} title="End of Shift / Day" width={400}>
-      <div style={{color:C.sub,fontSize:13,marginBottom:20}}>What would you like to close?</div>
-      <div style={{display:"flex",flexDirection:"column",gap:10}}>
-        <button onClick={()=>setEndType("shift")}
-          style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,padding:"16px 20px",cursor:"pointer",textAlign:"left",fontWeight:600,fontSize:15,color:C.text}}>
-          <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>Shift End</div>
-          <div style={{fontSize:12,color:C.sub,fontWeight:400}}>View your shift summary. Orders stay open for the next shift.</div>
-        </button>
-        <button onClick={()=>setEndType("day")}
-          style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"16px 20px",cursor:"pointer",textAlign:"left",color:C.text}}>
-          <div style={{fontWeight:700,fontSize:15,marginBottom:3,color:C.accentDark}}>Day End</div>
-          <div style={{fontSize:12,color:C.sub,fontWeight:400}}>Close the business day for this outlet. No new entries after this.</div>
-        </button>
-      </div>
+  // ── Step 1: pick shift ──
+  if(step==="pick")return(
+    <Modal open onClose={handleClose} title="Day End" width={400}>
+      {alreadyClosed?(
+        <div style={{textAlign:"center",padding:"20px 0"}}>
+          <div style={{fontSize:36,marginBottom:12}}>✅</div>
+          <div style={{fontWeight:700,fontSize:16,color:C.success,marginBottom:8}}>Day Already Closed</div>
+          <div style={{color:C.sub,fontSize:13,marginBottom:20}}>This outlet closed for {fmtD(getToday())}.</div>
+          <button onClick={handleClose} style={{...BSc,width:"100%"}}>Close</button>
+        </div>
+      ):(
+        <>
+          <div style={{color:C.sub,fontSize:13,marginBottom:16}}>Which shift are you closing?</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:20}}>
+            {SHIFTS.map(s=>(
+              <button key={s} onClick={()=>setShift(s)} style={{padding:"14px",border:`2px solid ${shift===s?C.accent:C.border}`,borderRadius:6,background:shift===s?C.accentLight:C.surface,color:shift===s?C.accentDark:C.sub,fontWeight:700,fontSize:14,cursor:"pointer"}}>
+                {s==="Morning"?"🌅 Morning":"🌙 Evening"}
+              </button>
+            ))}
+          </div>
+          <button onClick={handleProceed} style={{...BPr,width:"100%"}}>View {shift} Summary →</button>
+        </>
+      )}
     </Modal>
   );
 
   // ── Step 2: summary ──
   return(
     <>
-      <Modal open={open&&!zeroConfirm} onClose={handleClose} title={endType==="shift"?"Shift End Summary":"Day End Summary"} width={460}>
-        {alreadyClosed?(
-          <div style={{textAlign:"center",padding:"20px 0"}}>
-            <div style={{fontSize:36,marginBottom:12}}>✅</div>
-            <div style={{fontWeight:700,fontSize:16,color:C.success,marginBottom:8}}>Day Already Closed</div>
-            <div style={{color:C.sub,fontSize:13,marginBottom:20}}>This outlet closed for {fmtD(getToday())}.</div>
-            <button onClick={handleClose} style={{...BSc,width:"100%"}}>Close</button>
-          </div>
-        ):(
+      <Modal open={open&&!zeroConfirm} onClose={handleClose} title={`${shift} Shift — Day End`} width={480}>
+        <div style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:12,textAlign:"center",marginBottom:16}}>
+          <div style={{fontSize:11,color:C.accent,fontWeight:700,marginBottom:2}}>{shift.toUpperCase()} SHIFT DAY END</div>
+          <div style={{fontSize:18,fontWeight:800,color:C.text}}>{fmtD(getToday())}</div>
+          <div style={{fontSize:12,color:C.sub,marginTop:2}}>{outletName}</div>
+        </div>
+        {shiftTxns.length===0&&<Msg type="warn">⚠ No orders recorded for {shift} shift.</Msg>}
+
+        {/* Order Summary */}
+        <div style={{fontWeight:700,fontSize:12,color:C.sub,textTransform:"uppercase",letterSpacing:.4,marginBottom:8}}>Order Summary</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+          <StatCard label="Gross Sales" value={inr(shiftGrand)} color={C.success}/>
+          <StatCard label="Net Sales" value={inr(shiftNet)} color={C.accent}/>
+          <StatCard label="Refunds" value={"−"+inr(shiftRefTotal)} color={C.danger}/>
+          <StatCard label="Orders" value={shiftTxns.length} color={C.text}/>
+        </div>
+
+        {/* Settlement breakdown */}
+        <div style={{fontWeight:700,fontSize:12,color:C.sub,textTransform:"uppercase",letterSpacing:.4,marginBottom:8}}>Settlements</div>
+        <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:6,padding:10,marginBottom:12}}>
+          {rows.length===0?<div style={{color:C.muted,fontSize:13}}>No transactions.</div>
+            :rows.map(m=>(
+              <div key={m} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${C.border}`,fontSize:13}}>
+                <span style={{color:C.text}}>{m}</span>
+                <span style={{fontWeight:700,color:MODE_COLORS[m]}}>{inr(shiftTotals[m])}</span>
+              </div>
+            ))
+          }
+        </div>
+
+        {/* Comps */}
+        {compTxns.length>0&&(
           <>
-            <div style={{background:C.accentLight,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:12,textAlign:"center",marginBottom:16}}>
-              <div style={{fontSize:11,color:C.accent,fontWeight:700,marginBottom:2}}>{endType==="shift"?"SHIFT END":"BUSINESS DAY"}</div>
-              <div style={{fontSize:18,fontWeight:800,color:C.text}}>{fmtD(getToday())}</div>
-              <div style={{fontSize:12,color:C.sub,marginTop:2}}>{outletName}</div>
-            </div>
-            {txnCount===0&&<Msg type="warn">⚠ No orders recorded today.</Msg>}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
-              <StatCard label="Gross Sales" value={inr(grand)} color={C.success}/>
-              <StatCard label="Net Sales" value={inr(net)} color={C.accent}/>
-              <StatCard label="Refunds" value={"−"+inr(totalRef)} color={C.danger}/>
-              <StatCard label="Orders" value={txnCount} color={C.text}/>
-              <StatCard label="Cash In" value={inr(cashIn)} color={C.success}/>
-              <StatCard label="Cash in Hand" value={inr(cashInHand)} color={C.success} sub="Cash − Refunds"/>
-            </div>
-            <Divider/>
-            <div style={{marginBottom:14}}>
-              <div style={{fontWeight:700,fontSize:12,color:C.sub,textTransform:"uppercase",letterSpacing:.4,marginBottom:8}}>Payment Mode Breakdown</div>
-              {rows.length===0?<div style={{color:C.muted,fontSize:13}}>No transactions today.</div>
-                :rows.map(m=>(
-                  <div key={m} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${C.border}`}}>
-                    <span style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:C.text}}><span style={{width:10,height:10,borderRadius:"50%",background:MODE_COLORS[m],display:"inline-block"}}/>{m}</span>
-                    <span style={{fontWeight:700,color:MODE_COLORS[m]}}>{inr(totals[m])}</span>
+            <div style={{fontWeight:700,fontSize:12,color:C.sub,textTransform:"uppercase",letterSpacing:.4,marginBottom:8}}>Comps — {inr(compTotal)} total</div>
+            <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:6,padding:10,marginBottom:12}}>
+              {compTxns.map(t=>{
+                const amt=t.payments.filter(p=>p.mode==="Comp").reduce((a,p)=>a+Number(p.amount),0);
+                return(
+                  <div key={t.id} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${C.border}`,fontSize:13}}>
+                    <span style={{color:C.sub,maxWidth:"70%"}}>{t.compReason||"No reason"}</span>
+                    <span style={{fontWeight:700,color:C.danger}}>{inr(amt)}</span>
                   </div>
-                ))
-              }
+                );
+              })}
             </div>
-            <div style={{background:C.successLight,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:12,textAlign:"center",marginBottom:14}}>
-              <div style={{fontSize:11,color:C.success,fontWeight:700,marginBottom:2}}>CASH IN HAND</div>
-              <div style={{fontSize:26,fontWeight:800,color:C.success}}>{inr(cashInHand)}</div>
-            </div>
-            <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-              <CopyWABtn getText={buildWA}/>
-              <button onClick={()=>printHTML(buildPrintHTML(),`${endType==="shift"?"Shift":"Day"} End — `+outletName)} style={{...BSc,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>🖨 Print</button>
-            </div>
-            {endType==="shift"
-              ?<button onClick={handleClose} style={{...BPr,background:C.success,padding:14,fontSize:15}}>Done</button>
-              :<button onClick={()=>txnCount===0?setZeroConfirm(true):onConfirm()} style={{...BPr,background:C.success,padding:14,fontSize:15}}>✓ Confirm Day End</button>
-            }
           </>
         )}
+
+        {/* Cash Closing */}
+        <div style={{fontWeight:700,fontSize:12,color:C.sub,textTransform:"uppercase",letterSpacing:.4,marginBottom:8}}>Cash Closing</div>
+        {loadingCC?<div style={{color:C.sub,fontSize:13,marginBottom:12}}>Loading…</div>
+          :cashClosing?(
+            <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:6,padding:10,marginBottom:12}}>
+              {[["Total in Till",inr(cashClosing.totalInTill)],["Opening Float","−"+inr(cashClosing.openingFloat)],["Refunds","−"+inr(cashClosing.refundsTotal)],["Actual Cash",inr(cashClosing.actualCash)],["POS Reported",inr(cashClosing.posReportedCash)]].map(([l,v])=>(
+                <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:13,borderBottom:`1px solid ${C.border}`}}>
+                  <span style={{color:C.sub}}>{l}</span><span style={{fontWeight:600}}>{v}</span>
+                </div>
+              ))}
+              <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:14,fontWeight:800,color:cashClosing.variance>=0?C.success:C.danger}}>
+                <span>Variance</span><span>{cashClosing.variance>=0?"+":""}{inr(cashClosing.variance)}</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:13,borderTop:`1px solid ${C.border}`}}>
+                <span style={{color:C.sub}}>₹500 to Bank</span><span style={{fontWeight:600}}>{inr(cashClosing.handedToBank)}</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:14,fontWeight:800,color:C.accent}}>
+                <span>Balance in Box</span><span>{inr(cashClosing.balanceInBox)}</span>
+              </div>
+            </div>
+          ):(
+            <Msg type="warn" style={{marginBottom:12}}>⚠ No cash closing submitted for {shift} shift. Submit one before closing.</Msg>
+          )
+        }
+
+        <div style={{display:"flex",gap:8,marginBottom:10}}>
+          <button onClick={()=>printHTML(buildPrintHTML(),`Day End — ${outletName} — ${shift} ${getToday()}`)} style={{...BSc,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>🖨 Print Report</button>
+        </div>
+        <button onClick={()=>shiftTxns.length===0?setZeroConfirm(true):onConfirm(shift)} style={{...BPr,background:C.success,padding:14,fontSize:15,width:"100%"}}>🔒 Lock {shift} Shift</button>
       </Modal>
-      <ConfirmDialog open={zeroConfirm} onClose={()=>setZeroConfirm(false)} onConfirm={()=>{setZeroConfirm(false);onConfirm();}} title="No Orders Today" warn
-        message="You have 0 orders recorded today. Are you sure you want to close the day?" confirmLabel="Close Anyway"/>
+      <ConfirmDialog open={zeroConfirm} onClose={()=>setZeroConfirm(false)} onConfirm={()=>{setZeroConfirm(false);onConfirm(shift);}} title="No Orders This Shift" warn
+        message={`No orders recorded for ${shift} shift. Lock it anyway?`} confirmLabel="Lock Shift"/>
     </>
   );
 }
 
 // ─── Admin App ────────────────────────────────────────────────────────────────
-function AdminApp({user,onLogout,showToast,onBMO}){
+function AdminApp({user,onLogout,showToast,onBMO,isFounder}){
   const [screen,setScreen]=useState("dashboard");
   const [menuOpen,setMenuOpen]=useState(false);
   const [txnFilter,setTxnFilter]=useState({outlet:"all",date:null});
@@ -1871,7 +2015,7 @@ function UserForm({initial,outlets,onSave,onCancel,isNew}){
       <Field label={isNew?"Password":"New Password"} hint={!isNew?"leave blank to keep":""} error={err.password}>
         <Inp type="password" value={f.password} onChange={v=>{setF({...f,password:v});setErr(e=>({...e,password:""}));}} placeholder={isNew?"password":"••••••••"}/>
       </Field>
-      <Field label="Role"><Sel value={f.role} onChange={v=>setF({...f,role:v,outlets:[]})} options={["admin","manager","accounts","outlet"]}/></Field>
+      <Field label="Role"><Sel value={f.role} onChange={v=>setF({...f,role:v,outlets:[]})} options={["admin","founder","manager","accounts","outlet"]}/></Field>
     </div>
     {["outlet","manager"].includes(f.role)&&(
       <Field label="Assigned Outlet" error={err.outlets}>
@@ -3122,8 +3266,18 @@ function CashClosingScreen({user,showToast,txns,refs}){
   const [history,setHistory]=useState([]);
   const [histLoading,setHistLoading]=useState(true);
   const [tab,setTab]=useState("form"); // "form" | "history"
+  const [shiftLocked,setShiftLocked]=useState(false);
 
   const today=getToday();
+
+  // Check if current shift is already locked (Day End completed)
+  useEffect(()=>{
+    (async()=>{
+      const ds=await sget("dayStatus")||{};
+      const key=`${outletId}_${today}_${shift}`;
+      setShiftLocked(!!ds[key]);
+    })();
+  },[outletId,today,shift]);
 
   useEffect(()=>{
     (async()=>{
@@ -3292,9 +3446,17 @@ function CashClosingScreen({user,showToast,txns,refs}){
             </Field>
           </div>
 
-          <button onClick={save} disabled={busy} style={{...BPr,opacity:busy?.7:1}}>
-            {busy?"Saving…":"✓ Submit Cash Closing"}
-          </button>
+          {shiftLocked?(
+            <div style={{background:C.successLight,border:`1.5px solid ${C.successBorder}`,borderRadius:8,padding:"14px 16px",textAlign:"center",marginBottom:8}}>
+              <div style={{fontSize:18,marginBottom:4}}>🔒</div>
+              <div style={{fontWeight:700,fontSize:14,color:C.success}}>Shift Locked</div>
+              <div style={{fontSize:12,color:C.sub,marginTop:4}}>The {shift} shift has been finalised. No further edits allowed.</div>
+            </div>
+          ):(
+            <button onClick={save} disabled={busy} style={{...BPr,opacity:busy?.7:1}}>
+              {busy?"Saving…":"✓ Submit Cash Closing"}
+            </button>
+          )}
         </>
       )}
 
@@ -3313,7 +3475,7 @@ function CashClosingHistory({closings,loading,onPrint,outlets=[]}){
     <div style={{display:"flex",flexDirection:"column",gap:10}}>
       {closings.map(c=>{
         const varPct=c.posReportedCash>0?((c.variance/c.posReportedCash)*100).toFixed(2):"0.00";
-        const varOk=Math.abs(c.variance)<=50;
+        const varPos=c.variance>=0;
         return(
           <div key={c.id} style={{...Cd,padding:14}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
@@ -3332,10 +3494,10 @@ function CashClosingHistory({closings,loading,onPrint,outlets=[]}){
                 <div style={{fontSize:10,color:C.sub,fontWeight:700,textTransform:"uppercase",marginBottom:2}}>Actual</div>
                 <div style={{fontWeight:700,fontSize:14}}>{inr(c.actualCash)}</div>
               </div>
-              <div style={{background:varOk?C.successLight:C.dangerLight,borderRadius:4,padding:"8px 10px",border:`1px solid ${varOk?C.successBorder:C.dangerBorder}`}}>
-                <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:2,color:varOk?C.success:C.danger}}>Variance</div>
-                <div style={{fontWeight:700,fontSize:14,color:varOk?C.success:C.danger}}>{c.variance>=0?"+":""}{inr(c.variance)}</div>
-                <div style={{fontSize:10,color:varOk?C.success:C.danger}}>{varPct}%</div>
+              <div style={{background:varPos?C.successLight:C.dangerLight,borderRadius:4,padding:"8px 10px",border:`1px solid ${varPos?C.successBorder:C.dangerBorder}`}}>
+                <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:2,color:varPos?C.success:C.danger}}>Variance</div>
+                <div style={{fontWeight:700,fontSize:14,color:varPos?C.success:C.danger}}>{c.variance>=0?"+":""}{inr(c.variance)}</div>
+                <div style={{fontSize:10,color:varPos?C.success:C.danger}}>{varPct}%</div>
               </div>
             </div>
             <div style={{display:"flex",gap:12,fontSize:12,color:C.sub}}>
