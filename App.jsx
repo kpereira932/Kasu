@@ -2108,13 +2108,14 @@ function Users({user,showToast}){
     } else {
       const conflict=all.find(u=>u.username===username&&u.id!==form.id);
       if(conflict){showToast("Username already taken","error");return;}
-      const updated=all.map(u=>{
-        if(u.id!==form.id)return u;
+      const updated=[];
+      for(const u of all){
+        if(u.id!==form.id){updated.push(u);continue;}
         const upd={...u,...form,username,name};
         if(!form.password.trim())delete upd.password; // keep existing if blank
         else upd.password=await hashPassword(form.password.trim());
-        return upd;
-      });
+        updated.push(upd);
+      }
       await sset("users",updated);showToast("User updated","success");
       setEditUser(null);setAddOpen(false);load();return;
     }
