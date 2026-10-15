@@ -355,6 +355,7 @@ async function seed(){
   const H_GK="f58eda6bba979b76e00127631b4675bc8caa4a0c357c2de9e06d1511ae0da8f0"; // gk2@123
   const H_CY="1f073ce180dd2005c8582d4382127b8a684299a0babb8d49f221be2ad22d6eb4"; // cyberhub@123
   const H_BN="6727caabe1ad72d91ac1e738c4387b193149693a42a8fae23e6987c0e3800112"; // Benne@123
+  const H_TR="769d000b755400d0c93fa89ef4045bfdd608b4cd553e75a82d06921edcadef5b"; // train@123
   const DEFAULT_USERS=[
     {id:"u1",username:"superadmin",password:H_SA,role:"superadmin",name:"Super Admin",outlets:[],active:true},
     {id:"u2",username:"admin",password:H_AD,role:"admin",name:"Admin User",outlets:[],active:true},
@@ -393,6 +394,8 @@ async function seed(){
     // Founders
     {id:"u50",username:"Akhil",password:H_BN,role:"founder",name:"Akhil",outlets:[],active:true},
     {id:"u51",username:"Nikhil",password:H_BN,role:"founder",name:"Nikhil",outlets:[],active:true},
+    // Training / Demo
+    {id:"u99",username:"training",password:H_TR,role:"outlet",name:"Training Account",outlets:["o1"],active:true},
   ];
 
   // Run all seed reads in parallel
