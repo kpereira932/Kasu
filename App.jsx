@@ -342,6 +342,7 @@ async function seed(){
     {id:"o2",name:"Benne Bandra",emails:[],active:true},
     {id:"o3",name:"Benne Chowpatty",emails:[],active:true},
     {id:"o4",name:"Benne GK2",emails:[],active:true},
+    {id:"o5",name:"Benne Cyberhub",emails:[],active:true},
   ];
   const DEFAULT_USERS=[
     {id:"u1",username:"superadmin",password:"superadmin@123",role:"superadmin",name:"Super Admin",outlets:[],active:true},
@@ -352,6 +353,7 @@ async function seed(){
     {id:"u6",username:"Bandra",password:"bandra@123",role:"outlet",name:"Benne Bandra",outlets:["o2"],active:true},
     {id:"u7",username:"Chowpatty",password:"chowpatty@123",role:"outlet",name:"Benne Chowpatty",outlets:["o3"],active:true},
     {id:"u8",username:"Gk2",password:"gk2@123",role:"outlet",name:"Benne GK2",outlets:["o4"],active:true},
+    {id:"u9",username:"Cyberhub",password:"cyberhub@123",role:"outlet",name:"Benne Cyberhub",outlets:["o5"],active:true},
     // Managers
     {id:"u10",username:"Chandni",password:"Benne@123",role:"manager",name:"Chandni",outlets:[],active:true},
     {id:"u11",username:"Esha",password:"Benne@123",role:"manager",name:"Esha",outlets:[],active:true},
