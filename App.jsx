@@ -344,44 +344,55 @@ async function seed(){
     {id:"o4",name:"Benne GK2",emails:[],active:true},
     {id:"o5",name:"Benne Cyberhub",emails:[],active:true},
   ];
+  // Passwords stored as SHA-256 hashes — never store plaintext here
+  const H_SA="b6fec15f505852eedb851d5469c8e32d6a79b0ac8abea32ba7ea4596c15acaa8"; // superadmin@123
+  const H_AD="7676aaafb027c825bd9abab78b234070e702752f625b752e55e55b48e607e358";  // admin@123
+  const H_MG="324d52ea400e79ae65163f0b369e295c4993d26204c66317ee8e53f31ae003e3"; // manager@123
+  const H_AC="46c75498730f0bfaa9c45bba35f4aafe5fc96de841ecf3ad0fde825749f69a68"; // accounts@123
+  const H_JU="01e40857b0d65599a6e34e8668b55efd69083cd2b44411796af82fda5d0ee2eb"; // juhu@123
+  const H_BA="d339221d3b68ef5b56c2f9b7b3e4b6fcc30504ebfb252ce2caed0e748b45d95d"; // bandra@123
+  const H_CH="bcdb0e63b0169ebf5f35632af0400aa452a884c27d8ce62b98bff2b50f7089dc"; // chowpatty@123
+  const H_GK="f58eda6bba979b76e00127631b4675bc8caa4a0c357c2de9e06d1511ae0da8f0"; // gk2@123
+  const H_CY="1f073ce180dd2005c8582d4382127b8a684299a0babb8d49f221be2ad22d6eb4"; // cyberhub@123
+  const H_BN="6727caabe1ad72d91ac1e738c4387b193149693a42a8fae23e6987c0e3800112"; // Benne@123
   const DEFAULT_USERS=[
-    {id:"u1",username:"superadmin",password:"superadmin@123",role:"superadmin",name:"Super Admin",outlets:[],active:true},
-    {id:"u2",username:"admin",password:"admin@123",role:"admin",name:"Admin User",outlets:[],active:true},
-    {id:"u3",username:"manager1",password:"manager@123",role:"manager",name:"Manager One",outlets:["o1"],active:true},
-    {id:"u4",username:"accounts1",password:"accounts@123",role:"accounts",name:"Accounts Team",outlets:[],active:true},
-    {id:"u5",username:"Juhu",password:"juhu@123",role:"outlet",name:"Benne Juhu",outlets:["o1"],active:true},
-    {id:"u6",username:"Bandra",password:"bandra@123",role:"outlet",name:"Benne Bandra",outlets:["o2"],active:true},
-    {id:"u7",username:"Chowpatty",password:"chowpatty@123",role:"outlet",name:"Benne Chowpatty",outlets:["o3"],active:true},
-    {id:"u8",username:"Gk2",password:"gk2@123",role:"outlet",name:"Benne GK2",outlets:["o4"],active:true},
-    {id:"u9",username:"Cyberhub",password:"cyberhub@123",role:"outlet",name:"Benne Cyberhub",outlets:["o5"],active:true},
+    {id:"u1",username:"superadmin",password:H_SA,role:"superadmin",name:"Super Admin",outlets:[],active:true},
+    {id:"u2",username:"admin",password:H_AD,role:"admin",name:"Admin User",outlets:[],active:true},
+    {id:"u3",username:"manager1",password:H_MG,role:"manager",name:"Manager One",outlets:["o1"],active:true},
+    {id:"u4",username:"accounts1",password:H_AC,role:"accounts",name:"Accounts Team",outlets:[],active:true},
+    {id:"u5",username:"Juhu",password:H_JU,role:"outlet",name:"Benne Juhu",outlets:["o1"],active:true},
+    {id:"u6",username:"Bandra",password:H_BA,role:"outlet",name:"Benne Bandra",outlets:["o2"],active:true},
+    {id:"u7",username:"Chowpatty",password:H_CH,role:"outlet",name:"Benne Chowpatty",outlets:["o3"],active:true},
+    {id:"u8",username:"Gk2",password:H_GK,role:"outlet",name:"Benne GK2",outlets:["o4"],active:true},
+    {id:"u9",username:"Cyberhub",password:H_CY,role:"outlet",name:"Benne Cyberhub",outlets:["o5"],active:true},
     // Managers
-    {id:"u10",username:"Chandni",password:"Benne@123",role:"manager",name:"Chandni",outlets:[],active:true},
-    {id:"u11",username:"Esha",password:"Benne@123",role:"manager",name:"Esha",outlets:[],active:true},
-    {id:"u12",username:"Sohel",password:"Benne@123",role:"manager",name:"Sohel",outlets:[],active:true},
-    {id:"u13",username:"Ashish",password:"Benne@123",role:"manager",name:"Ashish",outlets:[],active:true},
-    {id:"u14",username:"Niketa",password:"Benne@123",role:"manager",name:"Niketa",outlets:[],active:true},
-    {id:"u15",username:"Chirag",password:"Benne@123",role:"manager",name:"Chirag",outlets:[],active:true},
-    {id:"u16",username:"Mohit",password:"Benne@123",role:"manager",name:"Mohit",outlets:[],active:true},
-    {id:"u17",username:"Aditya",password:"Benne@123",role:"manager",name:"Aditya",outlets:[],active:true},
-    {id:"u18",username:"Sid",password:"Benne@123",role:"manager",name:"Sid",outlets:[],active:true},
-    {id:"u19",username:"Mahesh",password:"Benne@123",role:"manager",name:"Mahesh",outlets:[],active:true},
-    {id:"u20",username:"Abdul",password:"Benne@123",role:"manager",name:"Abdul",outlets:[],active:true},
-    {id:"u21",username:"Anaya",password:"Benne@123",role:"manager",name:"Anaya",outlets:[],active:true},
-    {id:"u22",username:"Patsy",password:"Benne@123",role:"manager",name:"Patsy",outlets:[],active:true},
-    {id:"u23",username:"Yogesh",password:"Benne@123",role:"manager",name:"Yogesh",outlets:[],active:true},
-    {id:"u24",username:"Anushka",password:"Benne@123",role:"manager",name:"Anushka",outlets:[],active:true},
-    {id:"u25",username:"Rohan",password:"Benne@123",role:"manager",name:"Rohan",outlets:[],active:true},
+    {id:"u10",username:"Chandni",password:H_BN,role:"manager",name:"Chandni",outlets:[],active:true},
+    {id:"u11",username:"Esha",password:H_BN,role:"manager",name:"Esha",outlets:[],active:true},
+    {id:"u12",username:"Sohel",password:H_BN,role:"manager",name:"Sohel",outlets:[],active:true},
+    {id:"u13",username:"Ashish",password:H_BN,role:"manager",name:"Ashish",outlets:[],active:true},
+    {id:"u14",username:"Niketa",password:H_BN,role:"manager",name:"Niketa",outlets:[],active:true},
+    {id:"u15",username:"Chirag",password:H_BN,role:"manager",name:"Chirag",outlets:[],active:true},
+    {id:"u16",username:"Mohit",password:H_BN,role:"manager",name:"Mohit",outlets:[],active:true},
+    {id:"u17",username:"Aditya",password:H_BN,role:"manager",name:"Aditya",outlets:[],active:true},
+    {id:"u18",username:"Sid",password:H_BN,role:"manager",name:"Sid",outlets:[],active:true},
+    {id:"u19",username:"Mahesh",password:H_BN,role:"manager",name:"Mahesh",outlets:[],active:true},
+    {id:"u20",username:"Abdul",password:H_BN,role:"manager",name:"Abdul",outlets:[],active:true},
+    {id:"u21",username:"Anaya",password:H_BN,role:"manager",name:"Anaya",outlets:[],active:true},
+    {id:"u22",username:"Patsy",password:H_BN,role:"manager",name:"Patsy",outlets:[],active:true},
+    {id:"u23",username:"Yogesh",password:H_BN,role:"manager",name:"Yogesh",outlets:[],active:true},
+    {id:"u24",username:"Anushka",password:H_BN,role:"manager",name:"Anushka",outlets:[],active:true},
+    {id:"u25",username:"Rohan",password:H_BN,role:"manager",name:"Rohan",outlets:[],active:true},
     // Accounts
-    {id:"u30",username:"Vikas",password:"Benne@123",role:"accounts",name:"Vikas",outlets:[],active:true},
-    {id:"u31",username:"Rahul",password:"Benne@123",role:"accounts",name:"Rahul",outlets:[],active:true},
-    {id:"u32",username:"Sandy",password:"Benne@123",role:"accounts",name:"Sandy",outlets:[],active:true},
-    {id:"u33",username:"Pallavi",password:"Benne@123",role:"accounts",name:"Pallavi",outlets:[],active:true},
+    {id:"u30",username:"Vikas",password:H_BN,role:"accounts",name:"Vikas",outlets:[],active:true},
+    {id:"u31",username:"Rahul",password:H_BN,role:"accounts",name:"Rahul",outlets:[],active:true},
+    {id:"u32",username:"Sandy",password:H_BN,role:"accounts",name:"Sandy",outlets:[],active:true},
+    {id:"u33",username:"Pallavi",password:H_BN,role:"accounts",name:"Pallavi",outlets:[],active:true},
     // Admins
-    {id:"u40",username:"Nayantara",password:"Benne@123",role:"admin",name:"Nayantara",outlets:[],active:true},
-    {id:"u41",username:"Kevin",password:"Benne@123",role:"admin",name:"Kevin",outlets:[],active:true},
+    {id:"u40",username:"Nayantara",password:H_BN,role:"admin",name:"Nayantara",outlets:[],active:true},
+    {id:"u41",username:"Kevin",password:H_BN,role:"admin",name:"Kevin",outlets:[],active:true},
     // Founders
-    {id:"u50",username:"Akhil",password:"Benne@123",role:"founder",name:"Akhil",outlets:[],active:true},
-    {id:"u51",username:"Nikhil",password:"Benne@123",role:"founder",name:"Nikhil",outlets:[],active:true},
+    {id:"u50",username:"Akhil",password:H_BN,role:"founder",name:"Akhil",outlets:[],active:true},
+    {id:"u51",username:"Nikhil",password:H_BN,role:"founder",name:"Nikhil",outlets:[],active:true},
   ];
 
   // Run all seed reads in parallel
@@ -435,6 +446,13 @@ function addLog(action,userId,detail,reason="",extra={}){
     }catch(e){console.error("addLog",e);}
   })();
 }
+
+// ─── Password Hashing ─────────────────────────────────────────────────────────
+async function hashPassword(plain){
+  const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(plain));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+function isHashed(pw){return typeof pw==="string"&&/^[0-9a-f]{64}$/.test(pw);}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function bizDay(d=new Date()){
@@ -645,8 +663,19 @@ function Login({onLogin,showToast}){
     if(!un.trim()||!pw.trim()){setErr("Enter username and password.");return;}
     setBusy(true);setErr("");
     const users=await sget("users")||[];
-    const u=users.find(u=>u.username===un&&u.password===pw&&u.active!==false);
-    if(u)onLogin(u);else{setErr("Invalid credentials or account inactive.");setBusy(false);}
+    const hashed=await hashPassword(pw.trim());
+    // Support both hashed passwords (new) and plaintext (legacy migration period)
+    const u=users.find(u=>u.username===un&&u.active!==false&&(u.password===hashed||(!isHashed(u.password)&&u.password===pw.trim())));
+    if(u){
+      // Opportunistically upgrade plaintext password to hash on successful login
+      if(!isHashed(u.password)){
+        const upgraded=users.map(x=>x.id===u.id?{...x,password:hashed}:x);
+        await sset("users",upgraded);
+        onLogin({...u,password:hashed});
+      } else {
+        onLogin(u);
+      }
+    } else {setErr("Invalid credentials or account inactive.");setBusy(false);}
   };
   return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,padding:20}}>
@@ -665,10 +694,55 @@ function Login({onLogin,showToast}){
   );
 }
 
+// ─── Change Password ──────────────────────────────────────────────────────────
+function ChangePasswordModal({user,onClose,showToast}){
+  const [cur,setCur]=useState("");
+  const [nw,setNw]=useState("");
+  const [conf,setConf]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState("");
+
+  const save=async()=>{
+    setErr("");
+    if(!cur||!nw||!conf){setErr("All fields are required.");return;}
+    if(nw.length<6){setErr("New password must be at least 6 characters.");return;}
+    if(nw!==conf){setErr("New passwords do not match.");return;}
+    setBusy(true);
+    try{
+      const users=await sget("users")||[];
+      const me=users.find(u=>u.id===user.id);
+      if(!me){setErr("User not found.");setBusy(false);return;}
+      const curHash=await hashPassword(cur);
+      const valid=isHashed(me.password)?me.password===curHash:me.password===cur;
+      if(!valid){setErr("Current password is incorrect.");setBusy(false);return;}
+      const newHash=await hashPassword(nw);
+      const updated=users.map(u=>u.id===user.id?{...u,password:newHash}:u);
+      await sset("users",updated);
+      await addLog("CHANGE_PASSWORD",user.id,user.name+" changed their password");
+      showToast("Password updated successfully!","success");
+      onClose();
+    }catch(e){setErr("Something went wrong. Try again.");setBusy(false);}
+  };
+
+  return(
+    <Modal open onClose={onClose} title="Change Password" width={400}>
+      <Field label="Current Password"><Inp type="password" value={cur} onChange={setCur} placeholder="Enter current password"/></Field>
+      <Field label="New Password"><Inp type="password" value={nw} onChange={setNw} placeholder="At least 6 characters"/></Field>
+      <Field label="Confirm New Password"><Inp type="password" value={conf} onChange={setConf} placeholder="Repeat new password" onEnter={save}/></Field>
+      {err&&<Msg type="error">{err}</Msg>}
+      <div style={{display:"flex",gap:8,marginTop:4}}>
+        <button onClick={onClose} style={{...BSe,flex:1}}>Cancel</button>
+        <button onClick={save} disabled={busy} style={{...BPr,flex:1,opacity:busy?.7:1}}>{busy?"Saving…":"Update Password"}</button>
+      </div>
+    </Modal>
+  );
+}
+
 // ─── Outlet App ───────────────────────────────────────────────────────────────
 function OutletApp({user,onLogout,showToast,onBMO}){
   const [screen,setScreen]=useState("entry");
   const [txns,setTxns]=useState([]);const [refs,setRefs]=useState([]);const [boxCharges,setBoxCharges]=useState([]);
+  const [changePwOpen,setChangePwOpen]=useState(false);
   const [dayDone,setDayDone]=useState(false);const [dayModal,setDayModal]=useState(false);
   const outletId=user.outlets[0];
 
@@ -735,9 +809,11 @@ function OutletApp({user,onLogout,showToast,onBMO}){
           <button onClick={onBMO} title="Emergency manual ordering — use only if POS is down" style={{background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:4,padding:"7px 12px",fontWeight:800,fontSize:12,cursor:"pointer",letterSpacing:".5px",display:"flex",alignItems:"center",gap:5}}>⚠ BMO</button>
           {!dayDone?<button onClick={()=>setDayModal(true)} style={{background:C.accentLight,color:C.accentDark,border:`1px solid ${C.accentBorder}`,borderRadius:4,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>Day End</button>
           :<span style={{display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",background:C.successLight,color:C.success,border:`1px solid ${C.successBorder}`,borderRadius:4,padding:"4px 8px",whiteSpace:"nowrap"}}>Day Closed</span>}
+          <button onClick={()=>setChangePwOpen(true)} title="Change Password" style={{background:"transparent",color:C.sub,border:`1px solid ${C.border}`,borderRadius:4,padding:"7px 10px",fontWeight:600,fontSize:12,cursor:"pointer"}}>🔑</button>
           <button onClick={onLogout} style={{background:"transparent",color:C.sub,border:`1px solid ${C.border}`,borderRadius:4,padding:"7px 10px",fontWeight:600,fontSize:12,cursor:"pointer"}}>Logout</button>
         </div>
       </div>
+      {changePwOpen&&<ChangePasswordModal user={user} onClose={()=>setChangePwOpen(false)} showToast={showToast}/>}
 
       {/* Summary strip — Total (ex Comp) + Date + Refresh */}
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"8px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
@@ -1418,6 +1494,7 @@ function AdminApp({user,onLogout,showToast,onBMO,isFounder}){
   const [screen,setScreen]=useState("dashboard");
   const [menuOpen,setMenuOpen]=useState(false);
   const [txnFilter,setTxnFilter]=useState({outlet:"all",date:null});
+  const [changePwOpen,setChangePwOpen]=useState(false);
   const isMobile=useIsMobile();
   const navItems=[
     {id:"dashboard",icon:"📊",label:"Dashboard"},
@@ -1448,7 +1525,8 @@ function AdminApp({user,onLogout,showToast,onBMO,isFounder}){
           </button>
         ))}
       </nav>
-      <button onClick={onLogout} style={{padding:"14px 16px",background:"none",border:"none",borderTop:`1px solid ${C.border}`,color:C.muted,fontSize:12,cursor:"pointer",textAlign:"left"}}>← Sign Out</button>
+      <button onClick={()=>{setMenuOpen(false);setChangePwOpen(true);}} style={{padding:"12px 16px",background:"none",border:"none",borderTop:`1px solid ${C.border}`,color:C.sub,fontSize:12,cursor:"pointer",textAlign:"left",width:"100%"}}>🔑 Change Password</button>
+      <button onClick={onLogout} style={{padding:"12px 16px",background:"none",border:"none",borderTop:`1px solid ${C.border}`,color:C.muted,fontSize:12,cursor:"pointer",textAlign:"left",width:"100%"}}>← Sign Out</button>
     </>
   );
   return(
@@ -1467,6 +1545,7 @@ function AdminApp({user,onLogout,showToast,onBMO,isFounder}){
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <button onClick={onBMO} title="Emergency manual ordering" style={{background:"#fff",color:C.danger,border:`1.5px solid ${C.danger}`,borderRadius:4,padding:"6px 10px",fontWeight:800,fontSize:12,cursor:"pointer"}}>⚠ BMO</button>
+              <button onClick={()=>setChangePwOpen(true)} title="Change Password" style={{background:"transparent",color:"#fff",border:"1px solid rgba(255,255,255,0.5)",borderRadius:4,padding:"6px 10px",fontWeight:600,fontSize:11,cursor:"pointer"}}>🔑</button>
               <button onClick={onLogout} style={{background:"transparent",color:"#fff",border:"1px solid rgba(255,255,255,0.5)",borderRadius:4,padding:"6px 10px",fontWeight:600,fontSize:11,cursor:"pointer"}}>Logout</button>
             </div>
           </div>
@@ -1490,6 +1569,7 @@ function AdminApp({user,onLogout,showToast,onBMO,isFounder}){
           {screen==="backup"&&user.role==="superadmin"&&<BackupRestore showToast={showToast}/>}
         </div>
       </div>
+      {changePwOpen&&<ChangePasswordModal user={user} onClose={()=>setChangePwOpen(false)} showToast={showToast}/>}
     </div>
   );
 }
@@ -2022,7 +2102,8 @@ function Users({user,showToast}){
     if(["outlet","manager"].includes(form.role)&&!form.outlets[0]){showToast("Assign an outlet for this role","error");return;}
     if(isNew){
       if(all.find(u=>u.username===username)){showToast("Username already taken","error");return;}
-      all.push({id:"u"+Date.now(),...form,username,name});
+      const pwHash=await hashPassword(form.password.trim());
+      all.push({id:"u"+Date.now(),...form,username,name,password:pwHash});
       showToast("User created","success");
     } else {
       const conflict=all.find(u=>u.username===username&&u.id!==form.id);
@@ -2031,7 +2112,7 @@ function Users({user,showToast}){
         if(u.id!==form.id)return u;
         const upd={...u,...form,username,name};
         if(!form.password.trim())delete upd.password; // keep existing if blank
-        else upd.password=form.password.trim();
+        else upd.password=await hashPassword(form.password.trim());
         return upd;
       });
       await sset("users",updated);showToast("User updated","success");
