@@ -2108,7 +2108,7 @@ function Users({user,showToast}){
     } else {
       const conflict=all.find(u=>u.username===username&&u.id!==form.id);
       if(conflict){showToast("Username already taken","error");return;}
-            const updated=[];
+      const updated=[];
       for(const u of all){
         if(u.id!==form.id){updated.push(u);continue;}
         const upd={...u,...form,username,name};
