@@ -3757,3 +3757,4 @@ function CashClosingsAdmin({user,showToast}){
     </div>
   );
 }
+
