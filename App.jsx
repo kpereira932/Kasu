@@ -767,35 +767,7 @@ function Login({onLogin,showToast}){
     const password = pw.trim();
     const email = usernameToEmail(username);
 
-    try {
-      // 1) Try the new safer Firebase Auth login first
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      const users = await sget("users") || [];
-      // Find matching profile by username (case-insensitive)
-      let profile = users.find(u => u.username && u.username.toLowerCase() === username.toLowerCase() && u.active !== false);
-
-      if (!profile) {
-        // Profile not found – sign out and show clear message
-        await signOut(auth);
-        setErr("Login worked but no staff profile found. Ask admin to add this user in Kāsu.");
-        setBusy(false);
-        return;
-      }
-
-      clearLoginFailures(username);
-      let next = { ...profile, _authUid: cred.user.uid };
-      if (next.mustChangePassword) {
-        next = { ...next, _forcePwChange: true };
-      }
-      onLogin(next);
-      return;
-    } catch (authErr) {
-      // Firebase Auth failed – fall back to old method so the restaurant keeps working
-      // while we slowly create users in Firebase Auth
-      console.log("Firebase Auth login failed, trying old method:", authErr && authErr.code);
-    }
-
-    // 2) Old method (temporary fallback)
+    // 1) OLD method FIRST — so every existing staff can always log in
     try {
       const users = await sget("users") || [];
       const hashed = await hashPassword(password);
@@ -816,14 +788,39 @@ function Login({onLogin,showToast}){
         if (next.mustChangePassword) {
           next = { ...next, _forcePwChange: true };
         }
+        // If this username already exists in Firebase Auth, also sign in there (best effort)
+        try {
+          const cred = await signInWithEmailAndPassword(auth, email, password);
+          next = { ...next, _authUid: cred.user.uid };
+        } catch (e) {
+          // Not in Auth yet — that is fine, old login still works
+        }
         onLogin(next);
-      } else {
-        recordLoginFailure(username);
-        setErr("Invalid credentials or account inactive.");
-        setBusy(false);
+        return;
       }
     } catch (e) {
-      setErr("Something went wrong. Please try again.");
+      console.log("Old login path error:", e);
+    }
+
+    // 2) Try Firebase Auth only (for users who were created only in Auth)
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const users = await sget("users") || [];
+      let profile = users.find(u => u.username && u.username.toLowerCase() === username.toLowerCase() && u.active !== false);
+      if (!profile) {
+        await signOut(auth);
+        setErr("Login worked but no staff profile found. Ask admin to add this user in Kāsu.");
+        setBusy(false);
+        return;
+      }
+      clearLoginFailures(username);
+      let next = { ...profile, _authUid: cred.user.uid };
+      if (next.mustChangePassword) next = { ...next, _forcePwChange: true };
+      onLogin(next);
+      return;
+    } catch (authErr) {
+      recordLoginFailure(username);
+      setErr("Invalid credentials or account inactive.");
       setBusy(false);
     }
   };
