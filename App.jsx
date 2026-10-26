@@ -3659,17 +3659,19 @@ async function getAllCashClosings(){
 }
 
 // Get previous closing's balance-in-box for carry-forward opening float
+// Returns { value: number, isFirstEver: boolean }
 async function getPrevBalanceInBox(outletId, date, shift){
   const closings=await getRecentCashClosings(outletId);
+  if(!closings.length) return {value:0,isFirstEver:true};
   // Sort oldest first, find the one immediately before current date+shift
   const sorted=[...closings].sort((a,b)=>a.ts<b.ts?-1:1);
   const curIdx=sorted.findIndex(c=>c.date===date&&c.shift===shift);
-  if(curIdx>0) return sorted[curIdx-1].balanceInBox||0;
+  if(curIdx>0) return {value:sorted[curIdx-1].balanceInBox||0,isFirstEver:false};
   // Find most recent before this date/shift
   const dateShiftScore=d=>d.date+"-"+(d.shift==="Morning"?"0":"1");
   const cur=date+"-"+(shift==="Morning"?"0":"1");
   const prev=sorted.filter(c=>dateShiftScore(c)<cur).pop();
-  return prev?prev.balanceInBox||0:0;
+  return prev?{value:prev.balanceInBox||0,isFirstEver:false}:{value:0,isFirstEver:true};
 }
 
 function buildClosingPrintHTML(c, outletName){
@@ -3725,6 +3727,9 @@ function CashClosingScreen({user,showToast,txns,refs}){
   const [varianceReason,setVarianceReason]=useState("");
   const [notes,setNotes]=useState("");
   const [openingFloat,setOpeningFloat]=useState(0);
+  const [openingFloatManual,setOpeningFloatManual]=useState("");  // string input for manual entry
+  const [isFirstEver,setIsFirstEver]=useState(false);
+  const [floatOverride,setFloatOverride]=useState(false); // user chose to manually override
   const [floatLoading,setFloatLoading]=useState(true);
   const [busy,setBusy]=useState(false);
   const [history,setHistory]=useState([]);
@@ -3746,8 +3751,12 @@ function CashClosingScreen({user,showToast,txns,refs}){
   useEffect(()=>{
     (async()=>{
       setFloatLoading(true);
-      const prev=await getPrevBalanceInBox(outletId,today,shift);
-      setOpeningFloat(prev);
+      setFloatOverride(false);
+      setOpeningFloatManual("");
+      const {value,isFirstEver:ife}=await getPrevBalanceInBox(outletId,today,shift);
+      setOpeningFloat(value);
+      setIsFirstEver(ife);
+      if(ife) setOpeningFloatManual(""); // prompt manual entry
       setFloatLoading(false);
     })();
   },[outletId,today,shift]);
@@ -3763,10 +3772,13 @@ function CashClosingScreen({user,showToast,txns,refs}){
 
   const setDenom=(d,v)=>setDenomCounts(x=>({...x,[d]:v}));
 
+  // Effective opening float: use manual entry when first-ever or overriding
+  const effectiveFloat=(isFirstEver||floatOverride)?Number(openingFloatManual)||0:openingFloat;
+
   // Derived calculations
   const totalInTill=DENOMS.reduce((s,d)=>s+(Number(denomCounts[d])||0)*d,0)+(Number(denomCounts.coins)||0);
   const shiftRefunds=refs.filter(r=>r.outletId===outletId&&r.day===today).reduce((s,r)=>s+Number(r.amount),0);
-  const actualCash=totalInTill-openingFloat-shiftRefunds;
+  const actualCash=totalInTill-effectiveFloat-shiftRefunds;
   const pos=Number(posReportedCash)||0;
   const variance=actualCash-pos;
   const handedNum=(Number(denomCounts[500])||0)*500;
@@ -3782,7 +3794,7 @@ function CashClosingScreen({user,showToast,txns,refs}){
         outletId,outletName:user.name,
         date:today,shift,
         denomCounts:{...denomCounts},
-        totalInTill,openingFloat,refundsTotal:shiftRefunds,
+        totalInTill,openingFloat:effectiveFloat,refundsTotal:shiftRefunds,
         posReportedCash:pos,actualCash,variance,
         handedToBank:handedNum,balanceInBox,
         varianceReason:varianceReason.trim(),notes:notes.trim(),
@@ -3832,7 +3844,26 @@ function CashClosingScreen({user,showToast,txns,refs}){
                 </button>
               ))}
             </div>
-            <div style={{marginTop:10,fontSize:12,color:C.sub}}>Date: <strong>{fmtD(today)}</strong> &nbsp;·&nbsp; Opening Float: <strong>{floatLoading?"loading…":inr(openingFloat)}</strong> (from prev shift)</div>
+            <div style={{marginTop:10,fontSize:12,color:C.sub}}>Date: <strong>{fmtD(today)}</strong></div>
+            {!floatLoading&&(isFirstEver||floatOverride)?(
+              <div style={{marginTop:10,background:C.warnLight,border:`1px solid ${C.warnBorder}`,borderRadius:6,padding:"10px 12px"}}>
+                <div style={{fontSize:12,fontWeight:700,color:C.warn,marginBottom:6}}>
+                  {isFirstEver&&!floatOverride?"🪙 First closing — enter the opening balance in box":"🪙 Manual opening balance"}
+                </div>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <span style={{fontSize:13,color:C.sub,whiteSpace:"nowrap"}}>₹</span>
+                  <input type="number" value={openingFloatManual} onChange={e=>setOpeningFloatManual(e.target.value)} placeholder="0" min="0"
+                    style={{...IS,width:"120px",padding:"6px 10px",fontSize:15,fontWeight:700}}/>
+                  <span style={{fontSize:12,color:C.sub}}>= opening float this shift</span>
+                  {floatOverride&&<button onClick={()=>{setFloatOverride(false);setOpeningFloatManual("");}} style={{fontSize:11,color:C.sub,background:"transparent",border:"none",cursor:"pointer",textDecoration:"underline"}}>cancel</button>}
+                </div>
+              </div>
+            ):(
+              !floatLoading&&<div style={{marginTop:10,fontSize:12,color:C.sub,display:"flex",alignItems:"center",gap:10}}>
+                Opening Float: <strong style={{color:C.text}}>{inr(openingFloat)}</strong> <span style={{color:C.muted}}>(from prev shift)</span>
+                <button onClick={()=>{setFloatOverride(true);setOpeningFloatManual(String(openingFloat));}} style={{fontSize:11,color:C.accent,background:"transparent",border:"none",cursor:"pointer",textDecoration:"underline",padding:0}}>override</button>
+              </div>
+            )}
           </div>
 
           {/* Denomination entry */}
@@ -3869,7 +3900,7 @@ function CashClosingScreen({user,showToast,txns,refs}){
             </Field>
             <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:6,padding:12,marginTop:8}}>
               <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:13}}><span style={{color:C.sub}}>Total in Till</span><span style={{fontWeight:600}}>{inr(totalInTill)}</span></div>
-              <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:13}}><span style={{color:C.sub}}>− Opening Float</span><span style={{fontWeight:600}}>{inr(openingFloat)}</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:13}}><span style={{color:C.sub}}>− Opening Float</span><span style={{fontWeight:600}}>{inr(effectiveFloat)}</span></div>
               <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:13}}><span style={{color:C.sub}}>− Refunds</span><span style={{fontWeight:600,color:C.danger}}>{inr(shiftRefunds)}</span></div>
               <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:14,fontWeight:700,borderTop:`1px solid ${C.border}`,marginTop:4}}><span>Actual Cash Collected</span><span style={{color:C.accent}}>{inr(actualCash)}</span></div>
             </div>
