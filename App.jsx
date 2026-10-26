@@ -508,6 +508,20 @@ function addLog(action,userId,detail,reason="",extra={}){
   })();
 }
 
+// ─── Security Alert ───────────────────────────────────────────────────────────
+// Calls /api/alert for high-risk events; fire-and-forget, never blocks the UI.
+function sendAlert(event,detail,userId="system",outlet=""){
+  (async()=>{
+    try{
+      await fetch("/api/alert",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({event,detail,userId,outlet}),
+      });
+    }catch(e){console.warn("sendAlert failed (non-critical):",e.message);}
+  })();
+}
+
 // ─── Password Hashing ─────────────────────────────────────────────────────────
 async function hashPassword(plain){
   const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(plain));
@@ -717,17 +731,64 @@ export default function App(){
   );
 }
 
+// ─── Password strength check ──────────────────────────────────────────────────
+// Min 8 chars, at least one letter and one number.
+function checkPasswordStrength(pw){
+  if(pw.length<8) return "Password must be at least 8 characters.";
+  if(!/[A-Za-z]/.test(pw)) return "Password must contain at least one letter.";
+  if(!/[0-9]/.test(pw)) return "Password must contain at least one number.";
+  return null; // ok
+}
+
 // ─── Login ────────────────────────────────────────────────────────────────────
+const LOGIN_LOCKOUT_KEY = "kasu_lockout"; // sessionStorage key
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS   = 15 * 60 * 1000; // 15 minutes
+
+function getLockoutState(username){
+  try{
+    const raw=sessionStorage.getItem(LOGIN_LOCKOUT_KEY);
+    if(!raw) return null;
+    const map=JSON.parse(raw);
+    return map[username]||null;
+  }catch{return null;}
+}
+function setLockoutState(username,state){
+  try{
+    const raw=sessionStorage.getItem(LOGIN_LOCKOUT_KEY);
+    const map=raw?JSON.parse(raw):{};
+    map[username]=state;
+    sessionStorage.setItem(LOGIN_LOCKOUT_KEY,JSON.stringify(map));
+  }catch{}
+}
+function clearLockoutState(username){
+  try{
+    const raw=sessionStorage.getItem(LOGIN_LOCKOUT_KEY);
+    if(!raw) return;
+    const map=JSON.parse(raw);
+    delete map[username];
+    sessionStorage.setItem(LOGIN_LOCKOUT_KEY,JSON.stringify(map));
+  }catch{}
+}
+
 function Login({onLogin,showToast}){
   const [un,setUn]=useState("");const [pw,setPw]=useState("");const [busy,setBusy]=useState(false);const [err,setErr]=useState("");
   const go=async()=>{
     if(!un.trim()||!pw.trim()){setErr("Enter username and password.");return;}
+    // Check lockout
+    const lockout=getLockoutState(un.trim());
+    if(lockout){
+      const remaining=Math.ceil((lockout.until-Date.now())/60000);
+      if(Date.now()<lockout.until){setErr(`Too many failed attempts. Try again in ${remaining} minute${remaining!==1?"s":""}.`);return;}
+      clearLockoutState(un.trim());
+    }
     setBusy(true);setErr("");
     const users=await sget("users")||[];
     const hashed=await hashPassword(pw.trim());
     // Support both hashed passwords (new) and plaintext (legacy migration period)
-    const u=users.find(u=>u.username===un&&u.active!==false&&(u.password===hashed||(!isHashed(u.password)&&u.password===pw.trim())));
+    const u=users.find(u=>u.username===un.trim()&&u.active!==false&&(u.password===hashed||(!isHashed(u.password)&&u.password===pw.trim())));
     if(u){
+      clearLockoutState(un.trim());
       // Opportunistically upgrade plaintext password to hash on successful login
       if(!isHashed(u.password)){
         const upgraded=users.map(x=>x.id===u.id?{...x,password:hashed}:x);
@@ -736,7 +797,22 @@ function Login({onLogin,showToast}){
       } else {
         onLogin(u);
       }
-    } else {setErr("Invalid credentials or account inactive.");setBusy(false);}
+    } else {
+      // Record failed attempt
+      const prev=getLockoutState(un.trim())||{attempts:0,until:0};
+      const attempts=prev.attempts+1;
+      if(attempts>=MAX_ATTEMPTS){
+        const until=Date.now()+LOCKOUT_MS;
+        setLockoutState(un.trim(),{attempts,until});
+        addLog("LOGIN_LOCKED","system",`Account '${un.trim()}' locked after ${attempts} failed attempts`);
+        sendAlert("LOGIN_LOCKED",`Account '${un.trim()}' locked after ${attempts} failed login attempts`,un.trim());
+        setErr(`Too many failed attempts. Account locked for 15 minutes.`);
+      } else {
+        setLockoutState(un.trim(),{attempts,until:prev.until});
+        setErr(`Invalid credentials or account inactive. (${attempts}/${MAX_ATTEMPTS} attempts)`);
+      }
+      setBusy(false);
+    }
   };
   return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,padding:20}}>
@@ -766,7 +842,8 @@ function ChangePasswordModal({user,onClose,showToast}){
   const save=async()=>{
     setErr("");
     if(!cur||!nw||!conf){setErr("All fields are required.");return;}
-    if(nw.length<6){setErr("New password must be at least 6 characters.");return;}
+    const pwErr=checkPasswordStrength(nw);
+    if(pwErr){setErr(pwErr);return;}
     if(nw!==conf){setErr("New passwords do not match.");return;}
     setBusy(true);
     try{
@@ -788,7 +865,7 @@ function ChangePasswordModal({user,onClose,showToast}){
   return(
     <Modal open onClose={onClose} title="Change Password" width={400}>
       <Field label="Current Password"><Inp type="password" value={cur} onChange={setCur} placeholder="Enter current password"/></Field>
-      <Field label="New Password"><Inp type="password" value={nw} onChange={setNw} placeholder="At least 6 characters"/></Field>
+      <Field label="New Password"><Inp type="password" value={nw} onChange={setNw} placeholder="Min 8 chars, include a number"/></Field>
       <Field label="Confirm New Password"><Inp type="password" value={conf} onChange={setConf} placeholder="Repeat new password" onEnter={save}/></Field>
       {err&&<Msg type="error">{err}</Msg>}
       <div style={{display:"flex",gap:8,marginTop:4}}>
@@ -847,6 +924,11 @@ function OutletApp({user,onLogout,showToast,onBMO}){
     if(shift==="Evening")setDayDone(true);
     setDayModal(false);
     await addLog("DAY_END",user.id,`Day End — ${outletId} — ${shift}`);
+    // Alert if Day End is submitted outside normal hours (6 AM–midnight IST)
+    const istHour=new Date(Date.now()+5.5*60*60*1000).getUTCHours();
+    if(istHour<6||istHour>=24){
+      sendAlert("DAY_END_ODD_HOURS",`${shift} Day End for '${outletId}' submitted at ${istHour}:xx IST (outside 6AM–midnight)`,user.id,outletId);
+    }
     showToast(`${shift} shift locked!`,"success");
   };
 
@@ -2242,7 +2324,9 @@ function UserForm({initial,outlets,onSave,onCancel,isNew}){
     const e={};
     if(!f.name.trim())e.name="Required.";
     if(!f.username.trim())e.username="Required.";
-    if(isNew&&!f.password.trim())e.password="Required.";
+    if(isNew&&!f.password.trim()){e.password="Required.";}
+    else if(isNew&&f.password.trim()){const pe=checkPasswordStrength(f.password.trim());if(pe)e.password=pe;}
+    else if(!isNew&&f.password.trim()){const pe=checkPasswordStrength(f.password.trim());if(pe)e.password=pe;}
     if(["outlet","manager"].includes(f.role)&&!f.outlets[0])e.outlets="Select an outlet.";
     return e;
   };
@@ -2253,7 +2337,7 @@ function UserForm({initial,outlets,onSave,onCancel,isNew}){
       <Field label="Full Name" error={err.name}><Inp value={f.name} onChange={v=>{setF({...f,name:v});setErr(e=>({...e,name:""}));}} placeholder="Name"/></Field>
       <Field label="Username" error={err.username}><Inp value={f.username} onChange={v=>{setF({...f,username:v});setErr(e=>({...e,username:""}));}} placeholder="username"/></Field>
       <Field label={isNew?"Password":"New Password"} hint={!isNew?"leave blank to keep":""} error={err.password}>
-        <Inp type="password" value={f.password} onChange={v=>{setF({...f,password:v});setErr(e=>({...e,password:""}));}} placeholder={isNew?"password":"••••••••"}/>
+        <Inp type="password" value={f.password} onChange={v=>{setF({...f,password:v});setErr(e=>({...e,password:""}));}} placeholder={isNew?"min 8 chars, include a number":"leave blank to keep"}/>
       </Field>
       <Field label="Role"><Sel value={f.role} onChange={v=>setF({...f,role:v,outlets:[]})} options={["admin","founder","manager","accounts","outlet"]}/></Field>
     </div>
