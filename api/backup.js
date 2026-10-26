@@ -73,8 +73,10 @@ function parseDocs(docs) {
 }
 
 async function sendEmail(apiKey, to, data, dateStr) {
-  const json   = JSON.stringify(data, null, 2);
-  const base64 = Buffer.from(json).toString("base64");
+  const json = JSON.stringify(data);
+  const { gzipSync } = require("zlib");
+  const compressed = gzipSync(Buffer.from(json));
+  const base64 = compressed.toString("base64");
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -86,9 +88,8 @@ async function sendEmail(apiKey, to, data, dateStr) {
       html: `<h2>Kāsu Weekly Backup</h2>
              <p>Date: <strong>${dateStr}</strong></p>
              <p>Documents backed up: <strong>${Object.keys(data).length}</strong></p>
-             <p>Full export attached as <code>kasu_backup_${dateStr}.json</code>.</p>`,
-      attachments: [{ filename: `kasu_backup_${dateStr}.json`, content: base64 }],
-    }),
+             <p>Full export attached as <code>kasu_backup_${dateStr}.json.gz</code>.</p>`,
+attachments: [{ filename: `kasu_backup_${dateStr}.json.gz`, content: base64 }],    }),
   });
 
   if (!res.ok) throw new Error(`Resend failed: ${res.status} ${await res.text()}`);
