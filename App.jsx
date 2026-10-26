@@ -143,9 +143,64 @@ async function sset(key,val){
   if(!authReady) await authReadyPromise;
   if(!isNoCacheKey(key)) cache[key]=val;
   try { await setDoc(doc(db,"kasu",key),{value:val}); }
-  catch(e){console.error("sset",key,e);}
+  catch(e){
+    console.error("sset",key,e);
+    offlineQueue.push({type:"sset",key,val,ts:Date.now()});
+    saveOfflineQueue();
+  }
 }
 function clearCache(k){delete cache[k];}
+
+// ─── Offline Queue ────────────────────────────────────────────────────────────
+// Queues failed Firestore writes to localStorage; drains when connection returns.
+const OFFLINE_QUEUE_KEY="kasu_offline_queue";
+let offlineQueue=[];
+let _offlineListeners=[];
+function onOfflineQueueChange(fn){_offlineListeners.push(fn);return()=>{_offlineListeners=_offlineListeners.filter(f=>f!==fn);};}
+function _notifyOfflineListeners(){try{_offlineListeners.forEach(f=>f(offlineQueue.length));}catch(_){}}
+function loadOfflineQueue(){
+  try{const raw=localStorage.getItem(OFFLINE_QUEUE_KEY);offlineQueue=raw?JSON.parse(raw):[];}
+  catch{offlineQueue=[];}
+}
+function saveOfflineQueue(){
+  try{localStorage.setItem(OFFLINE_QUEUE_KEY,JSON.stringify(offlineQueue));}catch{}
+  _notifyOfflineListeners();
+}
+loadOfflineQueue(); // run once at module load
+
+let _draining=false;
+async function drainOfflineQueue(){
+  if(_draining||offlineQueue.length===0)return;
+  _draining=true;
+  let drained=0;
+  while(offlineQueue.length>0){
+    const item=offlineQueue[0];
+    try{
+      if(!authReady)await authReadyPromise;
+      if(item.type==="sset"){
+        await setDoc(doc(db,"kasu",item.key),{value:item.val});
+      }else if(item.type==="txn"){
+        const key=txnKey(item.txn.outletId,item.txn.day);
+        const ref=doc(db,"kasu",key);
+        await runTransaction(db,async t=>{
+          const snap=await t.get(ref);
+          const arr=snap.exists()&&snap.data().value?snap.data().value:[];
+          // Avoid duplicate if already committed
+          if(!arr.some(x=>x.id===item.txn.id))t.set(ref,{value:[...arr,item.txn]});
+        });
+        invalidateTxnCache();
+      }
+      offlineQueue.shift();
+      drained++;
+      saveOfflineQueue();
+    }catch(e){
+      console.warn("drainOfflineQueue: item still failing, will retry later",e.message);
+      break; // stop trying; leave remaining items in queue
+    }
+  }
+  _draining=false;
+  return drained;
+}
 
 // Atomically append a transaction - prevents race conditions between outlets
 // ─── Transaction sharding by month ───────────────────────────────────────────
@@ -178,7 +233,10 @@ async function appendTxn(txn){
     invalidateTxnCache();
   }catch(e){
     console.error("appendTxn error",e.code, e.message);
-    throw e;
+    // Queue the txn for retry when connection returns
+    offlineQueue.push({type:"txn",txn,ts:Date.now()});
+    saveOfflineQueue();
+    throw e; // re-throw so doSave knows to show "saved offline" toast
   }
 }
 
@@ -693,6 +751,8 @@ export default function App(){
   const [ready,setReady]=useState(false);
   const [toast,setToast]=useState(null);
   const [bmoOpen,setBmoOpen]=useState(false);
+  const [offlineCount,setOfflineCount]=useState(offlineQueue.length);
+  const [syncing,setSyncing]=useState(false);
   const showToast=useCallback((msg,type="success")=>{setToast({msg,type,id:Date.now()});setTimeout(()=>setToast(null),3200);},[]);
   const handleLogin=useCallback((u)=>{sessionStorage.setItem("kasu_user",JSON.stringify(u));addLog("LOGIN",u.id,u.name+" logged in");setUser(u);},[]);
   const handleLogout=useCallback(()=>{sessionStorage.removeItem("kasu_user");setUser(null);},[]);
@@ -709,6 +769,20 @@ export default function App(){
     ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${C.borderStrong};border-radius:2px}
     @media print{.no-print{display:none!important}}`;
     document.head.appendChild(s);
+    // Subscribe to offline queue changes
+    const unsub=onOfflineQueueChange(n=>setOfflineCount(n));
+    // Drain on mount (in case app was closed with items queued)
+    drainOfflineQueue();
+    // Drain whenever browser goes online
+    const handleOnline=()=>{
+      setSyncing(true);
+      drainOfflineQueue().then(n=>{
+        setSyncing(false);
+        if(n>0)showToast(`${n} offline order${n===1?"":"s"} synced!`,"success");
+      });
+    };
+    window.addEventListener("online",handleOnline);
+    return()=>{unsub();window.removeEventListener("online",handleOnline);};
   },[]);
 
   if(!ready)return(
@@ -721,6 +795,17 @@ export default function App(){
   return(
     <div style={{minHeight:"100vh",background:C.bg}}>
       {toast&&<Toast toast={toast}/>}
+      {offlineCount>0&&(
+        <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:9998,background:C.warnLight,borderTop:`2px solid ${C.warnBorder}`,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+          <span style={{fontSize:13,fontWeight:600,color:C.warn,display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:16}}>📶</span>
+            {syncing
+              ?`Syncing ${offlineCount} offline order${offlineCount===1?"":"s"}…`
+              :`${offlineCount} order${offlineCount===1?"":"s"} saved offline — will sync when connected`}
+          </span>
+          {!syncing&&<button onClick={()=>{setSyncing(true);drainOfflineQueue().then(n=>{setSyncing(false);if(n>0)showToast(`${n} order${n===1?"":"s"} synced!`,"success");else showToast("Still offline — will retry automatically","warn");});}} style={{background:C.warn,color:"#fff",border:"none",borderRadius:4,padding:"5px 12px",fontSize:12,fontWeight:600,cursor:"pointer"}}>Sync now</button>}
+        </div>
+      )}
       {bmoOpen&&user&&<BMOApp user={user} onClose={()=>setBmoOpen(false)} showToast={showToast}/>}
       {!bmoOpen&&(
         !user?<Login onLogin={handleLogin} showToast={showToast}/>
@@ -1063,15 +1148,19 @@ function EntryScreen({user,dayDone,onSaved,showToast,txns}){
     const txn={id:`t${Date.now()}`,orderNo:orderNo.trim(),payments:pays.map(p=>({mode:p.mode,amount:Number(p.amount)})),
       boxAmount:0,boxMode:"Cash",boxItems:null,compReason:hasComp?compReason.trim():"",
       outletId,outletName:user.name,day:getToday(),ts:new Date().toISOString(),createdBy:user.id,createdByName:user.name};
+    let savedOffline=false;
     try{
       await appendTxn(txn);
     }catch(e){
-      setBusy(false);showToast("Save failed — check connection","error");return;
+      // appendTxn already queued the txn; let the user know it's held offline
+      savedOffline=true;
     }
-    await addLog("ADD_TXN",user.id,"Order "+orderNo.trim()+(hasComp?` [Comp: ${compReason.trim()}]`:""));
+    await addLog("ADD_TXN",user.id,"Order "+orderNo.trim()+(hasComp?` [Comp: ${compReason.trim()}]`:"")+(savedOffline?" [queued-offline]":""));
     setOrderNo("");setPays([{mode:"Cash",amount:""}]);setCompReason("");setErrors({});setDupWarn(false);
     invalidateTxnCache();
-    setBusy(false);showToast("Order #"+orderNo.trim()+" saved!","success");onSaved();
+    setBusy(false);
+    showToast(savedOffline?"Order #"+orderNo.trim()+" saved offline — will sync when connection returns":"Order #"+orderNo.trim()+" saved!",savedOffline?"warn":"success");
+    onSaved();
     setTimeout(()=>orderRef.current&&orderRef.current.focus(),100);
   };
 
