@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, runTransaction } from "firebase/firestore";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PAYMENT_MODES = ["Cash","PhonePe QR Fail","Pine QR Fail","Pine Card Fail","Stag QR","Comp"];
@@ -83,10 +83,17 @@ const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 const auth = getAuth(fbApp);
 
-// Convert a username (what staff type) into the email format used by Firebase Auth
-function usernameToEmail(username) {
-  return String(username || "").trim().toLowerCase() + "@kasu.benne.local";
-}
+// ─── Anonymous Auth ───────────────────────────────────────────────────────────
+// Signs in anonymously so Firestore rules can require request.auth != null.
+// This does NOT affect Kāsu's own username/password system — it just gives
+// the browser a Firebase token so Firestore will accept reads and writes.
+let authReady = false;
+const authReadyPromise = new Promise(resolve => {
+  onAuthStateChanged(auth, user => {
+    if (user) { authReady = true; resolve(); }
+    else { signInAnonymously(auth).catch(e => console.error("anon auth failed", e)); }
+  });
+});
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
 const LEGACY_MODE_MAP = {"Pine Labs QR Fail":"Pine QR Fail","Pine Labs Card Fail":"Pine Card Fail"};
@@ -104,6 +111,7 @@ const cache = {};
 const NO_CACHE_KEYS=new Set(["transactions","bmoOrders","bmoOrderCounter","refunds","boxCharges","dayStatus","bmoMenu","users","cashClosings","dayEnds"]);
 function isNoCacheKey(key){return NO_CACHE_KEYS.has(key)||key.startsWith("bmoOrders_")||key.startsWith("txn_")||key==="transactions"||key.startsWith("cashClosings_")||key.startsWith("dayEnds_");}
 async function sget(key) {
+  if(!authReady) await authReadyPromise;
   if(key==="transactions"){
     try {
       const snap = await getDoc(doc(db,"kasu",key));
@@ -132,6 +140,7 @@ async function sget(key) {
   } catch(e){console.error("sget",key,e);return null;}
 }
 async function sset(key,val){
+  if(!authReady) await authReadyPromise;
   if(!isNoCacheKey(key)) cache[key]=val;
   try { await setDoc(doc(db,"kasu",key),{value:val}); }
   catch(e){console.error("sset",key,e);}
@@ -204,15 +213,7 @@ async function updateBmoOrder(orderId,updater){
   }
 }
 
-let OUTLET_IDS=["o1","o2","o3","o4","o5","o6","o7","o8","o9","o10","o11","o12","o13","o14","o15","o16","o17","o18","o19","o20","o21","o22","o23","o24","o25"];
-async function refreshOutletIds(){
-  try{
-    const outs=await sget("outlets");
-    if(Array.isArray(outs)&&outs.length){
-      OUTLET_IDS=outs.map(o=>o.id).filter(Boolean);
-    }
-  }catch(e){}
-}
+const OUTLET_IDS=["o1","o2","o3","o4","o5","o6","o7","o8","o9","o10","o11","o12","o13","o14","o15","o16","o17","o18","o19","o20","o21","o22","o23","o24","o25"];
 
 // In-memory txn cache — refreshed on each poll cycle
 let txnCache=null;
@@ -358,59 +359,101 @@ async function seed(){
     {id:"o3",name:"Benne Chowpatty",emails:[],active:true},
     {id:"o4",name:"Benne GK2",emails:[],active:true},
     {id:"o5",name:"Benne Cyberhub",emails:[],active:true},
+    // Expansion slots — rename & activate when opening a new outlet
+    {id:"o6",name:"Outlet Slot 6",emails:[],active:false},
+    {id:"o7",name:"Outlet Slot 7",emails:[],active:false},
+    {id:"o8",name:"Outlet Slot 8",emails:[],active:false},
+    {id:"o9",name:"Outlet Slot 9",emails:[],active:false},
+    {id:"o10",name:"Outlet Slot 10",emails:[],active:false},
+    {id:"o11",name:"Outlet Slot 11",emails:[],active:false},
+    {id:"o12",name:"Outlet Slot 12",emails:[],active:false},
+    {id:"o13",name:"Outlet Slot 13",emails:[],active:false},
+    {id:"o14",name:"Outlet Slot 14",emails:[],active:false},
+    {id:"o15",name:"Outlet Slot 15",emails:[],active:false},
+    {id:"o16",name:"Outlet Slot 16",emails:[],active:false},
+    {id:"o17",name:"Outlet Slot 17",emails:[],active:false},
+    {id:"o18",name:"Outlet Slot 18",emails:[],active:false},
+    {id:"o19",name:"Outlet Slot 19",emails:[],active:false},
+    {id:"o20",name:"Outlet Slot 20",emails:[],active:false},
+    {id:"o21",name:"Outlet Slot 21",emails:[],active:false},
+    {id:"o22",name:"Outlet Slot 22",emails:[],active:false},
+    {id:"o23",name:"Outlet Slot 23",emails:[],active:false},
+    {id:"o24",name:"Outlet Slot 24",emails:[],active:false},
+    {id:"o25",name:"Outlet Slot 25",emails:[],active:false},
   ];
   // Passwords stored as SHA-256 hashes — never store plaintext here
-  const H_SA="b6fec15f505852eedb851d5469c8e32d6a79b0ac8abea32ba7ea4596c15acaa8";
-  const H_AD="7676aaafb027c825bd9abab78b234070e702752f625b752e55e55b48e607e358";
-  const H_MG="324d52ea400e79ae65163f0b369e295c4993d26204c66317ee8e53f31ae003e3";
-  const H_AC="46c75498730f0bfaa9c45bba35f4aafe5fc96de841ecf3ad0fde825749f69a68";
-  const H_JU="01e40857b0d65599a6e34e8668b55efd69083cd2b44411796af82fda5d0ee2eb";
-  const H_BA="d339221d3b68ef5b56c2f9b7b3e4b6fcc30504ebfb252ce2caed0e748b45d95d";
-  const H_CH="bcdb0e63b0169ebf5f35632af0400aa452a884c27d8ce62b98bff2b50f7089dc";
-  const H_GK="f58eda6bba979b76e00127631b4675bc8caa4a0c357c2de9e06d1511ae0da8f0";
-  const H_CY="1f073ce180dd2005c8582d4382127b8a684299a0babb8d49f221be2ad22d6eb4";
-  const H_BN="6727caabe1ad72d91ac1e738c4387b193149693a42a8fae23e6987c0e3800112";
-  const H_TR="769d000b755400d0c93fa89ef4045bfdd608b4cd553e75a82d06921edcadef5b";
+  const H_SA="b6fec15f505852eedb851d5469c8e32d6a79b0ac8abea32ba7ea4596c15acaa8"; // superadmin@123
+  const H_AD="7676aaafb027c825bd9abab78b234070e702752f625b752e55e55b48e607e358";  // admin@123
+  const H_MG="324d52ea400e79ae65163f0b369e295c4993d26204c66317ee8e53f31ae003e3"; // manager@123
+  const H_AC="46c75498730f0bfaa9c45bba35f4aafe5fc96de841ecf3ad0fde825749f69a68"; // accounts@123
+  const H_JU="01e40857b0d65599a6e34e8668b55efd69083cd2b44411796af82fda5d0ee2eb"; // juhu@123
+  const H_BA="d339221d3b68ef5b56c2f9b7b3e4b6fcc30504ebfb252ce2caed0e748b45d95d"; // bandra@123
+  const H_CH="bcdb0e63b0169ebf5f35632af0400aa452a884c27d8ce62b98bff2b50f7089dc"; // chowpatty@123
+  const H_GK="f58eda6bba979b76e00127631b4675bc8caa4a0c357c2de9e06d1511ae0da8f0"; // gk2@123
+  const H_CY="1f073ce180dd2005c8582d4382127b8a684299a0babb8d49f221be2ad22d6eb4"; // cyberhub@123
+  const H_BN="6727caabe1ad72d91ac1e738c4387b193149693a42a8fae23e6987c0e3800112"; // Benne@123
+  const H_TR="769d000b755400d0c93fa89ef4045bfdd608b4cd553e75a82d06921edcadef5b"; // train@123
   const DEFAULT_USERS=[
-    {id:"u1",username:"superadmin",password:H_SA,role:"superadmin",name:"Super Admin",outlets:[],active:true,mustChangePassword:true},
-    {id:"u2",username:"admin",password:H_AD,role:"admin",name:"Admin User",outlets:[],active:true,mustChangePassword:true},
-    {id:"u3",username:"manager1",password:H_MG,role:"manager",name:"Manager One",outlets:["o1"],active:true,mustChangePassword:true},
-    {id:"u4",username:"accounts1",password:H_AC,role:"accounts",name:"Accounts Team",outlets:[],active:true,mustChangePassword:true},
-    {id:"u5",username:"Juhu",password:H_JU,role:"outlet",name:"Benne Juhu",outlets:["o1"],active:true,mustChangePassword:true},
-    {id:"u6",username:"Bandra",password:H_BA,role:"outlet",name:"Benne Bandra",outlets:["o2"],active:true,mustChangePassword:true},
-    {id:"u7",username:"Chowpatty",password:H_CH,role:"outlet",name:"Benne Chowpatty",outlets:["o3"],active:true,mustChangePassword:true},
-    {id:"u8",username:"Gk2",password:H_GK,role:"outlet",name:"Benne GK2",outlets:["o4"],active:true,mustChangePassword:true},
-    {id:"u9",username:"Cyberhub",password:H_CY,role:"outlet",name:"Benne Cyberhub",outlets:["o5"],active:true,mustChangePassword:true},
+    {id:"u1",username:"superadmin",password:H_SA,role:"superadmin",name:"Super Admin",outlets:[],active:true},
+    {id:"u2",username:"admin",password:H_AD,role:"admin",name:"Admin User",outlets:[],active:true},
+    {id:"u3",username:"manager1",password:H_MG,role:"manager",name:"Manager One",outlets:["o1"],active:true},
+    {id:"u4",username:"accounts1",password:H_AC,role:"accounts",name:"Accounts Team",outlets:[],active:true},
+    {id:"u5",username:"Juhu",password:H_JU,role:"outlet",name:"Benne Juhu",outlets:["o1"],active:true},
+    {id:"u6",username:"Bandra",password:H_BA,role:"outlet",name:"Benne Bandra",outlets:["o2"],active:true},
+    {id:"u7",username:"Chowpatty",password:H_CH,role:"outlet",name:"Benne Chowpatty",outlets:["o3"],active:true},
+    {id:"u8",username:"Gk2",password:H_GK,role:"outlet",name:"Benne GK2",outlets:["o4"],active:true},
+    {id:"u9",username:"Cyberhub",password:H_CY,role:"outlet",name:"Benne Cyberhub",outlets:["o5"],active:true},
     // Managers
-    {id:"u10",username:"Chandni",password:H_BN,role:"manager",name:"Chandni",outlets:[],active:true,mustChangePassword:true},
-    {id:"u11",username:"Esha",password:H_BN,role:"manager",name:"Esha",outlets:[],active:true,mustChangePassword:true},
-    {id:"u12",username:"Sohel",password:H_BN,role:"manager",name:"Sohel",outlets:[],active:true,mustChangePassword:true},
-    {id:"u13",username:"Ashish",password:H_BN,role:"manager",name:"Ashish",outlets:[],active:true,mustChangePassword:true},
-    {id:"u14",username:"Niketa",password:H_BN,role:"manager",name:"Niketa",outlets:[],active:true,mustChangePassword:true},
-    {id:"u15",username:"Chirag",password:H_BN,role:"manager",name:"Chirag",outlets:[],active:true,mustChangePassword:true},
-    {id:"u16",username:"Mohit",password:H_BN,role:"manager",name:"Mohit",outlets:[],active:true,mustChangePassword:true},
-    {id:"u17",username:"Aditya",password:H_BN,role:"manager",name:"Aditya",outlets:[],active:true,mustChangePassword:true},
-    {id:"u18",username:"Sid",password:H_BN,role:"manager",name:"Sid",outlets:[],active:true,mustChangePassword:true},
-    {id:"u19",username:"Mahesh",password:H_BN,role:"manager",name:"Mahesh",outlets:[],active:true,mustChangePassword:true},
-    {id:"u20",username:"Abdul",password:H_BN,role:"manager",name:"Abdul",outlets:[],active:true,mustChangePassword:true},
-    {id:"u21",username:"Anaya",password:H_BN,role:"manager",name:"Anaya",outlets:[],active:true,mustChangePassword:true},
-    {id:"u22",username:"Patsy",password:H_BN,role:"manager",name:"Patsy",outlets:[],active:true,mustChangePassword:true},
-    {id:"u23",username:"Yogesh",password:H_BN,role:"manager",name:"Yogesh",outlets:[],active:true,mustChangePassword:true},
-    {id:"u24",username:"Anushka",password:H_BN,role:"manager",name:"Anushka",outlets:[],active:true,mustChangePassword:true},
-    {id:"u25",username:"Rohan",password:H_BN,role:"manager",name:"Rohan",outlets:[],active:true,mustChangePassword:true},
+    {id:"u10",username:"Chandni",password:H_BN,role:"manager",name:"Chandni",outlets:[],active:true},
+    {id:"u11",username:"Esha",password:H_BN,role:"manager",name:"Esha",outlets:[],active:true},
+    {id:"u12",username:"Sohel",password:H_BN,role:"manager",name:"Sohel",outlets:[],active:true},
+    {id:"u13",username:"Ashish",password:H_BN,role:"manager",name:"Ashish",outlets:[],active:true},
+    {id:"u14",username:"Niketa",password:H_BN,role:"manager",name:"Niketa",outlets:[],active:true},
+    {id:"u15",username:"Chirag",password:H_BN,role:"manager",name:"Chirag",outlets:[],active:true},
+    {id:"u16",username:"Mohit",password:H_BN,role:"manager",name:"Mohit",outlets:[],active:true},
+    {id:"u17",username:"Aditya",password:H_BN,role:"manager",name:"Aditya",outlets:[],active:true},
+    {id:"u18",username:"Sid",password:H_BN,role:"manager",name:"Sid",outlets:[],active:true},
+    {id:"u19",username:"Mahesh",password:H_BN,role:"manager",name:"Mahesh",outlets:[],active:true},
+    {id:"u20",username:"Abdul",password:H_BN,role:"manager",name:"Abdul",outlets:[],active:true},
+    {id:"u21",username:"Anaya",password:H_BN,role:"manager",name:"Anaya",outlets:[],active:true},
+    {id:"u22",username:"Patsy",password:H_BN,role:"manager",name:"Patsy",outlets:[],active:true},
+    {id:"u23",username:"Yogesh",password:H_BN,role:"manager",name:"Yogesh",outlets:[],active:true},
+    {id:"u24",username:"Anushka",password:H_BN,role:"manager",name:"Anushka",outlets:[],active:true},
+    {id:"u25",username:"Rohan",password:H_BN,role:"manager",name:"Rohan",outlets:[],active:true},
     // Accounts
-    {id:"u30",username:"Vikas",password:H_BN,role:"accounts",name:"Vikas",outlets:[],active:true,mustChangePassword:true},
-    {id:"u31",username:"Rahul",password:H_BN,role:"accounts",name:"Rahul",outlets:[],active:true,mustChangePassword:true},
-    {id:"u32",username:"Sandy",password:H_BN,role:"accounts",name:"Sandy",outlets:[],active:true,mustChangePassword:true},
-    {id:"u33",username:"Pallavi",password:H_BN,role:"accounts",name:"Pallavi",outlets:[],active:true,mustChangePassword:true},
+    {id:"u30",username:"Vikas",password:H_BN,role:"accounts",name:"Vikas",outlets:[],active:true},
+    {id:"u31",username:"Rahul",password:H_BN,role:"accounts",name:"Rahul",outlets:[],active:true},
+    {id:"u32",username:"Sandy",password:H_BN,role:"accounts",name:"Sandy",outlets:[],active:true},
+    {id:"u33",username:"Pallavi",password:H_BN,role:"accounts",name:"Pallavi",outlets:[],active:true},
     // Admins
-    {id:"u40",username:"Nayantara",password:H_BN,role:"admin",name:"Nayantara",outlets:[],active:true,mustChangePassword:true},
-    {id:"u41",username:"Kevin",password:H_BN,role:"admin",name:"Kevin",outlets:[],active:true,mustChangePassword:true},
+    {id:"u40",username:"Nayantara",password:H_BN,role:"admin",name:"Nayantara",outlets:[],active:true},
+    {id:"u41",username:"Kevin",password:H_BN,role:"admin",name:"Kevin",outlets:[],active:true},
     // Founders
-    {id:"u50",username:"Akhil",password:H_BN,role:"founder",name:"Akhil",outlets:[],active:true,mustChangePassword:true},
-    {id:"u51",username:"Nikhil",password:H_BN,role:"founder",name:"Nikhil",outlets:[],active:true,mustChangePassword:true},
+    {id:"u50",username:"Akhil",password:H_BN,role:"founder",name:"Akhil",outlets:[],active:true},
+    {id:"u51",username:"Nikhil",password:H_BN,role:"founder",name:"Nikhil",outlets:[],active:true},
     // Training / Demo
-    {id:"u99",username:"training",password:H_TR,role:"outlet",name:"Training Account",outlets:["o1"],active:true,mustChangePassword:true},
+    {id:"u99",username:"training",password:H_TR,role:"outlet",name:"Training Account",outlets:["o1"],active:true},
+    // Expansion outlet slots — assign outlet & rename when opening a new location
+    {id:"u60",username:"outlet06",password:H_BN,role:"outlet",name:"Outlet Slot 6",outlets:["o6"],active:false},
+    {id:"u61",username:"outlet07",password:H_BN,role:"outlet",name:"Outlet Slot 7",outlets:["o7"],active:false},
+    {id:"u62",username:"outlet08",password:H_BN,role:"outlet",name:"Outlet Slot 8",outlets:["o8"],active:false},
+    {id:"u63",username:"outlet09",password:H_BN,role:"outlet",name:"Outlet Slot 9",outlets:["o9"],active:false},
+    {id:"u64",username:"outlet10",password:H_BN,role:"outlet",name:"Outlet Slot 10",outlets:["o10"],active:false},
+    {id:"u65",username:"outlet11",password:H_BN,role:"outlet",name:"Outlet Slot 11",outlets:["o11"],active:false},
+    {id:"u66",username:"outlet12",password:H_BN,role:"outlet",name:"Outlet Slot 12",outlets:["o12"],active:false},
+    {id:"u67",username:"outlet13",password:H_BN,role:"outlet",name:"Outlet Slot 13",outlets:["o13"],active:false},
+    {id:"u68",username:"outlet14",password:H_BN,role:"outlet",name:"Outlet Slot 14",outlets:["o14"],active:false},
+    {id:"u69",username:"outlet15",password:H_BN,role:"outlet",name:"Outlet Slot 15",outlets:["o15"],active:false},
+    {id:"u70",username:"outlet16",password:H_BN,role:"outlet",name:"Outlet Slot 16",outlets:["o16"],active:false},
+    {id:"u71",username:"outlet17",password:H_BN,role:"outlet",name:"Outlet Slot 17",outlets:["o17"],active:false},
+    {id:"u72",username:"outlet18",password:H_BN,role:"outlet",name:"Outlet Slot 18",outlets:["o18"],active:false},
+    {id:"u73",username:"outlet19",password:H_BN,role:"outlet",name:"Outlet Slot 19",outlets:["o19"],active:false},
+    {id:"u74",username:"outlet20",password:H_BN,role:"outlet",name:"Outlet Slot 20",outlets:["o20"],active:false},
+    {id:"u75",username:"outlet21",password:H_BN,role:"outlet",name:"Outlet Slot 21",outlets:["o21"],active:false},
+    {id:"u76",username:"outlet22",password:H_BN,role:"outlet",name:"Outlet Slot 22",outlets:["o22"],active:false},
+    {id:"u77",username:"outlet23",password:H_BN,role:"outlet",name:"Outlet Slot 23",outlets:["o23"],active:false},
+    {id:"u78",username:"outlet24",password:H_BN,role:"outlet",name:"Outlet Slot 24",outlets:["o24"],active:false},
+    {id:"u79",username:"outlet25",password:H_BN,role:"outlet",name:"Outlet Slot 25",outlets:["o25"],active:false},
   ];
 
   // Run all seed reads in parallel
@@ -442,13 +485,6 @@ async function seed(){
       return u;
     });
     for(const d of DEFAULT_USERS){if(!u2.find(u=>u.id===d.id)){u2.push(d);ch=true;}}
-    // One-time: force password rotation for accounts that never changed defaults
-    for(let i=0;i<u2.length;i++){
-      if(u2[i].mustChangePassword===undefined){
-        u2[i]={...u2[i],mustChangePassword:true};
-        ch=true;
-      }
-    }
     if(ch)await sset("users",u2);
   }
 
@@ -460,8 +496,6 @@ async function seed(){
   if(!exBmoOrders)    writes.push(sset("bmoOrders",[]));
   if(!exBmoCounter)   writes.push(sset("bmoOrderCounter",{}));
   if(writes.length>0) await Promise.all(writes);
-
-  await refreshOutletIds();
 }
 function addLog(action,userId,detail,reason="",extra={}){
   // Fire and forget — never block user actions for logging
@@ -480,34 +514,6 @@ async function hashPassword(plain){
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 function isHashed(pw){return typeof pw==="string"&&/^[0-9a-f]{64}$/.test(pw);}
-/** Client-side policy only — real security needs Firebase Auth + strict rules */
-function validatePasswordStrength(pw){
-  if(typeof pw!=="string"||pw.length<10) return "Password must be at least 10 characters.";
-  if(!/[A-Z]/.test(pw)) return "Include at least one uppercase letter.";
-  if(!/[a-z]/.test(pw)) return "Include at least one lowercase letter.";
-  if(!/[0-9]/.test(pw)) return "Include at least one number.";
-  if(!/[^A-Za-z0-9]/.test(pw)) return "Include at least one symbol.";
-  const weak=["password","benne","kasu","admin","123456","qwerty"];
-  if(weak.some(w=>pw.toLowerCase().includes(w))) return "Password is too common — choose something less guessable.";
-  return "";
-}
-// Simple client throttle to slow credential stuffing (not a substitute for server auth)
-const _loginAttempts={};
-function checkLoginThrottle(username){
-  const key=(username||"").toLowerCase();
-  const now=Date.now();
-  const arr=(_loginAttempts[key]||[]).filter(t=>now-t<15*60*1000);
-  _loginAttempts[key]=arr;
-  if(arr.length>=8) return "Too many attempts. Wait 15 minutes and try again.";
-  return "";
-}
-function recordLoginFailure(username){
-  const key=(username||"").toLowerCase();
-  _loginAttempts[key]=(_loginAttempts[key]||[]).concat(Date.now());
-}
-function clearLoginFailures(username){
-  delete _loginAttempts[(username||"").toLowerCase()];
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function bizDay(d=new Date()){
@@ -673,31 +679,9 @@ export default function App(){
   const [ready,setReady]=useState(false);
   const [toast,setToast]=useState(null);
   const [bmoOpen,setBmoOpen]=useState(false);
-  const [forcePw,setForcePw]=useState(false);
   const showToast=useCallback((msg,type="success")=>{setToast({msg,type,id:Date.now()});setTimeout(()=>setToast(null),3200);},[]);
-  const handleLogin=useCallback((u)=>{
-    const force=!!(u&& (u._forcePwChange||u.mustChangePassword));
-    const clean={...u}; delete clean._forcePwChange;
-    sessionStorage.setItem("kasu_user",JSON.stringify(clean));
-    addLog("LOGIN",clean.id,clean.name+" logged in");
-    setUser(clean);
-    setForcePw(force);
-    if(force) showToast("Please set a new strong password before continuing.","warn");
-  },[showToast]);
-  const handleLogout=useCallback(async()=>{
-    try{ await signOut(auth); }catch(e){}
-    sessionStorage.removeItem("kasu_user");
-    setUser(null);
-    setForcePw(false);
-  },[]);
-  const handleForcedPwClose=useCallback((updated)=>{
-    if(updated&&updated.id){
-      const clean={...updated,mustChangePassword:false}; delete clean._forcePwChange;
-      sessionStorage.setItem("kasu_user",JSON.stringify(clean));
-      setUser(clean);
-      setForcePw(false);
-    }
-  },[]);
+  const handleLogin=useCallback((u)=>{sessionStorage.setItem("kasu_user",JSON.stringify(u));addLog("LOGIN",u.id,u.name+" logged in");setUser(u);},[]);
+  const handleLogout=useCallback(()=>{sessionStorage.removeItem("kasu_user");setUser(null);},[]);
 
   useEffect(()=>{
     seed().finally(()=>setReady(true));
@@ -711,25 +695,6 @@ export default function App(){
     ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${C.borderStrong};border-radius:2px}
     @media print{.no-print{display:none!important}}`;
     document.head.appendChild(s);
-
-    // Keep session in sync with Firebase Auth (safer login)
-    const unsub = onAuthStateChanged(auth, async (fbUser) => {
-      if (!fbUser) {
-        // Only clear if we previously had a Firebase-backed session
-        const stored = sessionStorage.getItem("kasu_user");
-        if (stored) {
-          try {
-            const parsed = JSON.parse(stored);
-            if (parsed && parsed._authUid) {
-              sessionStorage.removeItem("kasu_user");
-              setUser(null);
-              setForcePw(false);
-            }
-          } catch(e){}
-        }
-      }
-    });
-    return () => unsub();
   },[]);
 
   if(!ready)return(
@@ -742,11 +707,8 @@ export default function App(){
   return(
     <div style={{minHeight:"100vh",background:C.bg}}>
       {toast&&<Toast toast={toast}/>}
-      {forcePw&&user&&(
-        <ChangePasswordModal user={user} onClose={handleForcedPwClose} showToast={showToast} forced/>
-      )}
-      {bmoOpen&&user&&!forcePw&&<BMOApp user={user} onClose={()=>setBmoOpen(false)} showToast={showToast}/>}
-      {!bmoOpen&&!forcePw&&(
+      {bmoOpen&&user&&<BMOApp user={user} onClose={()=>setBmoOpen(false)} showToast={showToast}/>}
+      {!bmoOpen&&(
         !user?<Login onLogin={handleLogin} showToast={showToast}/>
         :user.role==="outlet"?<OutletApp user={user} onLogout={handleLogout} showToast={showToast} onBMO={()=>setBmoOpen(true)}/>
         :<AdminApp user={user} onLogout={handleLogout} showToast={showToast} onBMO={()=>setBmoOpen(true)} isFounder={user.role==="founder"}/>
@@ -760,69 +722,21 @@ function Login({onLogin,showToast}){
   const [un,setUn]=useState("");const [pw,setPw]=useState("");const [busy,setBusy]=useState(false);const [err,setErr]=useState("");
   const go=async()=>{
     if(!un.trim()||!pw.trim()){setErr("Enter username and password.");return;}
-    const throttle=checkLoginThrottle(un.trim());
-    if(throttle){setErr(throttle);return;}
     setBusy(true);setErr("");
-    const username = un.trim();
-    const password = pw.trim();
-    const email = usernameToEmail(username);
-
-    // 1) OLD method FIRST — so every existing staff can always log in
-    try {
-      const users = await sget("users") || [];
-      const hashed = await hashPassword(password);
-      const u = users.find(u =>
-        u.username &&
-        u.username.toLowerCase() === username.toLowerCase() &&
-        u.active !== false &&
-        (u.password === hashed || (!isHashed(u.password) && u.password === password))
-      );
-      if (u) {
-        clearLoginFailures(username);
-        let next = { ...u };
-        if (!isHashed(u.password)) {
-          const upgraded = users.map(x => x.id === u.id ? { ...x, password: hashed } : x);
-          await sset("users", upgraded);
-          next = { ...u, password: hashed };
-        }
-        if (next.mustChangePassword) {
-          next = { ...next, _forcePwChange: true };
-        }
-        // If this username already exists in Firebase Auth, also sign in there (best effort)
-        try {
-          const cred = await signInWithEmailAndPassword(auth, email, password);
-          next = { ...next, _authUid: cred.user.uid };
-        } catch (e) {
-          // Not in Auth yet — that is fine, old login still works
-        }
-        onLogin(next);
-        return;
+    const users=await sget("users")||[];
+    const hashed=await hashPassword(pw.trim());
+    // Support both hashed passwords (new) and plaintext (legacy migration period)
+    const u=users.find(u=>u.username===un&&u.active!==false&&(u.password===hashed||(!isHashed(u.password)&&u.password===pw.trim())));
+    if(u){
+      // Opportunistically upgrade plaintext password to hash on successful login
+      if(!isHashed(u.password)){
+        const upgraded=users.map(x=>x.id===u.id?{...x,password:hashed}:x);
+        await sset("users",upgraded);
+        onLogin({...u,password:hashed});
+      } else {
+        onLogin(u);
       }
-    } catch (e) {
-      console.log("Old login path error:", e);
-    }
-
-    // 2) Try Firebase Auth only (for users who were created only in Auth)
-    try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      const users = await sget("users") || [];
-      let profile = users.find(u => u.username && u.username.toLowerCase() === username.toLowerCase() && u.active !== false);
-      if (!profile) {
-        await signOut(auth);
-        setErr("Login worked but no staff profile found. Ask admin to add this user in Kāsu.");
-        setBusy(false);
-        return;
-      }
-      clearLoginFailures(username);
-      let next = { ...profile, _authUid: cred.user.uid };
-      if (next.mustChangePassword) next = { ...next, _forcePwChange: true };
-      onLogin(next);
-      return;
-    } catch (authErr) {
-      recordLoginFailure(username);
-      setErr("Invalid credentials or account inactive.");
-      setBusy(false);
-    }
+    } else {setErr("Invalid credentials or account inactive.");setBusy(false);}
   };
   return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,padding:20}}>
@@ -842,7 +756,7 @@ function Login({onLogin,showToast}){
 }
 
 // ─── Change Password ──────────────────────────────────────────────────────────
-function ChangePasswordModal({user,onClose,showToast,forced=false}){
+function ChangePasswordModal({user,onClose,showToast}){
   const [cur,setCur]=useState("");
   const [nw,setNw]=useState("");
   const [conf,setConf]=useState("");
@@ -852,42 +766,10 @@ function ChangePasswordModal({user,onClose,showToast,forced=false}){
   const save=async()=>{
     setErr("");
     if(!cur||!nw||!conf){setErr("All fields are required.");return;}
-    const strengthErr=validatePasswordStrength(nw);
-    if(strengthErr){setErr(strengthErr);return;}
+    if(nw.length<6){setErr("New password must be at least 6 characters.");return;}
     if(nw!==conf){setErr("New passwords do not match.");return;}
-    if(nw===cur){setErr("New password must be different from current password.");return;}
     setBusy(true);
     try{
-      // If this user logged in with the new safer system, change password in Firebase Auth
-      if (user._authUid && auth.currentUser) {
-        try {
-          const email = auth.currentUser.email || usernameToEmail(user.username);
-          const cred = EmailAuthProvider.credential(email, cur);
-          await reauthenticateWithCredential(auth.currentUser, cred);
-          await updatePassword(auth.currentUser, nw);
-        } catch (authErr) {
-          const code = authErr && authErr.code;
-          if (code === "auth/wrong-password" || code === "auth/invalid-credential") {
-            setErr("Current password is incorrect.");
-          } else if (code === "auth/weak-password") {
-            setErr("New password is too weak.");
-          } else {
-            setErr("Could not update password. Try again.");
-          }
-          setBusy(false);
-          return;
-        }
-        // Also clear the mustChangePassword flag in the profile
-        const users = await sget("users") || [];
-        const updated = users.map(u => u.id === user.id ? { ...u, mustChangePassword: false } : u);
-        await sset("users", updated);
-        await addLog("CHANGE_PASSWORD", user.id, user.name + " changed their password (Auth)");
-        showToast("Password updated successfully!","success");
-        onClose({ ...user, mustChangePassword: false, _forcePwChange: false });
-        return;
-      }
-
-      // Old method (for users not yet moved to Firebase Auth)
       const users=await sget("users")||[];
       const me=users.find(u=>u.id===user.id);
       if(!me){setErr("User not found.");setBusy(false);return;}
@@ -895,23 +777,22 @@ function ChangePasswordModal({user,onClose,showToast,forced=false}){
       const valid=isHashed(me.password)?me.password===curHash:me.password===cur;
       if(!valid){setErr("Current password is incorrect.");setBusy(false);return;}
       const newHash=await hashPassword(nw);
-      const updated=users.map(u=>u.id===user.id?{...u,password:newHash,mustChangePassword:false}:u);
+      const updated=users.map(u=>u.id===user.id?{...u,password:newHash}:u);
       await sset("users",updated);
       await addLog("CHANGE_PASSWORD",user.id,user.name+" changed their password");
       showToast("Password updated successfully!","success");
-      onClose({...user,password:newHash,mustChangePassword:false,_forcePwChange:false});
+      onClose();
     }catch(e){setErr("Something went wrong. Try again.");setBusy(false);}
   };
 
   return(
-    <Modal open onClose={forced?()=>{}:onClose} title={forced?"Set a New Password":"Change Password"} width={400}>
+    <Modal open onClose={onClose} title="Change Password" width={400}>
       <Field label="Current Password"><Inp type="password" value={cur} onChange={setCur} placeholder="Enter current password"/></Field>
-      <Field label="New Password"><Inp type="password" value={nw} onChange={setNw} placeholder="Min 10 chars, upper, lower, number, symbol"/></Field>
+      <Field label="New Password"><Inp type="password" value={nw} onChange={setNw} placeholder="At least 6 characters"/></Field>
       <Field label="Confirm New Password"><Inp type="password" value={conf} onChange={setConf} placeholder="Repeat new password" onEnter={save}/></Field>
-      {forced&&<Msg type="warn">Your account still uses a default password. Choose a strong unique password to continue.</Msg>}
       {err&&<Msg type="error">{err}</Msg>}
       <div style={{display:"flex",gap:8,marginTop:4}}>
-        {!forced&&<button onClick={()=>onClose()} style={{...BSc,flex:1}}>Cancel</button>}
+        <button onClick={onClose} style={{...BSe,flex:1}}>Cancel</button>
         <button onClick={save} disabled={busy} style={{...BPr,flex:1,opacity:busy?.7:1}}>{busy?"Saving…":"Update Password"}</button>
       </div>
     </Modal>
@@ -1938,14 +1819,12 @@ function Transactions({user,showToast,initFilter}){
   const [all,setAll]=useState([]);const [refs,setRefs]=useState([]);const [outlets,setOutlets]=useState([]);
   const [fO,setFO]=useState(initFilter?.outlet||"all");const [fD,setFD]=useState(initFilter?.date||getToday());const [fM,setFM]=useState("all");const [search,setSearch]=useState("");
   const [editTxn,setEditTxn]=useState(null);const [delTxn,setDelTxn]=useState(null);const [loading,setLoading]=useState(true);
-  const [page,setPage]=useState(1);const PAGE_SIZE=40;
   const load=useCallback(async()=>{
     // Always bypass cache for admin to get fresh data from Firestore
     const [t,r,o]=await Promise.all([getAllTxns(),sget("refunds"),sget("outlets")]);
     setAll(t||[]);setRefs(r||[]);setOutlets(o||[]);setLoading(false);
   },[]);
   useEffect(()=>{load();},[load]);
-  useEffect(()=>{setPage(1);},[fO,fD,fM,search]);
   const doDelete=async(reason)=>{
     if(!delTxn)return;
     await deleteOneTxn(delTxn.id);
@@ -1984,22 +1863,7 @@ function Transactions({user,showToast,initFilter}){
       {loading?<div style={{display:"flex",justifyContent:"center",padding:40}}><Spinner/></div>:<>
         <SectionHeader title={`Orders (${filtered.length})`}/>
         {filtered.length===0?<EmptyState icon="📋" title="No transactions" desc="Adjust filters"/>
-          :(()=>{
-            const ordered=filtered.slice().reverse();
-            const totalPages=Math.max(1,Math.ceil(ordered.length/PAGE_SIZE));
-            const pageSafe=Math.min(page,totalPages);
-            const slice=ordered.slice((pageSafe-1)*PAGE_SIZE,pageSafe*PAGE_SIZE);
-            return <>
-              {slice.map(t=><TxnCard key={t.id} txn={t} editable={canEdit(t)} onEdit={()=>setEditTxn(t)} onDelete={canDel?()=>setDelTxn(t):null}/>)}
-              {ordered.length>PAGE_SIZE&&(
-                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,padding:"16px 0"}}>
-                  <button disabled={pageSafe<=1} onClick={()=>setPage(p=>Math.max(1,p-1))} style={{...BSc,opacity:pageSafe<=1?.4:1}}>← Prev</button>
-                  <span style={{fontSize:13,color:C.sub,fontWeight:600}}>Page {pageSafe} / {totalPages}</span>
-                  <button disabled={pageSafe>=totalPages} onClick={()=>setPage(p=>p+1)} style={{...BSc,opacity:pageSafe>=totalPages?.4:1}}>Next →</button>
-                </div>
-              )}
-            </>;
-          })()
+          :filtered.slice().reverse().map(t=><TxnCard key={t.id} txn={t} editable={canEdit(t)} onEdit={()=>setEditTxn(t)} onDelete={canDel?()=>setDelTxn(t):null}/>)
         }
         {filteredR.length>0&&<>
           <SectionHeader title={`Refunds (${filteredR.length})`}/>
@@ -2379,7 +2243,6 @@ function UserForm({initial,outlets,onSave,onCancel,isNew}){
     if(!f.name.trim())e.name="Required.";
     if(!f.username.trim())e.username="Required.";
     if(isNew&&!f.password.trim())e.password="Required.";
-    else if(f.password.trim()){const se=validatePasswordStrength(f.password.trim());if(se)e.password=se;}
     if(["outlet","manager"].includes(f.role)&&!f.outlets[0])e.outlets="Select an outlet.";
     return e;
   };
@@ -3952,4 +3815,3 @@ function CashClosingsAdmin({user,showToast}){
     </div>
   );
 }
-
