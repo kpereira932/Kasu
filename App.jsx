@@ -858,22 +858,48 @@ function clearLockoutState(username){
 
 function Login({onLogin,showToast}){
   const [un,setUn]=useState("");const [pw,setPw]=useState("");const [busy,setBusy]=useState(false);const [err,setErr]=useState("");
+  // Recovery panel: tap logo 5× to reveal
+  const [logoTaps,setLogoTaps]=useState(0);const [recover,setRecover]=useState(false);
+  const [rKey,setRKey]=useState("");const [rTarget,setRTarget]=useState("");const [rPw,setRPw]=useState("");const [rBusy,setRBusy]=useState(false);const [rErr,setRErr]=useState("");const [rOk,setROk]=useState(false);
+  const tapLogo=()=>{
+    const n=logoTaps+1;setLogoTaps(n);
+    if(n>=5){setRecover(true);setLogoTaps(0);}
+  };
+  const doRecover=async()=>{
+    setRErr("");
+    if(!rKey.trim()||!rTarget.trim()||!rPw.trim()){setRErr("All fields required.");return;}
+    const pe=checkPasswordStrength(rPw.trim());
+    if(pe){setRErr(pe);return;}
+    setRBusy(true);
+    try{
+      const res=await fetch("/api/recover",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({recoveryKey:rKey.trim(),targetLogin:rTarget.trim(),newPassword:rPw.trim()})});
+      const data=await res.json();
+      if(!res.ok){setRErr(data.error||"Recovery failed.");setRBusy(false);return;}
+      setROk(true);setRBusy(false);
+      showToast("Password reset successfully. You can now log in.","success");
+      setTimeout(()=>{setRecover(false);setROk(false);setRKey("");setRTarget("");setRPw("");},2500);
+    }catch(e){setRErr("Network error. Try again.");setRBusy(false);}
+  };
   const go=async()=>{
-    if(!un.trim()||!pw.trim()){setErr("Enter username and password.");return;}
-    // Check lockout
-    const lockout=getLockoutState(un.trim());
+    const loginKey=un.trim().toLowerCase();
+    if(!loginKey||!pw.trim()){setErr("Enter username/email and password.");return;}
+    // Check lockout by login key
+    const lockout=getLockoutState(loginKey);
     if(lockout){
       const remaining=Math.ceil((lockout.until-Date.now())/60000);
       if(Date.now()<lockout.until){setErr(`Too many failed attempts. Try again in ${remaining} minute${remaining!==1?"s":""}.`);return;}
-      clearLockoutState(un.trim());
+      clearLockoutState(loginKey);
     }
     setBusy(true);setErr("");
     const users=await sget("users")||[];
     const hashed=await hashPassword(pw.trim());
-    // Support both hashed passwords (new) and plaintext (legacy migration period)
-    const u=users.find(u=>u.username===un.trim()&&u.active!==false&&(u.password===hashed||(!isHashed(u.password)&&u.password===pw.trim())));
+    // Match by email (preferred) OR username (legacy), case-insensitive
+    const u=users.find(u=>u.active!==false&&(
+      (u.email&&u.email.toLowerCase()===loginKey)||
+      (u.username&&u.username.toLowerCase()===loginKey)
+    )&&(u.password===hashed||(!isHashed(u.password)&&u.password===pw.trim())));
     if(u){
-      clearLockoutState(un.trim());
+      clearLockoutState(loginKey);
       // Opportunistically upgrade plaintext password to hash on successful login
       if(!isHashed(u.password)){
         const upgraded=users.map(x=>x.id===u.id?{...x,password:hashed}:x);
@@ -883,17 +909,17 @@ function Login({onLogin,showToast}){
         onLogin(u);
       }
     } else {
-      // Record failed attempt
-      const prev=getLockoutState(un.trim())||{attempts:0,until:0};
+      // Record failed attempt (keyed by login key)
+      const prev=getLockoutState(loginKey)||{attempts:0,until:0};
       const attempts=prev.attempts+1;
       if(attempts>=MAX_ATTEMPTS){
         const until=Date.now()+LOCKOUT_MS;
-        setLockoutState(un.trim(),{attempts,until});
-        addLog("LOGIN_LOCKED","system",`Account '${un.trim()}' locked after ${attempts} failed attempts`);
-        sendAlert("LOGIN_LOCKED",`Account '${un.trim()}' locked after ${attempts} failed login attempts`,un.trim());
+        setLockoutState(loginKey,{attempts,until});
+        addLog("LOGIN_LOCKED","system",`Account '${loginKey}' locked after ${attempts} failed attempts`);
+        sendAlert("LOGIN_LOCKED",`Account '${loginKey}' locked after ${attempts} failed login attempts`,loginKey);
         setErr(`Too many failed attempts. Account locked for 15 minutes.`);
       } else {
-        setLockoutState(un.trim(),{attempts,until:prev.until});
+        setLockoutState(loginKey,{attempts,until:prev.until});
         setErr(`Invalid credentials or account inactive. (${attempts}/${MAX_ATTEMPTS} attempts)`);
       }
       setBusy(false);
@@ -903,14 +929,27 @@ function Login({onLogin,showToast}){
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,padding:20}}>
       <div style={{...Cd,width:"100%",maxWidth:380,padding:32}}>
         <div style={{textAlign:"center",marginBottom:32}}>
-          <div style={{display:"flex",justifyContent:"center",marginBottom:10}}><BenneLogo size={110}/></div>
+          <div style={{display:"flex",justifyContent:"center",marginBottom:10,cursor:"default",userSelect:"none"}} onClick={tapLogo}><BenneLogo size={110}/></div>
           <div className="font-serif" style={{fontSize:26,fontWeight:600,color:C.text}}>ಕಾಸು</div>
           <div style={{color:C.sub,fontSize:13,marginTop:3}}>Benne Operations Platform</div>
         </div>
-        <Field label="Username"><Inp value={un} onChange={setUn} placeholder="Enter username" onEnter={go}/></Field>
-        <Field label="Password"><Inp type="password" value={pw} onChange={setPw} placeholder="Enter password" onEnter={go}/></Field>
-        {err&&<Msg type="error">{err}</Msg>}
-        <button onClick={go} disabled={busy} style={{...BPr,marginTop:4,opacity:busy?.7:1}}>{busy?"Signing in…":"Sign In"}</button>
+        {!recover?<>
+          <Field label="Email or Username"><Inp value={un} onChange={setUn} placeholder="Email or username" onEnter={go}/></Field>
+          <Field label="Password"><Inp type="password" value={pw} onChange={setPw} placeholder="Enter password" onEnter={go}/></Field>
+          {err&&<Msg type="error">{err}</Msg>}
+          <button onClick={go} disabled={busy} style={{...BPr,marginTop:4,opacity:busy?.7:1}}>{busy?"Signing in…":"Sign In"}</button>
+        </>:<>
+          <div style={{background:C.warnLight,border:`1px solid ${C.warnBorder}`,borderRadius:6,padding:"8px 12px",marginBottom:12,fontSize:12,color:C.warn}}>🔑 Account Recovery — enter your recovery key to reset any password</div>
+          <Field label="Recovery Key"><Inp type="password" value={rKey} onChange={setRKey} placeholder="Paste recovery key"/></Field>
+          <Field label="Username or Email to reset"><Inp value={rTarget} onChange={setRTarget} placeholder="username or email"/></Field>
+          <Field label="New Password"><Inp type="password" value={rPw} onChange={setRPw} placeholder="min 8 chars, include a number" onEnter={doRecover}/></Field>
+          {rErr&&<Msg type="error">{rErr}</Msg>}
+          {rOk&&<Msg type="success">Password reset! Redirecting to login…</Msg>}
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            <button onClick={()=>{setRecover(false);setRErr("");setRKey("");setRTarget("");setRPw("");}} style={{...BSe,flex:1}}>Cancel</button>
+            <button onClick={doRecover} disabled={rBusy||rOk} style={{...BPr,flex:1,opacity:rBusy?.7:1}}>{rBusy?"Resetting…":"Reset Password"}</button>
+          </div>
+        </>}
       </div>
     </div>
   );
@@ -2329,21 +2368,29 @@ function Users({user,showToast}){
     const all=await sget("users")||[];
     const username=form.username.trim();
     const name=form.name.trim();
+    const email=(form.email||"").trim().toLowerCase();
     if(!name||!username){showToast("Name and username are required","error");return;}
+    if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showToast("Invalid email address","error");return;}
     if(isNew&&!form.password.trim()){showToast("Password is required","error");return;}
     if(["outlet","manager"].includes(form.role)&&!form.outlets[0]){showToast("Assign an outlet for this role","error");return;}
     if(isNew){
       if(all.find(u=>u.username===username)){showToast("Username already taken","error");return;}
+      if(email&&all.find(u=>u.email&&u.email.toLowerCase()===email)){showToast("Email already in use","error");return;}
       const pwHash=await hashPassword(form.password.trim());
-      all.push({id:"u"+Date.now(),...form,username,name,password:pwHash});
+      const newUser={id:"u"+Date.now(),...form,username,name,password:pwHash};
+      if(email)newUser.email=email; else delete newUser.email;
+      all.push(newUser);
       showToast("User created","success");
     } else {
       const conflict=all.find(u=>u.username===username&&u.id!==form.id);
       if(conflict){showToast("Username already taken","error");return;}
+      const emailConflict=email&&all.find(u=>u.email&&u.email.toLowerCase()===email&&u.id!==form.id);
+      if(emailConflict){showToast("Email already in use","error");return;}
       const updated=[];
       for(const u of all){
         if(u.id!==form.id){updated.push(u);continue;}
         const upd={...u,...form,username,name};
+        if(email)upd.email=email; else delete upd.email;
         if(!form.password.trim())delete upd.password; // keep existing if blank
         else upd.password=await hashPassword(form.password.trim());
         updated.push(upd);
@@ -2381,8 +2428,9 @@ function Users({user,showToast}){
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,color:C.text,fontSize:15}}>{u.name}</div>
                 <div style={{color:C.sub,fontSize:12,marginTop:3}}>
-                  @{u.username}
-                  {outletName(u.outlets)&&<span style={{marginLeft:8,color:C.accent}}>· {outletName(u.outlets)}</span>}
+                  {u.email?<span style={{color:C.accent}}>{u.email}</span>:<span style={{opacity:.7}}>@{u.username}</span>}
+                  {!u.email&&<span style={{marginLeft:6,fontSize:11,color:C.warn,background:C.warnLight,border:`1px solid ${C.warnBorder}`,borderRadius:3,padding:"0 4px"}}>no email</span>}
+                  {outletName(u.outlets)&&<span style={{marginLeft:8,color:C.sub}}>· {outletName(u.outlets)}</span>}
                 </div>
               </div>
               <Badge label={u.role.toUpperCase()} color={C.accent} bg={C.accentLight} border={C.accentBorder}/>
@@ -2397,7 +2445,7 @@ function Users({user,showToast}){
         ))
       }
       <Modal open={addOpen} onClose={()=>setAddOpen(false)} title="Add User" width={460}>
-        <UserForm initial={{username:"",password:"",name:"",role:"outlet",outlets:[],active:true}} outlets={outlets} onSave={(f)=>saveUser(f,true)} onCancel={()=>setAddOpen(false)} isNew/>
+        <UserForm initial={{username:"",email:"",password:"",name:"",role:"outlet",outlets:[],active:true}} outlets={outlets} onSave={(f)=>saveUser(f,true)} onCancel={()=>setAddOpen(false)} isNew/>
       </Modal>
       <Modal open={!!editUser} onClose={()=>setEditUser(null)} title={`Edit: ${editUser?.name||""}`} width={460}>
         {editUser&&<UserForm initial={editUser} outlets={outlets} onSave={(f)=>saveUser(f,false)} onCancel={()=>setEditUser(null)}/>}
@@ -2413,6 +2461,8 @@ function UserForm({initial,outlets,onSave,onCancel,isNew}){
     const e={};
     if(!f.name.trim())e.name="Required.";
     if(!f.username.trim())e.username="Required.";
+    const em=(f.email||"").trim();
+    if(em&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em))e.email="Invalid email.";
     if(isNew&&!f.password.trim()){e.password="Required.";}
     else if(isNew&&f.password.trim()){const pe=checkPasswordStrength(f.password.trim());if(pe)e.password=pe;}
     else if(!isNew&&f.password.trim()){const pe=checkPasswordStrength(f.password.trim());if(pe)e.password=pe;}
@@ -2425,6 +2475,7 @@ function UserForm({initial,outlets,onSave,onCancel,isNew}){
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
       <Field label="Full Name" error={err.name}><Inp value={f.name} onChange={v=>{setF({...f,name:v});setErr(e=>({...e,name:""}));}} placeholder="Name"/></Field>
       <Field label="Username" error={err.username}><Inp value={f.username} onChange={v=>{setF({...f,username:v});setErr(e=>({...e,username:""}));}} placeholder="username"/></Field>
+      <Field label="Email" hint="used to log in" error={err.email}><Inp value={f.email||""} onChange={v=>{setF({...f,email:v});setErr(e=>({...e,email:""}));}} placeholder="user@example.com"/></Field>
       <Field label={isNew?"Password":"New Password"} hint={!isNew?"leave blank to keep":""} error={err.password}>
         <Inp type="password" value={f.password} onChange={v=>{setF({...f,password:v});setErr(e=>({...e,password:""}));}} placeholder={isNew?"min 8 chars, include a number":"leave blank to keep"}/>
       </Field>
