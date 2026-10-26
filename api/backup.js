@@ -10,7 +10,7 @@
  *   BACKUP_EMAIL    — recipient, e.g. kevin@shimowfoods.com (Config)
  */
 
-const FIREBASE_API_KEY   = "AIzaSyCr6l0m73A8d8LoFXE_mVxqfRiMVYtb3Dg";
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
 const FIREBASE_PROJECT   = "kasu-benne";
 const FIRESTORE_BASE     = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents`;
 const FIREBASE_AUTH_BASE = "https://identitytoolkit.googleapis.com/v1";
